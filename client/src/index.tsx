@@ -1,8 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
-import './index.css';
+import './Styles/index.css';
 import App from './App';
 import * as serviceWorker from './serviceWorker';
+import { loadModules } from "esri-loader" 
+
+
+import "./Styles/styles.css";
+
 
 ReactDOM.render(
   <React.StrictMode>
