@@ -16,7 +16,8 @@ class DataManager:
             raise FileNotFoundError("Cannot find data repository")
 
     def __get_data_from_json_file(self, filename: string):
-        file_path = path.join(self.repo_path, config.JSON_DATA_PATH, f"{config.DATA_FILE_PREFIX}{filename}.json")
+        # file_path = path.join(self.repo_path, config.JSON_DATA_PATH, f"{config.DATA_FILE_PREFIX}{filename}.json")
+        file_path = ''  # fixme
         if not path.exists(file_path):
             raise FileNotFoundError("Cannot find data file")
 
