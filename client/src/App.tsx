@@ -1,20 +1,16 @@
-import React, { useEffect } from 'react';
-import logo from './logo.svg';
+import React, { useEffect, useState } from 'react';
 import './App.css';
-import { Chart } from "react-google-charts"
-
+import { Header } from './Views/Header';
 
 function App() {
+  
+  
+
 	return (
-		<div className={"my-pretty-chart-container"}>
-        <Chart
-          chartType="ScatterChart"
-          data={[["Age", "Weight"], [4, 5.5], [8, 12]]}
-          width="100%"
-          height="400px"
-          legendToggle
-        />
-      </div>
+    <React.Fragment>
+      <Header />
+		  <div> Hello world</div>
+    </React.Fragment> 
 	)
 }
 

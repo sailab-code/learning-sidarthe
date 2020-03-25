@@ -5,7 +5,7 @@ import App from './App';
 import * as serviceWorker from './serviceWorker';
 import { loadModules } from "esri-loader" 
 
-
+import "bootstrap/dist/css/bootstrap.min.css"
 import "./Styles/styles.css";
 
 
