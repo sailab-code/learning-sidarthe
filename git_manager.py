@@ -1,6 +1,6 @@
 import os
 import os.path as path
-import config
+from . import config
 import subprocess
 
 
