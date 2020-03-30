@@ -9,9 +9,11 @@ class GitManager:
     def __init__(self):
 
         if not path.exists(f"./{config.REPO_NAME}"):
-            process = subprocess.Popen(f"git clone {config.REPO_URL}")
+            command = f"git clone {config.REPO_URL}"
         else:
-            process = subprocess.Popen(f"git pull")
+            command = f"git pull"
+
+        process = subprocess.Popen(command, shell=True)
 
         # add timeout so we do not block too much
         process_status = process.wait(10000)
