@@ -1,15 +1,15 @@
 import os
 import os.path as path
-from . import config
 import subprocess
 
+REPO_URL="https://github.com/pcm-dpc/COVID-19.git"
+REPO_NAME="COVID-19"
 
 class GitManager:
-
     def __init__(self):
 
-        if not path.exists(f"./{config.REPO_NAME}"):
-            command = f"git clone {config.REPO_URL}"
+        if not path.exists(f"./{REPO_NAME}"):
+            command = f"git clone {REPO_URL}"
         else:
             command = f"git pull"
 
