@@ -10,10 +10,18 @@ class GitManager:
 
         if not path.exists(f"./{REPO_NAME}"):
             command = f"git clone {REPO_URL}"
+            cwd = os.curdir
         else:
             command = f"git pull"
+            cwd = path.join(os.curdir, REPO_NAME)
 
-        process = subprocess.Popen(command, shell=True)
+        process = subprocess.Popen(command, cwd=cwd, shell=True)
 
         # add timeout so we do not block too much
         process_status = process.wait(10000)
+
+
+
+
+
+
