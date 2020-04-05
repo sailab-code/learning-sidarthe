@@ -46,7 +46,7 @@ def exp(beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, ws, n_epochs, learning_setup
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 
-    exp_path = os.path.join(exp_path, learning_setup)
+    exp_path = os.path.join(exp_path, learning_setup+"_"+is_static)
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 
@@ -230,9 +230,9 @@ def exp(beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, ws, n_epochs, learning_setup
 
 
 if __name__ == "__main__":
-    learning_setup = "all_window"  # last_only
-    n_epochs = 30001
-    for ws in range(1,9):
-        beta_t, gamma_t, delta_t = 0.6, 0.25, 0.06
-        lr_b, lr_g, lr_d = 1e-1, 1e-2, 1e-3
+    learning_setup = "last_only"  # last_only
+    n_epochs = 20001
+    for ws in range(5):
+        beta_t, gamma_t, delta_t = 0.6, 0.25, 0.04
+        lr_b, lr_g, lr_d = 0.3, 0.3, 0.05
         exp(beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, ws, n_epochs, learning_setup, is_static=True)
