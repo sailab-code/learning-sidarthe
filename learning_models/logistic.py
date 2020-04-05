@@ -16,7 +16,7 @@ class Logistic(LearningModel):
         # model definition
         self.wx_b = nn.Linear(1, 1)
         # nn.init.xavier_normal_(wx_b.weight)
-        # nn.init.uniform_(m, a=1.0, b=max(y))
+        # nn.init.uniform_(m, a=1.0, b=max(w))
         self.m = torch.tensor([0.0], requires_grad=True)
 
         self.optimizer = self.configs["optimizer"]
@@ -60,5 +60,6 @@ class Logistic(LearningModel):
     def loss(y, y_hat):
         return torch.mean(0.5 * (y_hat.view(-1) - y)*(y_hat.view(-1) - y))  # MSELoss
 
-    def eval(self, x):
-        return self(x)
+    def eval(self, x, y):
+        y_hat = self(x)
+        return np.sqrt(2*self.loss(y, y_hat).detach().numpy())

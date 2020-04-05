@@ -31,15 +31,16 @@ def select_column_values(df, col_name="totale_casi", groupby=["data"], group_by_
         return list(df[col_name])
 
 
-def select_data(file, areas, area_col_name, value_col_name, file_sep=","):
+def select_data(file, areas, area_col_name, value_col_name, groupby_cols, file_sep=","):
     """
     Function to load any csv file, selecting which rows to get and which column
     :param file:
     :param areas: a list of values (strings) of the areas to
     :param area_col_name:
     :param value_col_name:
+    :param groupby_cols:
     :param file_sep:
-    :return: x and y ready, where x is just a range of integers from 1 (day 0) to N (last day), y are the
+    :return: x and w ready, where x is just a range of integers from 1 (day 0) to N (last day), w are the
     values of the column selected.
 
     Example of usage:
@@ -49,7 +50,7 @@ def select_data(file, areas, area_col_name, value_col_name, file_sep=","):
             areas = ["Toscana"]
             area_col_name = "denominazione_regione"
             value_col_name = "deceduti"
-            x,y = get_data(df_file, areas, area_col_name, value_col_name, file_sep=",")
+            x,w = get_data(df_file, areas, area_col_name, value_col_name, file_sep=",")
 
         Getting time seris of deaths in whole Italy:
             just the same except for:
@@ -58,7 +59,7 @@ def select_data(file, areas, area_col_name, value_col_name, file_sep=","):
 
     df = pd.read_csv(file, sep=file_sep)
     area_df = select_regions(df, areas, col_name=area_col_name)
-    y = select_column_values(area_df, col_name=value_col_name)
+    y = select_column_values(area_df, col_name=value_col_name, groupby=groupby_cols)
     x = list(range(1, len(y)+1))
 
     return x, y

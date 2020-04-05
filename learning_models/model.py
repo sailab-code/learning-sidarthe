@@ -11,7 +11,7 @@ class LearningModel(ABC):
         pass
 
     @abstractmethod
-    def eval(self, x):
+    def eval(self, x, y):
         pass
 
     @staticmethod

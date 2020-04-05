@@ -14,4 +14,4 @@ if __name__ == '__main__':
                                           "deceduti", "totale_casi"]
                           )
 
-    print(f"x={x}, y={y}")
+    print(f"x={x}, w={w}")
