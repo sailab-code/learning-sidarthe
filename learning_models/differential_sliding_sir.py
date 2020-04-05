@@ -110,7 +110,7 @@ class SirEq:
         # df/d_beta
         f.beta[t] = f.beta[t] + h
         _, f_bh, _ = f.loss(x, y, diff_eqs)  # f(beta + h)
-        f.beta[t] = f.beta[t] - h  # d_beta
+        f.beta[t] = f.beta[t] - 2*h  # d_beta
         _, f_b_h, _ = f.loss(x, y, diff_eqs)  # f(beta - h)
         df_beta = (f_bh - f_b_h) / 2*h  # f(b + h,g,d) - f(b - h,g,d) / 2h
         f.beta[t] = old_beta
@@ -118,7 +118,7 @@ class SirEq:
         # df/d_gamma
         f.gamma[t] = f.gamma[t] + h
         _, f_gh, _ = f.loss(x, y, diff_eqs)
-        f.gamma[t] = f.gamma[t] - h
+        f.gamma[t] = f.gamma[t] - 2*h
         _, f_g_h, _ = f.loss(x, y, diff_eqs)
         df_gamma = (f_gh - f_g_h) / 2*h  # f(b,g+h,d) - f(b,g+h,d) / 2h
         f.gamma[t] = old_gamma
@@ -126,7 +126,7 @@ class SirEq:
         # df/d_delta
         f.delta[t] = f.delta[t] + h
         _, f_dh, _ = f.loss(x, y, diff_eqs)
-        f.delta[t] = f.delta[t] - h
+        f.delta[t] = f.delta[t] - 2*h
         _, f_d_h, _ = f.loss(x, y, diff_eqs)
         df_delta = (f_dh - f_d_h) / 2*h  # f(b,g,d+h) - f(b,g,d-h) / 2h
         f.delta[t] = old_delta
