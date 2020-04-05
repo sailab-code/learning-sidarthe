@@ -46,7 +46,10 @@ def exp(beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, ws, n_epochs, learning_setup
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 
-    exp_path = os.path.join(exp_path, learning_setup+"_"+is_static)
+    if is_static:
+        exp_path = os.path.join(exp_path, learning_setup + "_static")
+    else:
+        exp_path = os.path.join(exp_path, learning_setup)
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 
