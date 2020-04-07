@@ -35,6 +35,7 @@ class SirEq:
         self.c_reg = 1e7
         self.d_reg = 1e7
         self.bc_reg = 1e7
+        self.ed_lambda = 0.7
 
     def dynamic_bc_diff_eqs(self, INP, t):
         """SIR Model with dynamic beta and gamma"""
@@ -148,6 +149,24 @@ class SirEq:
                 self.beta[t] -= lr_b * d_b[t]
                 self.gamma[t] -= lr_g * d_g[t]
                 self.delta[t] -= lr_d * d_d[t]
+
+        elif self.mode == "joint_dynamic_decay":
+            # updates all the betas, gammas and deltas at the same time
+            d_b, d_g, d_d = [], [], []
+            for t in range(len(self.beta)):
+                d_b_t, d_g_t, d_d_t = self.estimate_gradient(x, y, diff_eqs, t=t)
+                d_b.append(d_b_t)
+                d_g.append(d_g_t)
+                d_d.append(d_d_t)
+
+            for t in range(len(self.beta)):
+                ti = len(self.beta) - 1 - t
+                lr_b_d = np.exp(-self.ed_lambda * ti) * lr_b
+                lr_g_d = np.exp(-self.ed_lambda * ti) * lr_g
+                lr_d_d = np.exp(-self.ed_lambda * ti) * lr_d
+                self.beta[t] -= lr_b_d * d_b[t]
+                self.gamma[t] -= lr_g_d * d_g[t]
+                self.delta[t] -= lr_d_d * d_d[t]
         else:
             # updates only the last beta, gamma and delta
             t = -1
