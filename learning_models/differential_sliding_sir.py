@@ -92,7 +92,7 @@ class SirEq:
 
         return RES, w_hat
 
-    def estimate_gradient(f, x, y, diff_eqs, h=1e-4, t=-1):
+    def estimate_gradient(f, x, y, diff_eqs, h=5e-4, t=-1):
         """
         Estimate gradient of beta, gamma and delta wrt the loss.
         :param x: input
@@ -133,7 +133,7 @@ class SirEq:
 
         return df_beta, df_gamma, df_delta
 
-    def gradient_descent(self, x, y, diff_eqs, lr_b=1e-3, lr_g=1e-3, lr_d=1e-3):
+    def gradient_descent(self, x, y, diff_eqs, eta_b0=1e-3, eta_g0=1e-3, eta_d0=1e-3):
 
         if self.mode == "joint_dynamic":
             # updates all the betas, gammas and deltas at the same time
@@ -144,17 +144,38 @@ class SirEq:
                 d_g.append(d_g_t)
                 d_d.append(d_d_t)
 
+            # for t in range(len(self.beta)):
+            #     self.beta[t] -= eta_b0 * d_b[t]
+            #     self.gamma[t] -= eta_g0 * d_g[t]
+            #     self.delta[t] -= eta_d0 * d_d[t]
+
+            # mu0 = 0.9
+            m_bt, m_gt, m_dt = 0.0, 0.0, 0.0
+            a, b = 1.0, 0.1
+            alpha = 1/7
             for t in range(len(self.beta)):
-                self.beta[t] -= lr_b * d_b[t]
-                self.gamma[t] -= lr_g * d_g[t]
-                self.delta[t] -= lr_d * d_d[t]
+                mu = 1.0/(1.0 + np.exp(-alpha * t))
+                eta_decay = (a / (a + b * t))
+
+                eta_b = eta_b0 * eta_decay
+                m_bt = -eta_b * d_b[t] + mu * m_bt
+
+                eta_g = eta_g0 * eta_decay
+                m_gt = -eta_g * d_g[t] + mu * m_gt
+
+                eta_d = eta_d0 * eta_decay
+                m_dt = -eta_d * d_d[t] + mu * m_dt
+
+                self.beta[t] += m_bt
+                self.gamma[t] += m_gt
+                self.delta[t] += m_dt
         else:
             # updates only the last beta, gamma and delta
             t = -1
             d_b, d_g, d_d = self.estimate_gradient(x, y, diff_eqs, t=t)
-            self.beta[t] -= lr_b * d_b
-            self.gamma[t] -= lr_g * d_g
-            self.delta[t] -= lr_d * d_d
+            self.beta[t] -= eta_b0 * d_b
+            self.gamma[t] -= eta_g0 * d_g
+            self.delta[t] -= eta_d0 * d_d
 
     def updt_params(self, beta, gamma, delta):
         self.beta = beta
@@ -211,7 +232,7 @@ class SirEq:
             # sir.gradient_descent(t_range, W, t_start, t_end, diff_eqs, lr_b, lr_g, lr_d)
             sir.gradient_descent(t_range, W, diff_eqs, lr_b, lr_g, lr_d)
 
-            if i % 500 == 0:
+            if i % 50 == 0:
                 print("Loss at step %d: %.7f" % (i, loss))
                 print("beta: " + str(sir.beta))
                 print("gamma: " + str(sir.gamma))
