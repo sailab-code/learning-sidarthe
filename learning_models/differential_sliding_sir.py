@@ -61,7 +61,12 @@ class SirEq:
     def loss(self, x, y, diff_eqs):
         RES = spi.odeint(diff_eqs, self.init_cond, x)
         z = RES[:, 2]
-        w_hat = self.delta * z
+
+        delta = self.delta
+        if len(delta) < len(z):
+            delta = np.concatenate((delta,  np.array([delta[-1]]*(len(z) - len(delta)))), axis=0)
+
+        w_hat = delta * z
 
         if self.learning_setup == "last_only":  # or self.learning_setup == "last_only_static":
             # just compute the loss on the last element of the window
