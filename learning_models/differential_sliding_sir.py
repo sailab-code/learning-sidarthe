@@ -37,26 +37,28 @@ class SirEq:
         self.bc_reg = 1e7
         self.ed_lambda = 0.7
 
+        self.derivate_reg = 1e2
+
     def dynamic_bc_diff_eqs(self, INP, t):
         """SIR Model with dynamic beta and gamma"""
-        Y= np.zeros((3))
+        Y = np.zeros((3))
         V = INP
         t = int(t)
-        beta = self.beta[t]/self.population if t < len(self.beta) else self.beta[-1]/self.population
+        beta = self.beta[t] / self.population if t < len(self.beta) else self.beta[-1] / self.population
         gamma = self.gamma[t] if t < len(self.gamma) else self.gamma[-1]
         Y[0] = - beta * V[0] * V[1]
         Y[1] = beta * V[0] * V[1] - gamma * V[1]
         Y[2] = gamma * V[1]
-        return Y   # For odeint
+        return Y  # For odeint
 
     def diff_eqs(self, INP, t):
         """SIR Model"""
         Y = np.zeros((3))
         V = INP
-        Y[0] = - self.beta/self.population * V[0] * V[1]
-        Y[1] = self.beta/self.population * V[0] * V[1] - self.gamma * V[1]
+        Y[0] = - self.beta / self.population * V[0] * V[1]
+        Y[1] = self.beta / self.population * V[0] * V[1] - self.gamma * V[1]
         Y[2] = self.gamma * V[1]
-        return Y   # For odeint
+        return Y  # For odeint
 
     def loss(self, x, y, diff_eqs):
         RES = spi.odeint(diff_eqs, self.init_cond, x)
@@ -64,7 +66,7 @@ class SirEq:
 
         delta = self.delta
         if len(delta) < len(z):
-            delta = np.concatenate((delta,  np.array([delta[-1]]*(len(z) - len(delta)))), axis=0)
+            delta = np.concatenate((delta, np.array([delta[-1]] * (len(z) - len(delta)))), axis=0)
 
         w_hat = delta * z
 
@@ -73,16 +75,40 @@ class SirEq:
             w_hat = w_hat[-1]
             y = y[-1]
 
+        def parameter_derivate(parameter):
+            return np.power((parameter[1] - parameter[0]), 2) + np.power(parameter[-1] - parameter[-2], 2)
+
+        def loss_gte_one(parameter):
+            return np.greater_equal(parameter, 1.0) * np.abs(parameter)
+
+        def loss_lte_zero(parameter):
+            return np.less_equal(parameter, 0.0) * np.abs(parameter)
+
         mse_loss = np.sqrt(2 * np.mean(0.5 * (w_hat - y) * (w_hat - y)))  # MSE
 
+        # compute losses due to derivate not close to zero near the window limits
+        derivate_beta = parameter_derivate(self.beta)
+        derivate_gamma = parameter_derivate(self.gamma)
+        derivate_delta = parameter_derivate(self.delta)
+
         # REGULARIZATION TO PREVENT b,c,d to go out of bounds
-        b = np.abs(self.beta)
-        c = np.abs(self.gamma)
-        d = np.abs(self.delta)
+        # b = np.abs(self.beta)
+        # c = np.abs(self.gamma)
+        # +d = np.abs(self.delta)
+
+        tot_loss = mse_loss + \
+                   self.b_reg * (loss_gte_one(self.beta) + loss_lte_zero(self.beta)) + \
+                   self.c_reg * (loss_gte_one(self.gamma) + loss_lte_zero(self.gamma)) + \
+                   self.d_reg * (loss_gte_one(self.delta) + loss_lte_zero(self.delta)) + \
+                   self.derivate_reg * (derivate_beta + derivate_gamma + derivate_delta)
+
+        """
         tot_loss = mse_loss + (np.greater_equal(b, 1.0) * b * self.b_reg) + \
                    (np.greater_equal(c, 1.0) * c * self.c_reg) + (np.greater_equal(d, 1.0) * d * self.d_reg) + \
                    (np.less_equal(self.beta, 0.0) * b * self.b_reg) + (np.less_equal(self.gamma, 0.0) * c * self.c_reg) + \
-                   (np.less_equal(d, 0.0) * d * self.d_reg)
+                   (np.less_equal(d, 0.0) * d * self.d_reg) + \
+                   self.derivate_reg * (derivate_beta + derivate_gamma + derivate_delta)
+        """
 
         return mse_loss, tot_loss.mean(), RES
 
@@ -92,7 +118,7 @@ class SirEq:
 
         delta = self.delta
         if not isinstance(delta, float) and len(delta) < len(z):
-            delta = np.concatenate((delta, np.array([delta[-1]]*(len(z)-len(delta)))), axis=0)
+            delta = np.concatenate((delta, np.array([delta[-1]] * (len(z) - len(delta)))), axis=0)
 
         w_hat = delta * z
 
@@ -116,25 +142,25 @@ class SirEq:
         # df/d_beta
         f.beta[t] = f.beta[t] + h
         _, f_bh, _ = f.loss(x, y, diff_eqs)  # f(beta + h)
-        f.beta[t] = f.beta[t] - 2*h  # d_beta
+        f.beta[t] = f.beta[t] - 2 * h  # d_beta
         _, f_b_h, _ = f.loss(x, y, diff_eqs)  # f(beta - h)
-        df_beta = (f_bh - f_b_h) / 2*h  # f(b + h,g,d) - f(b - h,g,d) / 2h
+        df_beta = (f_bh - f_b_h) / 2 * h  # f(b + h,g,d) - f(b - h,g,d) / 2h
         f.beta[t] = old_beta
 
         # df/d_gamma
         f.gamma[t] = f.gamma[t] + h
         _, f_gh, _ = f.loss(x, y, diff_eqs)
-        f.gamma[t] = f.gamma[t] - 2*h
+        f.gamma[t] = f.gamma[t] - 2 * h
         _, f_g_h, _ = f.loss(x, y, diff_eqs)
-        df_gamma = (f_gh - f_g_h) / 2*h  # f(b,g+h,d) - f(b,g+h,d) / 2h
+        df_gamma = (f_gh - f_g_h) / 2 * h  # f(b,g+h,d) - f(b,g+h,d) / 2h
         f.gamma[t] = old_gamma
 
         # df/d_delta
         f.delta[t] = f.delta[t] + h
         _, f_dh, _ = f.loss(x, y, diff_eqs)
-        f.delta[t] = f.delta[t] - 2*h
+        f.delta[t] = f.delta[t] - 2 * h
         _, f_d_h, _ = f.loss(x, y, diff_eqs)
-        df_delta = (f_dh - f_d_h) / 2*h  # f(b,g,d+h) - f(b,g,d-h) / 2h
+        df_delta = (f_dh - f_d_h) / 2 * h  # f(b,g,d+h) - f(b,g,d-h) / 2h
         f.delta[t] = old_delta
 
         return df_beta, df_gamma, df_delta
@@ -157,14 +183,12 @@ class SirEq:
 
             # mu0 = 0.9
             m_bt, m_gt, m_dt = 0.0, 0.0, 0.0
-            a, b = 1.0, 0.15
-            alpha = 1/7
-            # eta_decay = 1.0
-            # mu = 0.9
+            a, b = 1.0, 0.05
+            alpha = 1 / 7
             for t in range(len(self.beta)):
-                mu = 1.0/(1.0 + np.exp(-alpha * t))
+                mu = 1.0 / (1.0 + np.exp(-alpha * t))
                 eta_decay = (a / (a + b * t))
-
+                # eta_decay = 1 - mu
                 eta_b = eta_b0 * eta_decay
                 m_bt = -eta_b * d_b[t] + mu * m_bt
 
@@ -281,7 +305,7 @@ class SirEq:
                 patience += 1
             elif n_lr_updts < max_n_lr_updts:
                 # when patience is over reduce learning rate by 2
-                lr_b, lr_g, lr_d = lr_b/2, lr_g/2, lr_d/2
+                lr_b, lr_g, lr_d = lr_b / 2, lr_g / 2, lr_d / 2
                 n_lr_updts += 1
                 patience = 0
             else:
