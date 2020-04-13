@@ -157,8 +157,10 @@ class SirEq:
 
             # mu0 = 0.9
             m_bt, m_gt, m_dt = 0.0, 0.0, 0.0
-            a, b = 1.0, 0.1
+            a, b = 1.0, 0.15
             alpha = 1/7
+            # eta_decay = 1.0
+            # mu = 0.9
             for t in range(len(self.beta)):
                 mu = 1.0/(1.0 + np.exp(-alpha * t))
                 eta_decay = (a / (a + b * t))

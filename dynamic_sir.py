@@ -57,7 +57,7 @@ def exp(region, population, beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, n_epochs
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 
-    train_size = 38
+    train_size = 41
     dataset_size = len(_w)
     beta_t0, gamma_t0, delta_t0 = beta_t, gamma_t, delta_t
 
@@ -174,10 +174,10 @@ def exp(region, population, beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, n_epochs
 
 if __name__ == "__main__":
     learning_setup = "all_window"  # last_only
-    n_epochs = 2501
-    region = "Emilia-Romagna"
-    population = 4.46e6
+    n_epochs = 1101
+    region = "Lombardia"
+    population = {"Lombardia": 1e7, "Emilia-Romagna": 4.45e6, "Veneto": 4.9e6, "Piemonte": 4.36e6}
     beta_t, gamma_t, delta_t = 0.81, 0.29, 0.03
-    lr_b, lr_g, lr_d = 2e-1, 4e-2, 2e-4
+    lr_b, lr_g, lr_d = 2e-1, 4e-2, 0.0
     fine_tune = True
-    exp(region, population, beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, n_epochs, fine_tune, learning_setup, is_static=True)
+    exp(region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, n_epochs, fine_tune, learning_setup, is_static=True)
