@@ -1,9 +1,12 @@
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+from torch import optim
+
 
 class TimeSeries:
     def __init__(self, time_grid, values, omega):
+
         """
         Constructs a time series
 
@@ -25,8 +28,7 @@ class TimeSeries:
         if t < 0:
             x = self.omega(t)
         else:
-            idx = np.searchsorted(self.time_grid, t)
-            x = self.values[idx]
+            x = self.values[(self.time_grid[self.time_grid == t]).long()][0]
 
         return x
 
@@ -40,33 +42,34 @@ def euler(f, omega, time_grid):
     :return: 1-Dim tensor the same size as time_grid with values computed on the time grid
     """
 
-    y0 = tuple(torch.tensor([y0_]) for y0_ in omega(0))
+    y0 = torch.tensor([omega(0)])
     time_grid = time_grid.to(y0[0])
-    values = [y0]
+    values = y0.clone()
 
-    t_series = TimeSeries(time_grid.detach().numpy(), values, omega)
 
     for i in range(0, time_grid.shape[0] - 1):
         t_i = time_grid[i]
         t_next = time_grid[i+1]
         y_i = values[i]
-
-        dt = t_next - t_i
-        dy = tuple(dt * f_t for f_t in f(t_i, t_series, dt))
-        y_next = tuple(y0_ + dy_ for y0_, dy_ in zip(y_i, dy))
-        values.append(y_next)
+        t_series = TimeSeries(time_grid, values, omega)
+        dt = torch.tensor([t_next - t_i])
+        dy = torch.stack(tuple(f_t.unsqueeze(0) for f_t in f(t_i, t_series, dt)), dim=1) * dt
+        y_next = y_i + dy
+        #y_next = y_next.unsqueeze(0)
+        values = torch.cat((values, y_next), dim=0)
 
     return values
 
-
-gamma = torch.tensor([0.1], requires_grad=True)
-beta = torch.tensor([0.170], requires_grad=True)
+N = 1
+gamma = torch.tensor([0.3] * N, requires_grad=True)
+beta = torch.tensor([0.8] * N, requires_grad=True)
+population = 1
 epsilon_s = 1e-6
 S0 = 1 - epsilon_s
 I0 = epsilon_s
 ND = 200
 TS = 1
-tau = 9
+tau = torch.tensor([1.], requires_grad=True)
 
 
 def omega(t):
@@ -76,40 +79,79 @@ def omega(t):
         0.
     )
 
+def dynamic_f(T, X, dt):
+    X_t = X(T)
+    t = T.long()
+
+    if t < beta.shape[0]:
+        beta_t = beta[t] / population
+        gamma_t = gamma[t]
+    else:
+        beta_t = beta[-1] / population
+        gamma_t = gamma[-1]
+
+    return [
+        - beta_t * X_t[0] * X_t[1],
+        beta_t * X_t[0] * X_t[1] - gamma_t * X_t[1],
+        gamma_t * X_t[1]
+    ]
+
 def f_past(t, X, dt):
 
     X_t = X(t)
     X_tau = X(t-tau)
 
     out = [
-        - beta * X_t[0] * X_t[1],
-        beta * X_t[0] * X_t[1] - gamma * X_tau[1],
-        gamma * X_tau[1]
+        - beta[0] * X_t[0] * X_t[1],
+        beta[0] * X_t[0] * X_t[1] - gamma[0] * X_tau[1],
+        gamma[0] * X_tau[1]
     ]
 
     if out[1] * dt + X_t[1] < 0:
-        out[1] = -X_t[1] / dt
-        out[2] = out[0] + X_t[1] / dt
+        out[1] = -X_t[1] / dt[0]
+        out[2] = out[0] + X_t[1] / dt[0]
 
     if out[1] * dt + X_t[1] > 1:
         out[1] = (1 - X_t[1]) / dt
         out[2] = out[0] + (1 - X_t[1]) / dt
 
-    return tuple(out)
+    return out
 
 
+epochs = 251
+lr = 1e-3
 if __name__ == '__main__':
     t_range = torch.arange(0, ND, TS)
-    sol = euler(f_past, omega, t_range)
-    #print(sol)
 
-    for i in range(1, len(sol)):
-        tens = sol[i]
-        x = tens[0].backward(torch.ones(ND, 1), retain_graph=True)
-        print(x)
+    optimizer = optim.SGD([beta, gamma], lr=lr, momentum=0.9)
+    for epoch in range(0, epochs):
+        print(f"epoch {epoch}")
+        optimizer.zero_grad()
+        sol = euler(dynamic_f, omega, t_range)
+        z_hat = sol[-1][2]
 
-    a = plt.figure(1)
-    plt.plot(t_range.detach().numpy(), sol)
-    plt.grid()
-    a.show()
-    print(f"x: {sol[len(sol) - 1][0]}, y: {sol[len(sol) - 1][2]}")
+        z_target = torch.tensor([[0.6]])
+
+        loss = torch.pow(z_target - z_hat, 2)
+        #print(k)
+        loss.backward()
+        print(beta.grad)
+        print(gamma.grad)
+        print(tau.grad)
+        #print(z_hat)
+        optimizer.step()
+        # update params
+
+        if epoch % 50 == 0:
+            a = plt.figure(1)
+            plt.plot(t_range.detach().numpy(), sol.detach().numpy())
+            plt.grid()
+            a.show()
+
+            print(f"loss: {loss}")
+            print(f"beta: {beta}")
+            print(f"gamma: {gamma}")
+
+    print(f"loss: {loss}")
+    print(f"beta: {beta}")
+    print(f"gamma: {gamma}")
