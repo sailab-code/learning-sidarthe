@@ -37,7 +37,8 @@ class SirEq:
         self.bc_reg = 1e7
         self.ed_lambda = 0.7
 
-        self.derivate_reg = 1e2
+        self.derivate_reg = 1e6
+        self.second_derivate_reg = 0
 
     def dynamic_bc_diff_eqs(self, INP, t):
         """SIR Model with dynamic beta and gamma"""
@@ -84,13 +85,18 @@ class SirEq:
         def loss_lte_zero(parameter):
             return np.less_equal(parameter, 0.0) * np.abs(parameter)
 
-        mse_loss = np.sqrt(2 * np.mean(0.5 * (w_hat - y) * (w_hat - y)))  # MSE
+        # mse_loss = np.sqrt(2 * np.mean(0.5 * (w_hat - y) * (w_hat - y)))  # MSE
+        mse_loss = np.sqrt(2 * np.mean(0.5 * (w_hat - y) * (w_hat - y)))  # weighted MSE
 
         # compute losses due to derivate not close to zero near the window limits
         derivate_beta = parameter_derivate(self.beta)
         derivate_gamma = parameter_derivate(self.gamma)
         derivate_delta = parameter_derivate(self.delta)
 
+        # second_derivates_beta = np.sum([self.second_order_derivative_regularization(self.beta, t) for t in range(1, len(self.beta)-1)])
+        # second_derivates_gamma = np.sum([self.second_order_derivative_regularization(self.gamma, t) for t in range(1, len(self.gamma)-1)])
+        # second_derivates_delta = np.sum([self.second_order_derivative_regularization(self.delta, t) for t in range(1, len(self.delta)-1)])
+        # print(second_derivates_beta)
         # REGULARIZATION TO PREVENT b,c,d to go out of bounds
         # b = np.abs(self.beta)
         # c = np.abs(self.gamma)
@@ -101,6 +107,7 @@ class SirEq:
                    self.c_reg * (loss_gte_one(self.gamma) + loss_lte_zero(self.gamma)) + \
                    self.d_reg * (loss_gte_one(self.delta) + loss_lte_zero(self.delta)) + \
                    self.derivate_reg * (derivate_beta + derivate_gamma + derivate_delta)
+                   # self.second_derivate_reg * (second_derivates_beta + second_derivates_gamma + second_derivates_delta)
 
         """
         tot_loss = mse_loss + (np.greater_equal(b, 1.0) * b * self.b_reg) + \
@@ -165,6 +172,10 @@ class SirEq:
 
         return df_beta, df_gamma, df_delta
 
+    @staticmethod
+    def second_order_derivative_regularization(parameter, t, h=1):
+        return np.power((parameter[t+h] - 2*parameter[t] + parameter[t-h])/h**2,2)  # f(x+h) - 2*f(x) + f(x-h)/h^2
+
     def gradient_descent(self, x, y, diff_eqs, eta_b0=1e-3, eta_g0=1e-3, eta_d0=1e-3):
 
         if self.mode == "joint_dynamic":
@@ -176,18 +187,19 @@ class SirEq:
                 d_g.append(d_g_t)
                 d_d.append(d_d_t)
 
+            # print(d_b)
             # for t in range(len(self.beta)):
             #     self.beta[t] -= eta_b0 * d_b[t]
             #     self.gamma[t] -= eta_g0 * d_g[t]
             #     self.delta[t] -= eta_d0 * d_d[t]
 
-            # mu0 = 0.9
+            # mu = 0.0
             m_bt, m_gt, m_dt = 0.0, 0.0, 0.0
-            a, b = 1.0, 0.05
+            a, b = 3.0, 0.05
             alpha = 1 / 7
             for t in range(len(self.beta)):
                 mu = 1.0 / (1.0 + np.exp(-alpha * t))
-                eta_decay = (a / (a + b * t))
+                eta_decay = (a / (a - b * t))
                 # eta_decay = 1 - mu
                 eta_b = eta_b0 * eta_decay
                 m_bt = -eta_b * d_b[t] + mu * m_bt
@@ -276,9 +288,10 @@ class SirEq:
 
         # early stopping stuff
         best = 1e12
-        thresh = 1e-5
-        patience, n_lr_updts, max_no_improve, max_n_lr_updts = 0, 0, 25, 20
+        thresh = 2e-1
+        patience, n_lr_updts, max_no_improve, max_n_lr_updts = 0, 0, 3, 3
 
+        losses = []
         best_beta, best_gamma, best_delta = sir.beta, sir.gamma, sir.delta
         for i in range(params["n_epochs"]):
             # loss, _, _ = sir.loss(t_range, W, t_start, t_end, diff_eqs)
@@ -287,6 +300,7 @@ class SirEq:
             sir.gradient_descent(t_range, W, diff_eqs, lr_b, lr_g, lr_d)
 
             if i % 50 == 0:
+                losses.append(loss)
                 print("Loss at step %d: %.7f" % (i, loss))
                 print("beta: " + str(sir.beta))
                 print("gamma: " + str(sir.gamma))
@@ -294,24 +308,24 @@ class SirEq:
                 print(Z0)
                 print(W[-1])
 
-            if loss < best + thresh:
-                # maintains the best solution found so far
-                best = loss
-                best_beta = sir.beta
-                best_gamma = sir.gamma
-                best_delta = sir.delta
-                patience = 0
-            elif patience < max_no_improve:
-                patience += 1
-            elif n_lr_updts < max_n_lr_updts:
-                # when patience is over reduce learning rate by 2
-                lr_b, lr_g, lr_d = lr_b / 2, lr_g / 2, lr_d / 2
-                n_lr_updts += 1
-                patience = 0
-            else:
-                # after too many reductions early stops
-                print("Early stop at step: %d" % i)
-                break
+                if loss + thresh < best:
+                    # maintains the best solution found so far
+                    best = loss
+                    best_beta = sir.beta
+                    best_gamma = sir.gamma
+                    best_delta = sir.delta
+                    patience = 0
+                elif patience < max_no_improve:
+                    patience += 1
+                elif n_lr_updts < max_n_lr_updts:
+                    # when patience is over reduce learning rate by 2
+                    lr_b, lr_g, lr_d = lr_b / 2, lr_g / 2, lr_d / 2
+                    n_lr_updts += 1
+                    patience = 0
+                else:
+                    # after too many reductions early stops
+                    print("Early stop at step: %d" % i)
+                    break
 
         print("Best: " + str(best))
         print(best_beta)
@@ -321,4 +335,4 @@ class SirEq:
         sir.updt_params(best_beta, best_gamma, best_delta)  # assign the best params to the model
         _, _, res = sir.loss(t_range, W, diff_eqs)
 
-        return best, sir.beta[-1], sir.gamma[-1], sir.delta[-1], sir, res
+        return best, sir.beta[-1], sir.gamma[-1], sir.delta[-1], sir, res, losses

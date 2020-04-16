@@ -58,7 +58,6 @@ def exp(beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, ws, n_epochs, fine_tune, lea
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 
-
     population = 1e7
     train_size = 38
     beta, gamma, delta = [], [], []
@@ -178,10 +177,10 @@ def exp(beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, ws, n_epochs, fine_tune, lea
     pl.savefig(os.path.join(exp_path, exp_prefix + "initial_params_bcd_over_time.png"))
 
     # GLOBAL MODEL (No learning here just ode)
-    dy_params = {"beta": beta, "gamma": gamma, "delta": delta, "n_epochs": 2001 if fine_tune else 0,
+    dy_params = {"beta": beta, "gamma": gamma, "delta": delta, "n_epochs": 4001 if fine_tune else 0,
                  "population": population,
                  "t_start": 0, "t_end": train_size,
-                 "lr_b": 2e-1, "lr_g": 4e-2, "lr_d": 2e-5,
+                 "lr_b": 2e-1, "lr_g": 4e-2, "lr_d": 2e-4,
                  "eq_mode": "joint_dynamic",
                  # "eq_mode": "dynamic",
                  "learning_setup": learning_setup}
@@ -272,6 +271,6 @@ if __name__ == "__main__":
     n_epochs = 10
     for ws in range(4, 5):
         beta_t, gamma_t, delta_t = 0.81, 0.29, 0.03
-        lr_b, lr_g, lr_d = 2e-1, 4e-2, 2e-5
+        lr_b, lr_g, lr_d = 2e-1, 4e-2, 2e-4
         fine_tune = True
         exp(beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, ws, n_epochs, fine_tune, learning_setup, is_static=True)

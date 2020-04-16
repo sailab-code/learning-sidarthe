@@ -46,13 +46,14 @@ class SirOptimizer(Optimizer):
                 # print(p.grad)
 
                 d_p = parameter.grad.data
-                # update = []
-                # for t, d_p_t in enumerate(d_p):
-                #    momentum_term = mu[t] * (update[t-1] if t > 0 else torch.zeros(1))
-                #    update.append(-etas[idx][t] * d_p_t + momentum_term)
+                update = [torch.zeros(1)]
+                for t in range(1, d_p.size(0)):
+                    momentum_term = -etas[idx][t] * d_p[t] + mu[t] * update[t-1]
+                    update.append(momentum_term)
 
-                # print(f"UPDATE: {update}")
-                parameter.data.add_(-self.etas[idx] * d_p)
+                print("UPDATE: {}".format(update))
+                # parameter.data.add_(-self.etas[idx] * d_p)
+                parameter.data.add_(torch.tensor(update))
 
 
 class SirEq:
