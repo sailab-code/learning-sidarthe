@@ -125,7 +125,7 @@ if __name__ == '__main__':
 
     optimizer = optim.SGD([beta, gamma], lr=lr, momentum=0.9)
     for epoch in range(0, epochs):
-        print(f"epoch {epoch}")
+        print("epoch {}".format(epoch))
         optimizer.zero_grad()
         sol = euler(dynamic_f, omega, t_range)
         z_hat = sol[-1][2]
@@ -148,10 +148,10 @@ if __name__ == '__main__':
             plt.grid()
             a.show()
 
-            print(f"loss: {loss}")
-            print(f"beta: {beta}")
-            print(f"gamma: {gamma}")
+            print("loss: {}".format(loss))
+            print("beta: {}".format(beta))
+            print("gamma: {}".format(gamma))
 
-    print(f"loss: {loss}")
-    print(f"beta: {beta}")
-    print(f"gamma: {gamma}")
+    print("loss: {}".format(loss))
+    print("beta: {}".format(beta))
+    print("gamma: {}".format(gamma))

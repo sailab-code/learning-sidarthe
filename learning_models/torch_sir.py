@@ -33,7 +33,9 @@ class SirOptimizer(Optimizer):
         for group in self.param_groups:
             times = torch.arange(group["params"][0].shape[0], dtype=torch.float32)
 
-            mu = torch.sigmoid(1 / self.alpha * (times / max(times) - 0.5))
+            # mu = torch.sigmoid(1 / self.alpha * (times / max(times) - 0.5))
+            mu = torch.sigmoid(self.alpha * times)
+            # print(mu)
             eta_mod = self.a / (self.a + self.b * times)
             # eta_mod = 1 - mu
             etas = torch.tensor(self.etas)
@@ -46,12 +48,12 @@ class SirOptimizer(Optimizer):
                 # print(p.grad)
 
                 d_p = parameter.grad.data
-                update = [torch.zeros(1)]
+                update = [torch.tensor(-etas[idx][0] * d_p[0])]
                 for t in range(1, d_p.size(0)):
                     momentum_term = -etas[idx][t] * d_p[t] + mu[t] * update[t-1]
                     update.append(momentum_term)
 
-                print("UPDATE: {}".format(update))
+                # print("UPDATE: {}".format(update))
                 # parameter.data.add_(-self.etas[idx] * d_p)
                 parameter.data.add_(torch.tensor(update))
 
@@ -64,11 +66,12 @@ class SirEq:
         self.population = population
         self.init_cond = init_cond
 
-        self.b_reg = kwargs.get("b_reg", 1e7)
-        self.c_reg = kwargs.get("c_reg", 1e7)
-        self.d_reg = kwargs.get("d_reg", 1e7)
-        self.bc_reg = kwargs.get("bc_reg", 1e7)
-        self.derivative_reg = kwargs.get("derivative_reg", 1e5)
+        self.b_reg = kwargs.get("b_reg", 1e4)
+        self.c_reg = kwargs.get("c_reg", 1e4)
+        self.d_reg = kwargs.get("d_reg", 1e4)
+        self.bc_reg = kwargs.get("bc_reg", 1e4)
+        self.der_1st_reg = kwargs.get("derivative_reg", 1e4)
+        self.der_2nd_reg = kwargs.get("der_2nd_reg", 0.0)
 
         if mode == "dynamic":
             self.diff_eqs = self.dynamic_diff_eqs
@@ -153,13 +156,13 @@ class SirEq:
         loss_derivative_beta = loss_derivative(self.beta)
         loss_derivative_gamma = loss_derivative(self.gamma)
         loss_derivative_delta = loss_derivative(self.delta)
-        loss_derivative_total = loss_derivative_beta + loss_derivative_gamma + loss_derivative_delta
+        loss_derivative_total =self.der_1st_reg * (loss_derivative_beta + loss_derivative_gamma + loss_derivative_delta)
 
         # compute losses due to second derivative
         loss_2nd_derivative_beta = loss_second_derivative(self.beta)
         loss_2nd_derivative_gamma = loss_second_derivative(self.gamma)
         loss_2nd_derivative_delta = loss_second_derivative(self.delta)
-        loss_2nd_derivative_total = loss_2nd_derivative_beta + loss_2nd_derivative_gamma + loss_2nd_derivative_delta
+        loss_2nd_derivative_total = self.der_2nd_reg * (loss_2nd_derivative_beta + loss_2nd_derivative_gamma + loss_2nd_derivative_delta)
 
         # REGULARIZATION TO PREVENT b,c,d from going out of bounds
         loss_reg_beta = self.b_reg * (loss_gte_one(self.beta) + loss_lte_zero(self.beta))
@@ -168,9 +171,8 @@ class SirEq:
 
         # compute total loss
         total_loss = mse_loss + \
-            loss_reg_beta + loss_reg_gamma + loss_reg_delta + \
-            -loss_2nd_derivative_total
-        # loss_derivative_total
+                     loss_reg_beta + loss_reg_gamma + loss_reg_delta + \
+                     loss_derivative_total - loss_2nd_derivative_total
 
         return mse_loss, torch.mean(total_loss)
 
@@ -231,7 +233,7 @@ class SirEq:
 
         # todo: implement custom optimizer
         # optimizer = SGD(sir.params(), lr=1e-9)
-        optimizer = SirOptimizer(sir.params(), [lr_b, lr_g, lr_d], alpha=1 / 10, a=1, b=0.05)
+        optimizer = SirOptimizer(sir.params(), [lr_b, lr_g, lr_d], alpha=1 / 10, a=1.0, b=0.05)
 
         for i in range(n_epochs):
             w_hat, _ = sir.inference(time_grid)
@@ -263,6 +265,7 @@ class SirEq:
                 patience += 1
             elif n_lr_updts < max_n_lr_updts:
                 # when patience is over reduce learning rate by 2
+                print("Reducing learning rate at step: %d" % i)
                 lr_b, lr_g, lr_d = lr_b / 2, lr_g / 2, lr_d / 2
                 optimizer.etas = [lr_b, lr_g, lr_d]
                 n_lr_updts += 1

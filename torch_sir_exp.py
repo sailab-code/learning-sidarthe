@@ -6,7 +6,7 @@ import torch
 
 def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epochs, name, train_size):
 
-    df_file = os.path.join(os.getcwd(), "COVID-19", "dati-regioni", "dpc-covid19-ita-regioni.csv")
+    df_file = os.path.join(os.getcwd(), "dati-regioni", "dpc-covid19-ita-regioni.csv")
     # df_file = os.path.join(os.getcwd(), "train.csv")
     area = [region]  # list(df["denominazione_regione"].unique())
     area_col_name = "denominazione_regione"  # "Country/Region"
@@ -144,10 +144,11 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     pl.savefig(os.path.join(exp_path, exp_prefix + "sliding_W_fit.png"))
     pl.show()
 
+
 if __name__ == "__main__":
-    n_epochs = 1000
+    n_epochs = 3501
     region = "Lombardia"
     population = {"Lombardia": 1e7, "Emilia-Romagna": 4.45e6, "Veneto": 4.9e6, "Piemonte": 4.36e6}
     beta_t, gamma_t, delta_t = 0.81, 0.29, 0.03
-    lr_b, lr_g, lr_d = 0.0001, 0.00001, 1e-7
+    lr_b, lr_g, lr_d = 0.05, 0.01, 1e-7
     exp(region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, n_epochs, name="first_run", train_size=40)
