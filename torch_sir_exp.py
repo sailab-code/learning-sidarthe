@@ -6,7 +6,7 @@ import torch
 
 def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epochs, name, train_size):
 
-    df_file = os.path.join(os.getcwd(), "dati-regioni", "dpc-covid19-ita-regioni.csv")
+    df_file = os.path.join(os.getcwd(), "COVID-19", "dati-regioni", "dpc-covid19-ita-regioni.csv")
     # df_file = os.path.join(os.getcwd(), "train.csv")
     area = [region]  # list(df["denominazione_regione"].unique())
     area_col_name = "denominazione_regione"  # "Country/Region"
@@ -35,10 +35,10 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     exp_prefix = area[0] + "_b" + str(beta_t0) + "_g" + str(gamma_t0) + "_d" + str(delta_t0) + \
                  "_lrb" + str(lr_b) + "_lrg" + str(lr_g) + "_lrd" + str(lr_d)
 
-
-    beta = [beta_t0 for _ in range(train_size)]
-    gamma = [gamma_t0 for _ in range(train_size)]
-    delta = [delta_t0 for _ in range(train_size)]
+    minus = 0
+    beta = [beta_t0 for _ in range(train_size - minus)]
+    gamma = [gamma_t0 for _ in range(train_size - minus)]
+    delta = [delta_t0 for _ in range(train_size - minus)]
 
     # BETA, GAMMA, DELTA plots
     fig, ax = pl.subplots()
@@ -146,7 +146,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
 
 
 if __name__ == "__main__":
-    n_epochs = 3501
+    n_epochs = 5001
     region = "Lombardia"
     population = {"Lombardia": 1e7, "Emilia-Romagna": 4.45e6, "Veneto": 4.9e6, "Piemonte": 4.36e6}
     beta_t, gamma_t, delta_t = 0.81, 0.29, 0.03
