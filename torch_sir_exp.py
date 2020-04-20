@@ -3,6 +3,7 @@ from utils.data_utils import select_data
 import os
 import pylab as pl
 import torch
+import numpy as np
 
 def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epochs, name, train_size):
 
@@ -40,6 +41,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     gamma = [gamma_t0 for _ in range(train_size - minus)]
     delta = [delta_t0 for _ in range(train_size - minus)]
 
+
     # BETA, GAMMA, DELTA plots
     fig, ax = pl.subplots()
     pl.title("Beta, Gamma, Delta over time")
@@ -60,8 +62,8 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
 
     sir = SirEq.train(target=w_target, y0 = y_target[0], z0=0., **dy_params)
     w_hat, sol = sir.inference(torch.arange(dy_params["t_start"], max(100, dataset_size)))
-    train_risk, _ = sir.loss(w_hat[dy_params["t_start"]:train_size], w_target[dy_params["t_start"]:train_size])
-    dataset_risk, _ = sir.loss(w_hat[dy_params["t_start"]:dataset_size], w_target[dy_params["t_start"]:dataset_size])
+    train_risk, _ = sir.loss(w_hat[dy_params["t_start"]+1:train_size+1], w_target[dy_params["t_start"]:train_size])
+    dataset_risk, _ = sir.loss(w_hat[dy_params["t_start"]+1:dataset_size+1], w_target[dy_params["t_start"]:dataset_size])
 
     log_file = os.path.join(exp_path, exp_prefix + "sir_" + area[0] + "_results.txt")
     with open(log_file, "w") as f:
@@ -146,7 +148,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
 
 
 if __name__ == "__main__":
-    n_epochs = 5001
+    n_epochs = 2001
     region = "Lombardia"
     population = {"Lombardia": 1e7, "Emilia-Romagna": 4.45e6, "Veneto": 4.9e6, "Piemonte": 4.36e6}
     beta_t, gamma_t, delta_t = 0.81, 0.29, 0.03
