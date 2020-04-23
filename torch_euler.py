@@ -28,7 +28,7 @@ class TimeSeries:
         if t < 0:
             x = self.omega(t)
         else:
-            x = self.values[(self.time_grid[self.time_grid == t]).long()][0]
+            x = self.values[self.time_grid[:self.values.shape[0]] == t][0]
 
         return x
 
@@ -51,14 +51,14 @@ def euler(f, omega, time_grid):
         t_i = time_grid[i]
         t_next = time_grid[i+1]
         y_i = values[i]
-        t_series = TimeSeries(time_grid, values, omega)
         dt = torch.tensor([t_next - t_i])
+        t_series = TimeSeries(time_grid, values, omega)
         dy = torch.stack(tuple(f_t.unsqueeze(0) for f_t in f(t_i, t_series, dt)), dim=1) * dt
         y_next = y_i + dy
         #y_next = y_next.unsqueeze(0)
         values = torch.cat((values, y_next), dim=0)
 
-    return values[1:]
+    return values
 
 N = 1
 gamma = torch.tensor([0.3] * N, requires_grad=True)
