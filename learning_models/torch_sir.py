@@ -1,5 +1,6 @@
 import numpy
 import torch
+import torch.nn as nn
 from torch.optim import SGD
 from torch.optim.optimizer import Optimizer
 from torch_euler import euler
@@ -79,10 +80,26 @@ class SirEq:
         self.der_1st_reg = kwargs.get("derivative_reg", 1e4)
         self.der_2nd_reg = kwargs.get("der_2nd_reg", 1e1)
 
+        use_alpha = kwargs.get("use_alpha", False)
+        input_size = kwargs.get("mlp_input", 4)
+        hidden_size = kwargs.get("mlp_hidden", 3)
+        self.init_alpha(use_alpha, input_size=input_size, hidden_size=hidden_size)
+
         if mode == "dynamic":
             self.diff_eqs = self.dynamic_diff_eqs
         else:
             self.diff_eqs = self.static_diff_eqs
+
+    def get_policy_code(self, t):
+        policy_code = torch.zeros(4)
+        if 6 < t <= 13:
+            policy_code[0] = 1.0
+        elif 13 < t <= 27:
+            policy_code[1] = 1.0
+        elif t > 27:
+            policy_code[2] = 1.0
+
+        return policy_code
 
     def omega(self, t):
         if t >= 0:
@@ -94,11 +111,13 @@ class SirEq:
         X_t = X(T)
         t = T.long()
 
+        policy_code = self.get_policy_code(t)
+
         if t < self.beta.shape[0]:
-            beta = self.beta[t] / self.population
+            beta = (self.beta[t] / self.population) * self.alpha(policy_code).squeeze()
             gamma = self.gamma[t]
         else:
-            beta = self.beta[-1] / self.population
+            beta = (self.beta[-1] / self.population) * self.alpha(policy_code).squeeze()
             gamma = self.gamma[-1]
 
         return [
@@ -111,7 +130,9 @@ class SirEq:
         X_t = X(T)
         t = T.long()
 
-        beta = self.beta
+        policy_code = self.get_policy_code(t)
+
+        beta = self.alpha(policy_code) * self.beta / self.population
         gamma = self.gamma
 
         return [
@@ -119,6 +140,19 @@ class SirEq:
             beta * X_t[0] * X_t[1] - gamma * X_t[1],
             gamma * X_t[1]
         ]
+
+    def init_alpha(self, use_alpha, input_size, hidden_size, output_size=1):
+        """mlp"""
+
+        if use_alpha:
+            self.alpha = nn.Sequential(nn.Linear(in_features=input_size, out_features=hidden_size),
+                                       nn.Linear(in_features=hidden_size, out_features=output_size),
+                                       nn.Sigmoid())
+        else:
+            self.alpha = self._foo_alpha
+
+    def _foo_alpha(self, policy):
+        return torch.tensor([1.0])
 
     def loss(self, w_hat, w_target, y_hat=None, y_target=None):
         if isinstance(w_target, numpy.ndarray):
@@ -133,7 +167,7 @@ class SirEq:
         def first_derivative_backward(f_x, f_x_minus_h, h):
             return torch.pow((f_x - f_x_minus_h) / h, 2)
 
-        h = 1 # todo: retrieve sampling
+        h = 1  # todo: retrieve sampling
 
         def loss_derivative(parameter: torch.Tensor):
             forward = first_derivative_forward(parameter[1], parameter[0], h).unsqueeze(0)
@@ -203,11 +237,12 @@ class SirEq:
 
         # compute total loss
         y_target_scale = 0.0
-        total_loss = ((1-y_target_scale) * w_mse_loss) +\
+        mse_loss = ((1.0 - y_target_scale) * w_mse_loss) + y_target_scale*y_mse_loss
+        total_loss = mse_loss +\
                      loss_reg_beta + loss_reg_gamma + loss_reg_delta + \
                      loss_1st_derivative_total + loss_2nd_derivative_total
 
-        return w_mse_loss, torch.mean(total_loss)
+        return mse_loss, torch.mean(total_loss)
 
     def inference(self, time_grid):
         sol = euler(self.diff_eqs, self.omega, time_grid)
@@ -244,11 +279,12 @@ class SirEq:
         n_epochs = params.get("n_epochs", 2000)
         derivative_reg = params.get("derivative_reg", 1e5)
         der_2nd_reg = params.get("der_2nd_reg", 1e5)
+        use_alpha = params.get("use_alpha", True)
 
         t_inc = 1
         lr_b, lr_g, lr_d = params["lr_b"], params["lr_g"], params["lr_d"]
 
-        time_grid = torch.arange(t_start, t_end, t_inc)
+        time_grid = torch.arange(t_start, t_end+t_inc, t_inc)
         w_target = torch.tensor(w_target[t_start:t_end], dtype=torch.float32)
         y_target = torch.tensor(y_target[t_start:t_end], dtype=torch.float32)
 
@@ -263,12 +299,12 @@ class SirEq:
 
         init_cond = (S0, I0, Z0)  # initialization of SIR parameters (Suscettible, Infected, Recovered)
         sir = SirEq(beta, gamma, delta, population, init_cond,
-                    b_reg=b_reg, c_reg=c_reg, d_reg=d_reg, derivative_reg=derivative_reg, der_2nd_reg=der_2nd_reg)
+                    b_reg=b_reg, c_reg=c_reg, d_reg=d_reg, derivative_reg=derivative_reg, der_2nd_reg=der_2nd_reg, use_alpha=use_alpha)
 
         # early stopping stuff
         best = 1e12
         thresh = 1e-6
-        patience, n_lr_updts, max_no_improve, max_n_lr_updts = 0, 0, 50, 10
+        patience, n_lr_updts, max_no_improve, max_n_lr_updts = 0, 0, 25, 25
         best_beta, best_gamma, best_delta = sir.beta, sir.gamma, sir.delta
 
         # todo: implement custom optimizer
@@ -293,6 +329,7 @@ class SirEq:
                 print("beta: " + str(sir.beta))
                 print("gamma: " + str(sir.gamma))
                 print("delta: " + str(sir.delta))
+                # print("alpha: " + str([sir.alpha(sir.get_policy_code(t)).detach().numpy() for t in range(sir.beta.shape[0])]))
                 # print(Z0)
                 # print(w_hat[-1])
 
@@ -308,7 +345,7 @@ class SirEq:
             elif n_lr_updts < max_n_lr_updts:
                 # when patience is over reduce learning rate by 2
                 print("Reducing learning rate at step: %d" % i)
-                lr_frac = 1.0
+                lr_frac = 2.0
                 lr_b, lr_g, lr_d = lr_b / lr_frac, lr_g / lr_frac, lr_d / lr_frac
                 optimizer.etas = [lr_b, lr_g, lr_d]
                 n_lr_updts += 1
@@ -319,14 +356,14 @@ class SirEq:
                 break
 
         print("Best: " + str(best))
-        print(beta)
-        print(gamma)
-        print(delta)
+        print(sir.beta)
+        print(sir.gamma)
+        print(sir.delta)
         print(best_beta)
         print(best_gamma)
         print(best_delta)
         print("\n")
 
-        # sir.set_params(best_beta, best_gamma, best_delta)
+        sir.set_params(best_beta, best_gamma, best_delta)
 
         return sir, losses

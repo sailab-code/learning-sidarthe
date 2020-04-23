@@ -3,6 +3,7 @@ import pylab as pl
 # import matplotlib.pyplot as pl
 import torch
 import datetime
+import numpy as np
 
 from learning_models.torch_sir import SirEq
 from utils.data_utils import select_data
@@ -125,14 +126,19 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     gamma_pl = Curve(pl_x, sir.gamma.detach().numpy(), '-r', "$\gamma$")
     delta_pl = Curve(pl_x, [sir.delta.detach().numpy()]*train_size, '-b', "$\delta$")
 
+    alpha = np.concatenate([sir.alpha(sir.get_policy_code(t)).detach().numpy() for t in range(len(sir.beta))], axis=0)
+    alpha_pl = Curve(pl_x, alpha, '-', "$\\alpha$")
+    beta_alpha_pl = Curve(pl_x, alpha * sir.beta.detach().numpy(), '-', "$\\alpha \cdot \\beta$")
+
     bgd_pl_title = "$\\beta, \gamma, \delta$  ({}".format(str(area[0])) + str(")")
 
     bgd_pl_path = os.path.join(exp_path, exp_prefix + "bcd_over_time.pdf")
-    generic_plot([beta_pl, gamma_pl, delta_pl], bgd_pl_title, bgd_pl_path, formatter=format_xtick)
+    generic_plot([beta_pl, gamma_pl, delta_pl, alpha_pl, beta_alpha_pl], bgd_pl_title, bgd_pl_path, formatter=format_xtick)
 
     # R0
     pl_x = list(range(len(beta)))
-    r0_pl = Curve(pl_x, sir.beta.detach().numpy()/sir.gamma.detach().numpy(), '-', label="$R_0$")
+    alpha = np.concatenate([sir.alpha(sir.get_policy_code(t)).detach().numpy() for t in range(len(sir.beta))], axis=0)
+    r0_pl = Curve(pl_x, (alpha * sir.beta.detach().numpy())/sir.gamma.detach().numpy(), '-', label="$R_0$")
     thresh_r0_pl = Curve(pl_x, [1.0]*len(pl_x), '-', color="magenta")
 
     r0_pl_title = '$R_0$  ({}'.format(str(area[0])) + str(")")
