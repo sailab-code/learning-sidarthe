@@ -52,17 +52,16 @@ class SirOptimizer(Optimizer):
                 # update = torch.cumsum(lr_t * mu_t, dim=0)
 
                 d_p = parameter.grad.data
-                """
                 update = [torch.tensor(-etas[idx][0] * d_p[0])]
                 for t in range(1, d_p.size(0)):
                     momentum_term = -etas[idx][t] * d_p[t] + mu[t] * update[t-1]
                     update.append(momentum_term)
-                """
+
 
 
                 # print("UPDATE: {}".format(update))
-                parameter.data.add_(-self.etas[idx] * d_p)
-                #parameter.data.add_(torch.tensor(update))
+                # parameter.data.add_(-self.etas[idx] * d_p)
+                parameter.data.add_(torch.tensor(update))
 
 
 class SirEq:
@@ -121,7 +120,7 @@ class SirEq:
             gamma * X_t[1]
         ]
 
-    def loss(self, w_hat, w_target):
+    def loss(self, w_hat, w_target, y_hat=None, y_target=None):
         if isinstance(w_target, numpy.ndarray):
             w_target = torch.tensor(w_target, dtype=w_hat.dtype)
 
@@ -178,20 +177,22 @@ class SirEq:
             return central
             # return torch.cat((forward, central, backward), dim=0)
 
+        w_mse_loss = torch.sqrt(2 * torch.mean(0.5 * torch.pow((w_hat - w_target), 2)))
 
-
-        mse_loss = torch.sqrt(2 * torch.mean(0.5 * torch.pow((w_hat - w_target), 2)))
+        if y_hat is not None and y_target is not None:
+            y_mse_loss = torch.sqrt(2 * torch.mean(0.5 * torch.pow((y_hat - y_target), 2)))
+        else:
+            y_mse_loss = 0.0
 
         # compute losses due to derivative not close to zero near the window limits
         loss_1st_derivative_beta = loss_derivative(self.beta)
         loss_1st_derivative_gamma = loss_derivative(self.gamma)
-        loss_1st_derivative_delta = 0.0 # loss_derivative(self.delta)
+        loss_1st_derivative_delta = 0.0  # loss_derivative(self.delta)
         loss_1st_derivative_total = self.der_1st_reg * torch.mean(loss_1st_derivative_beta + loss_1st_derivative_gamma + loss_1st_derivative_delta)
 
         # compute losses due to second derivative
         loss_2nd_derivative_beta = loss_second_derivative(self.beta)
         loss_2nd_derivative_gamma = loss_second_derivative(self.gamma)
-
         loss_2nd_derivative_delta = 0.0  # loss_second_derivative(self.delta)
         loss_2nd_derivative_total = self.der_2nd_reg * torch.mean(loss_2nd_derivative_beta + loss_2nd_derivative_gamma + loss_2nd_derivative_delta)
 
@@ -201,11 +202,12 @@ class SirEq:
         loss_reg_delta = self.d_reg * (loss_gte_one(self.delta) + loss_lte_zero(self.delta))
 
         # compute total loss
-        total_loss = mse_loss + \
+        y_target_scale = 0.0
+        total_loss = ((1-y_target_scale) * w_mse_loss) +\
                      loss_reg_beta + loss_reg_gamma + loss_reg_delta + \
                      loss_1st_derivative_total + loss_2nd_derivative_total
 
-        return mse_loss, torch.mean(total_loss)
+        return w_mse_loss, torch.mean(total_loss)
 
     def inference(self, time_grid):
         sol = euler(self.diff_eqs, self.omega, time_grid)
@@ -218,13 +220,18 @@ class SirEq:
 
         w_hat = delta * z_hat
 
-        return w_hat, sol
+        return w_hat, sol[:, 1], sol
 
     def params(self):
         return [self.beta, self.gamma, self.delta]
 
+    def set_params(self, beta, gamma, delta):
+        self.beta = beta
+        self.gamma = gamma
+        self.delta = delta
+
     @staticmethod
-    def train(target, y0, z0, **params):
+    def train(w_target, y_target, **params):
         beta = params["beta"]
         gamma = params["gamma"]
         delta = params["delta"]
@@ -234,7 +241,6 @@ class SirEq:
         b_reg = params.get("b_reg", 1e7)
         c_reg = params.get("c_reg", 1e7)
         d_reg = params.get("d_reg", 1e8)
-        bc_reg = params.get("bc_reg", 1e7)
         n_epochs = params.get("n_epochs", 2000)
         derivative_reg = params.get("derivative_reg", 1e5)
         der_2nd_reg = params.get("der_2nd_reg", 1e5)
@@ -242,37 +248,38 @@ class SirEq:
         t_inc = 1
         lr_b, lr_g, lr_d = params["lr_b"], params["lr_g"], params["lr_d"]
 
-        w_target = torch.tensor(target[t_start:t_end], dtype=torch.float32)
-        time_grid = torch.arange(t_start, t_end+t_inc, t_inc)
+        time_grid = torch.arange(t_start, t_end, t_inc)
+        w_target = torch.tensor(w_target[t_start:t_end], dtype=torch.float32)
+        y_target = torch.tensor(y_target[t_start:t_end], dtype=torch.float32)
 
         # init parameters
-        epsilon = y0 / population
-        epsilon_z = z0 / population
+        epsilon = y_target[t_start].item() / population
+        epsilon_z = w_target[t_start].item() / population
         S0 = 1 - (epsilon + epsilon_z)
         I0 = epsilon
-        Z0 = epsilon_z
         S0 = S0 * population
         I0 = I0 * population
-        Z0 = w_target[0].item()
+        Z0 = epsilon_z
+
         init_cond = (S0, I0, Z0)  # initialization of SIR parameters (Suscettible, Infected, Recovered)
         sir = SirEq(beta, gamma, delta, population, init_cond,
                     b_reg=b_reg, c_reg=c_reg, d_reg=d_reg, derivative_reg=derivative_reg, der_2nd_reg=der_2nd_reg)
 
         # early stopping stuff
         best = 1e12
-        thresh = 1e-5
-        patience, n_lr_updts, max_no_improve, max_n_lr_updts = 0, 0, 25, 20
+        thresh = 1e-6
+        patience, n_lr_updts, max_no_improve, max_n_lr_updts = 0, 0, 50, 10
         best_beta, best_gamma, best_delta = sir.beta, sir.gamma, sir.delta
 
         # todo: implement custom optimizer
         # optimizer = SGD(sir.params(), lr=1e-9)
-        optimizer = SirOptimizer(sir.params(), [lr_b, lr_g, lr_d], alpha=1 / 7, a=1.0, b=0.05)
+        optimizer = SirOptimizer(sir.params(), [lr_b, lr_g, lr_d], alpha=1 / 7, a=3.0, b=0.05)
 
         losses = []
         for i in range(n_epochs):
-            w_hat, _ = sir.inference(time_grid)
+            w_hat, y_hat, _ = sir.inference(time_grid)
             optimizer.zero_grad()
-            mse_loss, total_loss = sir.loss(w_hat, w_target)
+            mse_loss, total_loss = sir.loss(w_hat, w_target, y_hat, y_target)
 
             total_loss.backward()
             # mse_loss.backward()
@@ -283,25 +290,26 @@ class SirEq:
             if i % 50 == 0:
                 losses.append(mse_loss.detach().numpy())
                 print("Loss at step %d: %.7f" % (i, mse_loss))
-                print("beta: " + str(sir.beta.grad))
-                print("gamma: " + str(sir.gamma.grad))
-                print("delta: " + str(sir.delta.grad))
+                print("beta: " + str(sir.beta))
+                print("gamma: " + str(sir.gamma))
+                print("delta: " + str(sir.delta))
                 # print(Z0)
                 # print(w_hat[-1])
 
             if mse_loss + thresh < best:
                 # maintains the best solution found so far
                 best = mse_loss
-                best_beta = sir.beta
-                best_gamma = sir.gamma
-                best_delta = sir.delta
+                best_beta = sir.beta.clone()
+                best_gamma = sir.gamma.clone()
+                best_delta = sir.delta.clone()
                 patience = 0
             elif patience < max_no_improve:
                 patience += 1
             elif n_lr_updts < max_n_lr_updts:
                 # when patience is over reduce learning rate by 2
                 print("Reducing learning rate at step: %d" % i)
-                lr_b, lr_g, lr_d = lr_b / 2, lr_g / 2, lr_d / 2
+                lr_frac = 1.0
+                lr_b, lr_g, lr_d = lr_b / lr_frac, lr_g / lr_frac, lr_d / lr_frac
                 optimizer.etas = [lr_b, lr_g, lr_d]
                 n_lr_updts += 1
                 patience = 0
@@ -311,9 +319,14 @@ class SirEq:
                 break
 
         print("Best: " + str(best))
+        print(beta)
+        print(gamma)
+        print(delta)
         print(best_beta)
         print(best_gamma)
         print(best_delta)
         print("\n")
+
+        # sir.set_params(best_beta, best_gamma, best_delta)
 
         return sir, losses

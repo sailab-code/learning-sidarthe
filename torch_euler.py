@@ -46,7 +46,6 @@ def euler(f, omega, time_grid):
     time_grid = time_grid.to(y0[0])
     values = y0.clone()
 
-
     for i in range(0, time_grid.shape[0] - 1):
         t_i = time_grid[i]
         t_next = time_grid[i+1]
@@ -58,7 +57,8 @@ def euler(f, omega, time_grid):
         #y_next = y_next.unsqueeze(0)
         values = torch.cat((values, y_next), dim=0)
 
-    return values[1:]
+    # return values[1:]
+    return values
 
 N = 1
 gamma = torch.tensor([0.3] * N, requires_grad=True)

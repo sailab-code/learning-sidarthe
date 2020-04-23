@@ -11,7 +11,7 @@ from utils.visualization_utils import plot_sir_dynamic, generic_plot, Curve, for
 
 def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epochs, name, train_size, derivative_reg, der_2nd_reg):
 
-    df_file = os.path.join(os.getcwd(), "COVID-19", "dati-regioni", "dpc-covid19-ita-regioni.csv")
+    df_file = os.path.join(os.getcwd(), "dati-regioni", "dpc-covid19-ita-regioni.csv")
     # df_file = os.path.join(os.getcwd(), "train.csv")
     area = [region]  # list(df["denominazione_regione"].unique())
     area_col_name = "denominazione_regione"  # "Country/Region"
@@ -58,7 +58,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     minus = 0
     beta = [beta_t0 for _ in range(train_size - minus)]
     gamma = [gamma_t0 for _ in range(train_size - minus)]
-    delta = [delta_t0 for _ in range(train_size - minus)]
+    delta = [delta_t0]
 
     # BETA, GAMMA, DELTA plots
     pl_x = list(range(len(beta)))
@@ -80,10 +80,12 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
         "der_2nd_reg": der_2nd_reg
     }
 
-    sir, losses = SirEq.train(target=w_target, y0 = y_target[0], z0=0., **dy_params)
-    w_hat, sol = sir.inference(torch.arange(dy_params["t_start"], max(100, dataset_size)))
-    train_risk, _ = sir.loss(w_hat[dy_params["t_start"]:train_size], torch.tensor(w_target[dy_params["t_start"]:train_size], dtype=torch.float32))
-    dataset_risk, _ = sir.loss(w_hat[dy_params["t_start"]:dataset_size], torch.tensor(w_target[dy_params["t_start"]:dataset_size], dtype=torch.float32))
+    sir, losses = SirEq.train(w_target=w_target, y_target=y_target, **dy_params)
+    w_hat, y_hat, sol = sir.inference(torch.arange(dy_params["t_start"], max(100, dataset_size)))
+    train_risk, _ = sir.loss(w_hat[dy_params["t_start"]:train_size], torch.tensor(w_target[dy_params["t_start"]:train_size], dtype=torch.float32),
+                             y_hat[dy_params["t_start"]:train_size], torch.tensor(y_target[dy_params["t_start"]:train_size], dtype=torch.float32))
+    dataset_risk, _ = sir.loss(w_hat[dy_params["t_start"]:dataset_size], torch.tensor(w_target[dy_params["t_start"]:dataset_size], dtype=torch.float32),
+                               y_hat[dy_params["t_start"]:dataset_size], torch.tensor(y_target[dy_params["t_start"]:dataset_size], dtype=torch.float32))
 
     log_file = os.path.join(exp_path, exp_prefix + "sir_" + area[0] + "_results.txt")
     with open(log_file, "w") as f:
@@ -185,7 +187,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
 
 
 if __name__ == "__main__":
-    n_epochs = 501
+    n_epochs = 5001
     # Veneto b0.8_g0.35_d0.015_lrb0.05_lrg0.01_lrd0.0005_ts40_st_der1000.0_nd_der0.0
     # Lombardia b0.81_g0.2_d0.02_lrb0.05_lrg0.01_lrd1e-05_ts40_st_der1000.0_nd_der10000.0
     # Emilia-Romagna b0.8_g0.35_d0.015_lrb0.05_lrg0.01_lrd5e-05_ts40_st_der1000.0_nd_der0.0
@@ -194,10 +196,10 @@ if __name__ == "__main__":
                   "Toscana": 3.73e6, "Umbria": 0.882e6, "Lazio": 5.88e6, "Marche": 1.525e6, "Campania": 5.802e6,
                   "Puglia": 1.551e6,
                   "Liguria": 4.029e6}
-    beta_ts, gamma_ts, delta_ts = [0.37], [0.2], [0.025]
+    beta_ts, gamma_ts, delta_ts = [0.81], [0.2], [0.025]
     lr_bs, lr_gs, lr_ds = [5e-2], [1e-2], [2e-5]
     train_sizes = list(range(40, 41, 5))
-    derivative_regs = [1e3]  # [0.0, 1e2, 1e3]
+    derivative_regs = [0.0]  # [0.0, 1e2, 1e3]
     der_2nd_regs = [0.0]  # [0.0, 1e2, 1e3]
 
     import itertools
