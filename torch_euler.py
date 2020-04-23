@@ -10,7 +10,7 @@ class TimeSeries:
         """
         Constructs a time series
 
-        :param time_grid: array starting with 0 and containing the times at which the values in param values are defined
+        :param time_grid: array starting with 0 and containing the times at which the values in param values are defined (don't use time increase with odd exponent, e.g 1e-1 is wrong)
         :param values: values assumed by the time series
         :param omega: callable in the form of f(t) which returns the values for t < 0
         """
@@ -42,7 +42,7 @@ def euler(f, omega, time_grid):
     :return: 1-Dim tensor the same size as time_grid with values computed on the time grid
     """
 
-    y0 = torch.tensor([omega(0)])
+    y0 = torch.tensor([omega(0)], requires_grad=True)
     time_grid = time_grid.to(y0[0])
     values = y0.clone()
 
@@ -58,7 +58,7 @@ def euler(f, omega, time_grid):
         #y_next = y_next.unsqueeze(0)
         values = torch.cat((values, y_next), dim=0)
 
-    return values
+    return values[1:]
 
 N = 1
 gamma = torch.tensor([0.3] * N, requires_grad=True)

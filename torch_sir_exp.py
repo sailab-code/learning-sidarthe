@@ -11,7 +11,7 @@ from utils.visualization_utils import plot_sir_dynamic, generic_plot, Curve, for
 
 def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epochs, name, train_size, derivative_reg, der_2nd_reg):
 
-    df_file = os.path.join(os.getcwd(), "dati-regioni", "dpc-covid19-ita-regioni.csv")
+    df_file = os.path.join(os.getcwd(), "COVID-19", "dati-regioni", "dpc-covid19-ita-regioni.csv")
     # df_file = os.path.join(os.getcwd(), "train.csv")
     area = [region]  # list(df["denominazione_regione"].unique())
     area_col_name = "denominazione_regione"  # "Country/Region"
@@ -55,10 +55,10 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
                  "_lrb" + str(lr_b) + "_lrg" + str(lr_g) + "_lrd" + str(lr_d) + "_ts" + str(train_size) \
                  + "_st_der" + str(derivative_reg) + "_nd_der" + str(der_2nd_reg)
 
-    beta = [beta_t0 for _ in range(train_size)]
-    gamma = [gamma_t0 for _ in range(train_size)]
-    # delta = [delta_t0 for _ in range(train_size)]
-    delta = [delta_t0]
+    minus = 0
+    beta = [beta_t0 for _ in range(train_size - minus)]
+    gamma = [gamma_t0 for _ in range(train_size - minus)]
+    delta = [delta_t0 for _ in range(train_size - minus)]
 
     # BETA, GAMMA, DELTA plots
     pl_x = list(range(len(beta)))
