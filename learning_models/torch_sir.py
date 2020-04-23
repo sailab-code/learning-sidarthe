@@ -1,3 +1,5 @@
+import time
+
 import numpy
 import torch
 from torch.optim import SGD
@@ -50,7 +52,7 @@ class SirOptimizer(Optimizer):
 
                 d_p = parameter.grad.data
 
-                update = [torch.tensor(-etas[idx][0] * d_p[0])]
+                update = [-etas[idx][0] * d_p[0]]
                 for t in range(1, d_p.size(0)):
                     momentum_term = -etas[idx][t] * d_p[t] + mu[t] * update[t-1]
                     update.append(momentum_term)
@@ -67,7 +69,7 @@ class SirEq:
         self.gamma = torch.tensor(gamma, requires_grad=True)
         self.delta = torch.tensor(delta, requires_grad=True)
         self.population = population
-        self.init_cond = torch.tensor(init_cond)
+        self.init_cond = init_cond
 
         self.b_reg = kwargs.get("b_reg", 1e4)
         self.c_reg = kwargs.get("c_reg", 1e4)
@@ -87,8 +89,8 @@ class SirEq:
         else:
             return [1, 0, 0]
 
-    def dynamic_diff_eqs(self, T, y):
-        X_t = y
+    def dynamic_diff_eqs(self, T, X, dt):
+        X_t = X(T)
         t = T.long()
 
         if t < self.beta.shape[0]:
@@ -209,7 +211,7 @@ class SirEq:
 
     def inference(self, time_grid):
         time_grid = time_grid.to(dtype=torch.float32)
-        sol = odeint(self.diff_eqs, self.init_cond, time_grid)
+        sol = euler(self.diff_eqs, self.omega, time_grid)
         z_hat = sol[:, 2]
 
         delta = self.delta
@@ -237,7 +239,7 @@ class SirEq:
         d_reg = params.get("d_reg", 1e7)
         bc_reg = params.get("bc_reg", 1e7)
         n_epochs = params.get("n_epochs", 2000)
-        t_inc = 1
+        t_inc = params.get("t_inc", 1)
         lr_b, lr_g, lr_d = params["lr_b"], params["lr_g"], params["lr_d"]
 
         w_target = torch.tensor(target[t_start:t_end], dtype=torch.float32)
@@ -266,10 +268,12 @@ class SirEq:
         # optimizer = SGD(sir.params(), lr=1e-9)
         optimizer = SirOptimizer(sir.params(), [lr_b, lr_g, lr_d], alpha=1 / 10, a=1.0, b=0.05)
 
+        time_start = time.time()
         for i in range(n_epochs):
             w_hat, _ = sir.inference(time_grid)
+            w_hat = w_hat[slice(t_start,int(t_end/t_inc),int(1/t_inc))]
             optimizer.zero_grad()
-            mse_loss, total_loss = sir.loss(w_hat[1:], w_target)
+            mse_loss, total_loss = sir.loss(w_hat, w_target)
 
             total_loss.backward()
             # mse_loss.backward()
@@ -282,6 +286,9 @@ class SirEq:
                 print("beta: " + str(sir.beta.grad))
                 print("gamma: " + str(sir.gamma.grad))
                 print("delta: " + str(sir.delta.grad))
+                time_step = time.time() - time_start
+                time_start = time.time()
+                print(f"Average time for epoch: {time_step / 50}")
                 # print(Z0)
                 # print(w_hat[-1])
 

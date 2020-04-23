@@ -52,18 +52,23 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     ax.margins(0.05)
     ax.legend()
     pl.savefig(os.path.join(exp_path, exp_prefix + "initial_params_bcd_over_time.png"))
-
+    t_inc = 0.1
     dy_params = {
         "beta": beta, "gamma": gamma, "delta": delta, "n_epochs": n_epochs,
          "population": population,
          "t_start": 0, "t_end": train_size,
-         "lr_b": lr_b, "lr_g": lr_g, "lr_d": lr_d
+         "lr_b": lr_b, "lr_g": lr_g, "lr_d": lr_d,
+        "t_inc": t_inc
     }
 
     sir = SirEq.train(target=w_target, y0 = y_target[0], z0=0., **dy_params)
-    w_hat, sol = sir.inference(torch.arange(dy_params["t_start"], max(100, dataset_size)))
-    train_risk, _ = sir.loss(w_hat[dy_params["t_start"]+1:train_size+1], w_target[dy_params["t_start"]:train_size])
-    dataset_risk, _ = sir.loss(w_hat[dy_params["t_start"]+1:dataset_size+1], w_target[dy_params["t_start"]:dataset_size])
+    w_hat, sol = sir.inference(torch.arange(dy_params["t_start"], max(100, dataset_size), t_inc))
+    train_slice = slice(dy_params["t_start"], int(train_size/t_inc), int(1/t_inc))
+    dataset_slice = slice(dy_params["t_start"], int(dataset_size/t_inc), int(1/t_inc))
+    w_hat_train = w_hat[train_slice]
+    w_hat_dataset = w_hat[dataset_slice]
+    train_risk, _ = sir.loss(w_hat_train, w_target[dy_params["t_start"]:train_size])
+    dataset_risk, _ = sir.loss(w_hat_dataset, w_target[dy_params["t_start"]:dataset_size])
 
     log_file = os.path.join(exp_path, exp_prefix + "sir_" + area[0] + "_results.txt")
     with open(log_file, "w") as f:
@@ -90,8 +95,8 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     pl.savefig(os.path.join(exp_path, exp_prefix + "bcd_over_time.png"))
 
     # normalize wrt population
-    w_hat = w_hat.detach().numpy() / population
-    RES = sol.detach().numpy() / population
+    w_hat = w_hat[dataset_slice].detach().numpy() / population
+    RES = sol[dataset_slice].detach().numpy() / population
     _y = [_v / population for _v in y_target]
     _w = [_v / population for _v in w_target]
 
