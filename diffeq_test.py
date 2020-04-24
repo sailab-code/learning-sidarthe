@@ -6,14 +6,14 @@ import torch
 from matplotlib import pyplot as plt
 
 
-gamma = torch.tensor([0.3])
+gamma = torch.tensor([0.1])
 beta = torch.tensor([0.8])
 population = 1
 epsilon_s = 1e-6
 S0 = 1 - epsilon_s
 I0 = epsilon_s
-ND = 200
-TS = 0.1
+ND = 300
+TS = 0.01
 
 
 def omega(t):
@@ -95,3 +95,8 @@ if __name__ == '__main__':
     plt.plot(t_range.numpy(), sol_tdiffeq[:,2].detach().numpy(), label="torchdiffeq odeint", linestyle='--')
     plt.legend()
     c.show()
+
+    max_odeint = max(sol_odeint[:,1])
+    max_euler = max(sol_euler[:,1])
+
+    print(max_euler - max_odeint)
