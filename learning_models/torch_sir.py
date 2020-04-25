@@ -9,7 +9,7 @@ from torchdiffeq import odeint
 
 
 class SirOptimizer(Optimizer):
-    def __init__(self, params, etas, alpha, a, b):
+    def __init__(self, params, etas, alpha, a, b, momentum=True):
         """
 
         :param params: iterable containing parameters to be optimized
@@ -24,6 +24,7 @@ class SirOptimizer(Optimizer):
         self.b = b
         self.a = a
         self.alpha = alpha
+        self.momentum = momentum
         defaults = dict()
 
         super(SirOptimizer, self).__init__(params, defaults)
@@ -51,16 +52,14 @@ class SirOptimizer(Optimizer):
                 # print(p.grad)
 
                 d_p = parameter.grad.data
-
-                update = [-etas[idx][0] * d_p[0]]
-                for t in range(1, d_p.size(0)):
-                    momentum_term = -etas[idx][t] * d_p[t] + mu[t] * update[t-1]
-                    update.append(momentum_term)
-
-
-                # print("UPDATE: {}".format(update))
-                #parameter.data.add_(-self.etas[idx] * d_p)
-                parameter.data.add_(torch.tensor(update))
+                if self.momentum:
+                    update = [-etas[idx][0] * d_p[0]]
+                    for t in range(1, d_p.size(0)):
+                        momentum_term = -etas[idx][t] * d_p[t] + mu[t] * update[t - 1]
+                        update.append(momentum_term)
+                    parameter.data.add_(torch.tensor(update))
+                else:
+                    parameter.data.add_(-self.etas[idx] * d_p)
 
 
 class SirEq:
@@ -75,8 +74,9 @@ class SirEq:
         self.c_reg = kwargs.get("c_reg", 1e4)
         self.d_reg = kwargs.get("d_reg", 1e4)
         self.bc_reg = kwargs.get("bc_reg", 1e4)
-        self.der_1st_reg = kwargs.get("derivative_reg", 1000)
-        self.der_2nd_reg = kwargs.get("der_2nd_reg", 1000)
+        self.der_1st_reg = kwargs.get("der_1st_reg", 1e3)
+        self.der_2nd_reg = kwargs.get("der_2nd_reg", 1e3)
+        self.sample_time = kwargs.get("sample_time", 1)
 
         if mode == "dynamic":
             self.diff_eqs = self.dynamic_diff_eqs
@@ -126,24 +126,41 @@ class SirEq:
         if isinstance(w_target, numpy.ndarray):
             w_target = torch.tensor(w_target, dtype=w_hat.dtype)
 
+        sample_time = self.sample_time
+
+        # define derivative closures
         def first_derivative_central(f_x_plus_h, f_x_minus_h, h):
-            return torch.pow((f_x_plus_h - f_x_minus_h) / (2 * h), 2)
+            return 0.5 * torch.pow((f_x_plus_h - f_x_minus_h) / (2 * h), 2)
 
         def first_derivative_forward(f_x_plus_h, f_x, h):
-            return torch.pow((f_x_plus_h - f_x) / h, 2)
+            return 0.5 * torch.pow((f_x_plus_h - f_x) / h, 2)
 
         def first_derivative_backward(f_x, f_x_minus_h, h):
-            return torch.pow((f_x - f_x_minus_h) / h, 2)
-
-        h = 1  # todo: retrieve sampling
+            return 0.5 * torch.pow((f_x - f_x_minus_h) / h, 2)
 
         def loss_derivative(parameter: torch.Tensor):
-            forward = first_derivative_forward(parameter[1], parameter[0], h).unsqueeze(0)
-            central = first_derivative_central(parameter[2:], parameter[:-2], h)
-            backward = first_derivative_backward(parameter[-1], parameter[-2], h).unsqueeze(0)
+            forward = first_derivative_forward(parameter[1], parameter[0], sample_time).unsqueeze(0)
+            central = first_derivative_central(parameter[2:], parameter[:-2], sample_time)
+            backward = first_derivative_backward(parameter[-1], parameter[-2], sample_time).unsqueeze(0)
 
-            return central
-            # return torch.cat((forward, central, backward), dim=0)
+            # return central
+            return torch.cat((forward, central, backward), dim=0)
+
+        def second_derivative_central(f_x_plus_h, f_x, f_x_minus_h, h):
+            return 0.5 * torch.pow((f_x_plus_h - 2 * f_x + f_x_minus_h) / h ** 2, 2)
+
+        def second_derivative_forward(f_x_plus_2h, f_x_plus_h, f_x, h):
+            return 0.5 * torch.pow((f_x_plus_2h - 2 * f_x_plus_h + f_x) / h ** 2, 2)
+
+        def second_derivative_backward(f_x, f_x_minus_h, f_x_minus_2h, h):
+            return 0.5 * torch.pow((f_x - 2 * f_x_minus_h + f_x_minus_2h) / h ** 2, 2)
+
+        def loss_second_derivative(parameter: torch.Tensor):
+            forward = second_derivative_forward(parameter[2], parameter[1], parameter[0], sample_time).unsqueeze(0)
+            central = second_derivative_central(parameter[2:], parameter[1:-1], parameter[:-2], sample_time)
+            backward = second_derivative_backward(parameter[-1], parameter[-2], parameter[-3], sample_time).unsqueeze(0)
+            # return central
+            return torch.cat((forward, central, backward), dim=0)
 
         def loss_gte_one(parameter: torch.Tensor):
             return torch.where(parameter.ge(1.), torch.ones(1), torch.zeros(1)) * parameter.abs()
@@ -151,48 +168,8 @@ class SirEq:
         def loss_lte_zero(parameter: torch.Tensor):
             return torch.where(parameter.le(0.), torch.ones(1), torch.zeros(1)) * parameter.abs()
 
-        def second_derivative_central(f_x_plus_h, f_x, f_x_minus_h):
-            return f_x_plus_h - 2 * f_x + f_x_minus_h
-
-        def second_derivative_forward(f_x_plus_2h, f_x_plus_h, f_x):
-            return f_x_plus_2h - 2 * f_x_plus_h + f_x
-
-        def second_derivative_backward(f_x, f_x_minus_h, f_x_minus_2h):
-            return f_x - 2 * f_x_minus_h + f_x_minus_2h
-
-        def loss_second_derivative(parameter: torch.Tensor):
-            forward = second_derivative_forward(parameter[2], parameter[1], parameter[0]).unsqueeze(0)
-            central = second_derivative_central(parameter[2:], parameter[1:-1], parameter[:-2])
-            backward = second_derivative_backward(parameter[-1], parameter[-2], parameter[-3]).unsqueeze(0)
-            """
-                        loss = torch.tensor([0.])
-                        for t, value in enumerate(parameter):
-                            if t == 0:
-                                loss = loss + second_derivative_forward(parameter[t + 2], parameter[t + 1], parameter[t])
-                            elif t < parameter.shape[0] - 1:
-                                loss = loss + second_derivative_central(parameter[t + 1], parameter[t], parameter[t - 1])
-                            else:
-                                loss = loss + second_derivative_backward(parameter[t], parameter[t - 1], parameter[t - 2])
-
-                        return loss
-            """
-            return central
-            # return torch.cat((forward, central, backward), dim=0)
+        # compute mse loss
         mse_loss = torch.sqrt(2 * torch.mean(0.5 * torch.pow((w_hat - w_target), 2)))
-
-        # compute losses due to derivative not close to zero near the window limits
-        loss_1st_derivative_beta = loss_derivative(self.beta)
-        loss_1st_derivative_gamma = loss_derivative(self.gamma)
-        loss_1st_derivative_delta = loss_derivative(self.delta)
-        loss_1st_derivative_total = self.der_1st_reg * torch.mean(
-            loss_1st_derivative_beta + loss_1st_derivative_gamma + loss_1st_derivative_delta)
-
-        # compute losses due to second derivative
-        loss_2nd_derivative_beta = loss_second_derivative(self.beta)
-        loss_2nd_derivative_gamma = loss_second_derivative(self.gamma)
-        loss_2nd_derivative_delta = loss_second_derivative(self.delta)
-        loss_2nd_derivative_total = self.der_2nd_reg * torch.mean(
-            loss_2nd_derivative_beta + loss_2nd_derivative_gamma + loss_2nd_derivative_delta)
 
         # REGULARIZATION TO PREVENT b,c,d from going out of bounds
         loss_reg_beta = self.b_reg * (loss_gte_one(self.beta) + loss_lte_zero(self.beta))
@@ -201,11 +178,29 @@ class SirEq:
 
         # compute total loss
         total_loss = mse_loss + \
-                     loss_reg_beta + loss_reg_gamma + loss_reg_delta
+            loss_reg_beta + loss_reg_gamma + loss_reg_delta
 
-        total_loss = total_loss + loss_1st_derivative_total
+        # compute losses due to 1st derivative
+        if self.der_1st_reg != 0:
+            loss_1st_derivative_beta = loss_derivative(self.beta)
+            loss_1st_derivative_gamma = loss_derivative(self.gamma)
+            loss_1st_derivative_delta = loss_derivative(self.delta)
+            loss_1st_derivative_total = self.der_1st_reg * torch.mean(
+                loss_1st_derivative_beta + loss_1st_derivative_gamma + loss_1st_derivative_delta
+            )
 
-        # total_loss = total_loss + loss_2nd_derivative_total
+            total_loss = total_loss + self.der_1st_reg * loss_1st_derivative_total
+
+        # compute losses due to 2nd derivative
+        if self.der_2nd_reg != 0:
+            loss_2nd_derivative_beta = loss_second_derivative(self.beta)
+            loss_2nd_derivative_gamma = loss_second_derivative(self.gamma)
+            loss_2nd_derivative_delta = loss_second_derivative(self.delta)
+            loss_2nd_derivative_total = self.der_2nd_reg * torch.mean(
+                loss_2nd_derivative_beta + loss_2nd_derivative_gamma + loss_2nd_derivative_delta
+            )
+
+            total_loss = total_loss + self.der_2nd_reg * loss_2nd_derivative_total
 
         return mse_loss, torch.mean(total_loss)
 
@@ -238,6 +233,9 @@ class SirEq:
         c_reg = params.get("c_reg", 1e7)
         d_reg = params.get("d_reg", 1e7)
         bc_reg = params.get("bc_reg", 1e7)
+        der_1st_reg = params.get("der_1st_reg", 1e3)
+        der_2nd_reg = params.get("der_2nd_reg", 1e3)
+        momentum = params.get("momentum", True)
         n_epochs = params.get("n_epochs", 2000)
         t_inc = params.get("t_inc", 1)
         lr_b, lr_g, lr_d = params["lr_b"], params["lr_g"], params["lr_d"]
@@ -256,7 +254,10 @@ class SirEq:
         Z0 = w_target[0].item()
         init_cond = (S0, I0, Z0)  # initialization of SIR parameters (Suscettible, Infected, Recovered)
         sir = SirEq(beta, gamma, delta, population, init_cond,
-                    b_reg=b_reg, c_reg=c_reg, d_reg=d_reg)
+                    b_reg=b_reg, c_reg=c_reg, d_reg=d_reg,
+                    der_1st_reg=der_1st_reg, der_2nd_reg=der_2nd_reg,
+                    sample_time=t_inc
+                    )
 
         # early stopping stuff
         best = 1e12
@@ -266,17 +267,16 @@ class SirEq:
 
         # todo: implement custom optimizer
         # optimizer = SGD(sir.params(), lr=1e-9)
-        optimizer = SirOptimizer(sir.params(), [lr_b, lr_g, lr_d], alpha=1 / 10, a=1.0, b=0.05)
+        optimizer = SirOptimizer(sir.params(), [lr_b, lr_g, lr_d], alpha=1 / 10, a=1.0, b=0.05, momentum=momentum)
 
         time_start = time.time()
         for i in range(n_epochs):
             w_hat, _ = sir.inference(time_grid)
-            w_hat = w_hat[slice(t_start,int(t_end/t_inc),int(1/t_inc))]
+            w_hat = w_hat[slice(t_start, int(t_end / t_inc), int(1 / t_inc))]
             optimizer.zero_grad()
             mse_loss, total_loss = sir.loss(w_hat, w_target)
 
             total_loss.backward()
-            # mse_loss.backward()
             torch.nn.utils.clip_grad_norm_(sir.params(), 10)
             # print(f"after: \n {sir.beta.grad} \n \n")
             optimizer.step()

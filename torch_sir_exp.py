@@ -53,12 +53,16 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     ax.legend()
     pl.savefig(os.path.join(exp_path, exp_prefix + "initial_params_bcd_over_time.png"))
     t_inc = 0.1
+
     dy_params = {
         "beta": beta, "gamma": gamma, "delta": delta, "n_epochs": n_epochs,
          "population": population,
          "t_start": 0, "t_end": train_size,
          "lr_b": lr_b, "lr_g": lr_g, "lr_d": lr_d,
-        "t_inc": t_inc
+        "t_inc": t_inc,
+        "der_1st_reg": 0.,
+        "der_2nd_reg": 1e3,
+        "momentum": False
     }
 
     sir = SirEq.train(target=w_target, y0 = y_target[0], z0=0., **dy_params)
