@@ -10,7 +10,7 @@ from utils.data_utils import select_data
 from utils.visualization_utils import plot_sir_dynamic, generic_plot, Curve, format_xtick
 
 
-def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a, n_epochs, name, train_size, derivative_reg, der_2nd_reg):
+def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a, n_epochs, name, train_size, der_1st_reg, der_2nd_reg):
 
     df_file = os.path.join(os.getcwd(), "dati-regioni", "dpc-covid19-ita-regioni.csv")
     # df_file = os.path.join(os.getcwd(), "train.csv")
@@ -54,41 +54,37 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     dataset_size = len(w_target)
     exp_prefix = area[0] + "_b" + str(beta_t0) + "_g" + str(gamma_t0) + "_d" + str(delta_t0) + \
                  "_lrb" + str(lr_b) + "_lrg" + str(lr_g) + "_lrd" + str(lr_d) + "_ts" + str(train_size) \
-                 + "_st_der" + str(derivative_reg) + "_nd_der" + str(der_2nd_reg)
+                 + "_st_der" + str(der_1st_reg) + "_nd_der" + str(der_2nd_reg)
 
-    minus = 0
-    # beta = [beta_t0 for _ in range(train_size - minus)]
-    beta = [beta_t0]
-    # gamma = [gamma_t0 for _ in range(train_size - minus)]
-    gamma = [gamma_t0]
+    t_inc = 0.1
+    beta = [beta_t0 for _ in range(int(train_size))]
+    gamma = [gamma_t0 for _ in range(int(train_size))]
     delta = [delta_t0]
-
-    # BETA, GAMMA, DELTA plots
-    # pl_x = list(range(len(beta)))
-    # beta_pl = Curve(pl_x, beta, '-g', "$\\beta$")
-    # gamma_pl = Curve(pl_x, gamma, '-r', "$\gamma$")
-    # delta_pl = Curve(pl_x, [delta] * train_size, '-b', "$\delta$")
-    #
-    # bgd_pl_title = "$\\beta, \gamma, \delta$  ({}".format(str(area[0])) + str(")")
-    #
-    # bgd_pl_path = os.path.join(exp_path, exp_prefix + "initial_params_bcd_over_time.pdf")
-    # generic_plot([beta_pl, gamma_pl, delta_pl], bgd_pl_title, bgd_pl_path, formatter=format_xtick)
 
     dy_params = {
         "beta": beta, "gamma": gamma, "delta": delta, "n_epochs": n_epochs,
-         "population": population,
-         "t_start": 0, "t_end": train_size,
-         "lr_b": lr_b, "lr_g": lr_g, "lr_d": lr_d, "lr_a": lr_a,
-        "derivative_reg": derivative_reg,
-        "der_2nd_reg": der_2nd_reg
+        "population": population,
+        "t_start": 0, "t_end": train_size,
+        "lr_b": lr_b, "lr_g": lr_g, "lr_d": lr_d, "lr_a": lr_a,
+        "der_1st_reg": der_1st_reg,
+        "der_2nd_reg": der_2nd_reg,
+        "t_inc": t_inc,
+        "momentum": True
     }
 
-    sir, losses = SirEq.train(w_target=w_target, y_target=y_target, **dy_params)
-    w_hat, y_hat, sol = sir.inference(torch.arange(dy_params["t_start"], max(100, dataset_size)))
-    train_risk, _ = sir.loss(w_hat[dy_params["t_start"]:train_size], torch.tensor(w_target[dy_params["t_start"]:train_size], dtype=torch.float32),
-                             y_hat[dy_params["t_start"]:train_size], torch.tensor(y_target[dy_params["t_start"]:train_size], dtype=torch.float32))
-    dataset_risk, _ = sir.loss(w_hat[dy_params["t_start"]:dataset_size], torch.tensor(w_target[dy_params["t_start"]:dataset_size], dtype=torch.float32),
-                               y_hat[dy_params["t_start"]:dataset_size], torch.tensor(y_target[dy_params["t_start"]:dataset_size], dtype=torch.float32))
+    sir, mse_losses, der_1st_losses, der_2nd_losses = SirEq.train(w_target=w_target, y_target=y_target, **dy_params)
+    w_hat, y_hat, sol = sir.inference(torch.arange(dy_params["t_start"], max(100, dataset_size), t_inc))
+    train_slice = slice(dy_params["t_start"], int(train_size/t_inc), int(1/t_inc))
+    dataset_slice = slice(dy_params["t_start"], int(dataset_size/t_inc), int(1/t_inc))
+    w_hat_train = w_hat[train_slice]
+    w_hat_dataset = w_hat[dataset_slice]
+    y_hat_train = y_hat[train_slice]
+    y_hat_dataset = y_hat[dataset_slice]
+
+    train_risk, _, _, _  = sir.loss(w_hat_train, w_target[dy_params["t_start"]:train_size],
+                                    y_hat_train, y_target[dy_params["t_start"]:train_size])
+    dataset_risk, _, _, _ = sir.loss(w_hat_dataset, w_target[dy_params["t_start"]:dataset_size],
+                                     y_hat_dataset, y_target[dy_params["t_start"]:dataset_size])
 
     log_file = os.path.join(exp_path, exp_prefix + "sir_" + area[0] + "_results.txt")
     with open(log_file, "w") as f:
@@ -103,7 +99,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
         f.write("Dataset Risk:\n")
         f.write(str(dataset_risk.detach().numpy()) + "\n")
         f.write("Loss over epochs: \n")
-        f.write(str(losses) + "\n")
+        f.write(str(mse_losses) + "\n")
 
     csv_file = os.path.join(exp_path, "scores.csv")
     if not os.path.exists(csv_file):
@@ -116,7 +112,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
              str(list(sir.beta.detach().numpy())).replace("\n", " "), str(list(sir.gamma.detach().numpy())).replace("\n", " "),
              str(list(sir.delta.detach().numpy())).replace("\n", " "),
              str(dy_params["lr_b"]), str(dy_params["lr_g"]), str(dy_params["lr_d"]), str(train_size),
-             str(derivative_reg), str(der_2nd_reg),
+             str(der_1st_reg), str(der_2nd_reg),
              str(train_risk.detach().numpy()), str(dataset_risk.detach().numpy()) + "\n"])
         f.write(_res_str)
 
@@ -134,6 +130,9 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
 
     bgd_pl_title = "$\\beta, \gamma, \delta$  ({}".format(str(area[0])) + str(")")
 
+
+    print(sir.beta.shape)
+
     bgd_pl_path = os.path.join(exp_path, exp_prefix + "_bcd_over_time.pdf")
     generic_plot([beta_pl, gamma_pl, delta_pl, alpha_pl, beta_alpha_pl], bgd_pl_title, bgd_pl_path, formatter=format_xtick)
 
@@ -149,14 +148,14 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     generic_plot([r0_pl, thresh_r0_pl], r0_pl_title, r0_pl_path, formatter=format_xtick)
 
     # Risk
-    risk_pl = Curve(range(0, len(losses)*50, 50), losses, '-b', label="risk")
+    risk_pl = Curve(range(0, len(mse_losses)*50, 50), mse_losses, '-b', label="risk")
     risk_pl_title = "Risk over epochs  ({}".format(str(area[0])) + str(")")
     risk_pl_path = os.path.join(exp_path, exp_prefix + "_risk.pdf")
     generic_plot([risk_pl], risk_pl_title, risk_pl_path)
 
     # normalize wrt population
-    w_hat = w_hat.detach().numpy() / population
-    RES = sol.detach().numpy() / population
+    w_hat = w_hat[dataset_slice].detach().numpy() / population
+    RES = sol[dataset_slice].detach().numpy() / population
     _y = [_v / population for _v in y_target]
     _w = [_v / population for _v in w_target]
 
@@ -213,4 +212,4 @@ if __name__ == "__main__":
     import itertools
     for region, beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, train_size, derivative_reg,der_2nd_reg in itertools.product(regions, beta_ts, gamma_ts, delta_ts, lr_bs, lr_gs, lr_ds, lr_as, train_sizes, derivative_regs, der_2nd_regs):
         print(region)
-        exp(region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, n_epochs, name=region, train_size=train_size, derivative_reg=derivative_reg, der_2nd_reg=der_2nd_reg)
+        exp(region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, n_epochs, name=region, train_size=train_size, der_1st_reg=derivative_reg, der_2nd_reg=der_2nd_reg)
