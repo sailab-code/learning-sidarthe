@@ -91,7 +91,7 @@ class SirEq:
 
     def dynamic_diff_eqs(self, T, X, dt):
         X_t = X(T)
-        t = T.long()
+        t = (T / self.sample_time).round().long()
 
         if t < self.beta.shape[0]:
             beta = self.beta[t] / self.population
@@ -140,8 +140,10 @@ class SirEq:
 
         def loss_derivative(parameter: torch.Tensor):
             forward = first_derivative_forward(parameter[1], parameter[0], sample_time).unsqueeze(0)
+            forward = torch.zeros(1)
             central = first_derivative_central(parameter[2:], parameter[:-2], sample_time)
             backward = first_derivative_backward(parameter[-1], parameter[-2], sample_time).unsqueeze(0)
+            backward = torch.zeros(1)
 
             # return central
             return torch.cat((forward, central, backward), dim=0)
@@ -157,8 +159,10 @@ class SirEq:
 
         def loss_second_derivative(parameter: torch.Tensor):
             forward = second_derivative_forward(parameter[2], parameter[1], parameter[0], sample_time).unsqueeze(0)
+            forward = torch.zeros(1)
             central = second_derivative_central(parameter[2:], parameter[1:-1], parameter[:-2], sample_time)
             backward = second_derivative_backward(parameter[-1], parameter[-2], parameter[-3], sample_time).unsqueeze(0)
+            backward = torch.zeros(1)
             # return central
             return torch.cat((forward, central, backward), dim=0)
 
@@ -181,28 +185,29 @@ class SirEq:
             loss_reg_beta + loss_reg_gamma + loss_reg_delta
 
         # compute losses due to 1st derivative
+        loss_1st_derivative_total = torch.zeros(1)
         if self.der_1st_reg != 0:
             loss_1st_derivative_beta = loss_derivative(self.beta)
             loss_1st_derivative_gamma = loss_derivative(self.gamma)
             loss_1st_derivative_delta = loss_derivative(self.delta)
-            loss_1st_derivative_total = self.der_1st_reg * torch.mean(
-                loss_1st_derivative_beta + loss_1st_derivative_gamma + loss_1st_derivative_delta
+            loss_1st_derivative_total = (
+                    loss_1st_derivative_beta + loss_1st_derivative_gamma + loss_1st_derivative_delta
             )
 
             total_loss = total_loss + self.der_1st_reg * loss_1st_derivative_total
-
         # compute losses due to 2nd derivative
+        loss_2nd_derivative_total = torch.zeros(1)
         if self.der_2nd_reg != 0:
             loss_2nd_derivative_beta = loss_second_derivative(self.beta)
             loss_2nd_derivative_gamma = loss_second_derivative(self.gamma)
             loss_2nd_derivative_delta = loss_second_derivative(self.delta)
-            loss_2nd_derivative_total = self.der_2nd_reg * torch.mean(
+            loss_2nd_derivative_total = (
                 loss_2nd_derivative_beta + loss_2nd_derivative_gamma + loss_2nd_derivative_delta
             )
 
             total_loss = total_loss + self.der_2nd_reg * loss_2nd_derivative_total
 
-        return mse_loss, torch.mean(total_loss)
+        return mse_loss, torch.mean(total_loss), torch.mean(loss_1st_derivative_total), torch.mean(loss_2nd_derivative_total)
 
     def inference(self, time_grid):
         time_grid = time_grid.to(dtype=torch.float32)
@@ -265,23 +270,33 @@ class SirEq:
         patience, n_lr_updts, max_no_improve, max_n_lr_updts = 0, 0, 75, 20
         best_beta, best_gamma, best_delta = sir.beta, sir.gamma, sir.delta
 
-        # todo: implement custom optimizer
-        # optimizer = SGD(sir.params(), lr=1e-9)
         optimizer = SirOptimizer(sir.params(), [lr_b, lr_g, lr_d], alpha=1 / 10, a=1.0, b=0.05, momentum=momentum)
 
         time_start = time.time()
+
+        losses = []
+        der_1st_losses = []
+        der_2nd_losses = []
+
         for i in range(n_epochs):
             w_hat, _ = sir.inference(time_grid)
             w_hat = w_hat[slice(t_start, int(t_end / t_inc), int(1 / t_inc))]
             optimizer.zero_grad()
-            mse_loss, total_loss = sir.loss(w_hat, w_target)
+            mse_loss, total_loss, der_1st_loss, der_2nd_loss = sir.loss(w_hat, w_target)
 
             total_loss.backward()
-            torch.nn.utils.clip_grad_norm_(sir.params(), 10)
+            # torch.nn.utils.clip_grad_norm_(sir.params(), 10)
+            torch.nn.utils.clip_grad_norm_(sir.beta, 7.)
+            torch.nn.utils.clip_grad_norm_(sir.gamma, 7.)
+            torch.nn.utils.clip_grad_norm_(sir.delta, 7.)
+
             # print(f"after: \n {sir.beta.grad} \n \n")
             optimizer.step()
 
             if i % 50 == 0:
+                losses.append(mse_loss)
+                der_1st_losses.append(der_1st_loss)
+                der_2nd_losses.append(der_2nd_loss)
                 print("Loss at step %d: %.7f" % (i, mse_loss))
                 print("beta: " + str(sir.beta.grad))
                 print("gamma: " + str(sir.gamma.grad))
@@ -319,4 +334,4 @@ class SirEq:
         print(best_delta)
         print("\n")
 
-        return sir
+        return sir, losses, der_1st_losses, der_2nd_losses

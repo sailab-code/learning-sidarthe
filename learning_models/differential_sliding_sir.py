@@ -292,15 +292,19 @@ class SirEq:
         patience, n_lr_updts, max_no_improve, max_n_lr_updts = 0, 0, 3, 3
 
         losses = []
+        der_1st_losses = []
+        der_2nd_losses = []
         best_beta, best_gamma, best_delta = sir.beta, sir.gamma, sir.delta
         for i in range(params["n_epochs"]):
             # loss, _, _ = sir.loss(t_range, W, t_start, t_end, diff_eqs)
-            loss, _, _ = sir.loss(t_range, W, diff_eqs)
+            loss, _, der_1st_loss, der_2nd_loss  = sir.loss(t_range, W, diff_eqs)
             # sir.gradient_descent(t_range, W, t_start, t_end, diff_eqs, lr_b, lr_g, lr_d)
             sir.gradient_descent(t_range, W, diff_eqs, lr_b, lr_g, lr_d)
 
             if i % 50 == 0:
                 losses.append(loss)
+                der_1st_losses.append(der_1st_loss)
+                der_2nd_losses.append(der_2nd_loss)
                 print("Loss at step %d: %.7f" % (i, loss))
                 print("beta: " + str(sir.beta))
                 print("gamma: " + str(sir.gamma))
@@ -335,4 +339,4 @@ class SirEq:
         sir.updt_params(best_beta, best_gamma, best_delta)  # assign the best params to the model
         _, _, res = sir.loss(t_range, W, diff_eqs)
 
-        return best, sir.beta[-1], sir.gamma[-1], sir.delta[-1], sir, res, losses
+        return best, sir.beta[-1], sir.gamma[-1], sir.delta[-1], sir, res, losses, der_1st_losses, der_2nd_losses

@@ -98,10 +98,10 @@ def exp(region, population, beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, n_epochs
                  "lr_b": lr_b, "lr_g": lr_g, "lr_d": lr_d,
                  "eq_mode": "joint_dynamic",
                  "learning_setup": learning_setup}
-    _, _, _, _, dynamic_sir, _, losses = SirEq.train(target=_w, y_0=_y[0], z_0=_w[0], params=dy_params)  # configure dynamic_syr only
+    _, _, _, _, dynamic_sir, _, losses, der_1st_losses, der_2nd_losses = SirEq.train(target=_w, y_0=_y[0], z_0=_w[0], params=dy_params)  # configure dynamic_syr only
     RES, w_hat = dynamic_sir.inference(np.arange(dy_params["t_start"], max(100, dataset_size)), dynamic_sir.dynamic_bc_diff_eqs)  # run it on the first 100 days
-    train_risk, _, _ = dynamic_sir.loss(np.arange(dy_params["t_start"], train_size), _w[dy_params["t_start"]:dy_params["t_end"]], dynamic_sir.dynamic_bc_diff_eqs)
-    dataset_risk, _, _ = dynamic_sir.loss(np.arange(dy_params["t_start"], dataset_size), _w[dy_params["t_start"]:dataset_size], dynamic_sir.dynamic_bc_diff_eqs)
+    train_risk, _, _, _ = dynamic_sir.loss(np.arange(dy_params["t_start"], train_size), _w[dy_params["t_start"]:dy_params["t_end"]], dynamic_sir.dynamic_bc_diff_eqs)
+    dataset_risk, _, _, _ = dynamic_sir.loss(np.arange(dy_params["t_start"], dataset_size), _w[dy_params["t_start"]:dataset_size], dynamic_sir.dynamic_bc_diff_eqs)
 
     log_file = os.path.join(exp_path, exp_prefix + "sir_" + area[0] + "_results.txt")
     with open(log_file, "w") as f:
@@ -166,6 +166,7 @@ def exp(region, population, beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, n_epochs
     pl.xlabel('Time in days')
     pl.ylabel('R')
     pl.savefig(os.path.join(exp_path, exp_prefix + "sliding_SIR_global.png"))
+
 
     pl.figure()
     pl.grid(True)
