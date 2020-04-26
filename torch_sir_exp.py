@@ -10,7 +10,7 @@ from utils.data_utils import select_data
 from utils.visualization_utils import plot_sir_dynamic, generic_plot, Curve, format_xtick
 
 
-def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epochs, name, train_size, derivative_reg, der_2nd_reg):
+def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a, n_epochs, name, train_size, derivative_reg, der_2nd_reg):
 
     df_file = os.path.join(os.getcwd(), "dati-regioni", "dpc-covid19-ita-regioni.csv")
     # df_file = os.path.join(os.getcwd(), "train.csv")
@@ -43,7 +43,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     if not os.path.exists(base_path):
         os.mkdir(base_path)
 
-    exp_path = os.path.join(base_path, "torch_sir_ellis")
+    exp_path = os.path.join(base_path, "torch_sir_mono_beta_gamma_delta")
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 
@@ -57,26 +57,28 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
                  + "_st_der" + str(derivative_reg) + "_nd_der" + str(der_2nd_reg)
 
     minus = 0
-    beta = [beta_t0 for _ in range(train_size - minus)]
-    gamma = [gamma_t0 for _ in range(train_size - minus)]
+    # beta = [beta_t0 for _ in range(train_size - minus)]
+    beta = [beta_t0]
+    # gamma = [gamma_t0 for _ in range(train_size - minus)]
+    gamma = [gamma_t0]
     delta = [delta_t0]
 
     # BETA, GAMMA, DELTA plots
-    pl_x = list(range(len(beta)))
-    beta_pl = Curve(pl_x, beta, '-g', "$\\beta$")
-    gamma_pl = Curve(pl_x, gamma, '-r', "$\gamma$")
-    delta_pl = Curve(pl_x, [delta] * train_size, '-b', "$\delta$")
-
-    bgd_pl_title = "$\\beta, \gamma, \delta$  ({}".format(str(area[0])) + str(")")
-
-    bgd_pl_path = os.path.join(exp_path, exp_prefix + "initial_params_bcd_over_time.pdf")
-    generic_plot([beta_pl, gamma_pl, delta_pl], bgd_pl_title, bgd_pl_path, formatter=format_xtick)
+    # pl_x = list(range(len(beta)))
+    # beta_pl = Curve(pl_x, beta, '-g', "$\\beta$")
+    # gamma_pl = Curve(pl_x, gamma, '-r', "$\gamma$")
+    # delta_pl = Curve(pl_x, [delta] * train_size, '-b', "$\delta$")
+    #
+    # bgd_pl_title = "$\\beta, \gamma, \delta$  ({}".format(str(area[0])) + str(")")
+    #
+    # bgd_pl_path = os.path.join(exp_path, exp_prefix + "initial_params_bcd_over_time.pdf")
+    # generic_plot([beta_pl, gamma_pl, delta_pl], bgd_pl_title, bgd_pl_path, formatter=format_xtick)
 
     dy_params = {
         "beta": beta, "gamma": gamma, "delta": delta, "n_epochs": n_epochs,
          "population": population,
          "t_start": 0, "t_end": train_size,
-         "lr_b": lr_b, "lr_g": lr_g, "lr_d": lr_d,
+         "lr_b": lr_b, "lr_g": lr_g, "lr_d": lr_d, "lr_a": lr_a,
         "derivative_reg": derivative_reg,
         "der_2nd_reg": der_2nd_reg
     }
@@ -126,30 +128,30 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     gamma_pl = Curve(pl_x, sir.gamma.detach().numpy(), '-r', "$\gamma$")
     delta_pl = Curve(pl_x, [sir.delta.detach().numpy()]*train_size, '-b', "$\delta$")
 
-    alpha = np.concatenate([sir.alpha(sir.get_policy_code(t)).detach().numpy() for t in range(len(sir.beta))], axis=0)
+    alpha = np.concatenate([sir.alpha(sir.get_policy_code(t)).detach().numpy().reshape(1) for t in range(len(sir.beta))], axis=0)
     alpha_pl = Curve(pl_x, alpha, '-', "$\\alpha$")
     beta_alpha_pl = Curve(pl_x, alpha * sir.beta.detach().numpy(), '-', "$\\alpha \cdot \\beta$")
 
     bgd_pl_title = "$\\beta, \gamma, \delta$  ({}".format(str(area[0])) + str(")")
 
-    bgd_pl_path = os.path.join(exp_path, exp_prefix + "bcd_over_time.pdf")
+    bgd_pl_path = os.path.join(exp_path, exp_prefix + "_bcd_over_time.pdf")
     generic_plot([beta_pl, gamma_pl, delta_pl, alpha_pl, beta_alpha_pl], bgd_pl_title, bgd_pl_path, formatter=format_xtick)
 
     # R0
     pl_x = list(range(len(beta)))
-    alpha = np.concatenate([sir.alpha(sir.get_policy_code(t)).detach().numpy() for t in range(len(sir.beta))], axis=0)
+    alpha = np.concatenate([sir.alpha(sir.get_policy_code(t)).detach().numpy().reshape(1) for t in range(len(sir.beta))], axis=0)
     r0_pl = Curve(pl_x, (alpha * sir.beta.detach().numpy())/sir.gamma.detach().numpy(), '-', label="$R_0$")
     thresh_r0_pl = Curve(pl_x, [1.0]*len(pl_x), '-', color="magenta")
 
     r0_pl_title = '$R_0$  ({}'.format(str(area[0])) + str(")")
-    r0_pl_path = os.path.join(exp_path, exp_prefix + "r0.pdf")
+    r0_pl_path = os.path.join(exp_path, exp_prefix + "_r0.pdf")
 
     generic_plot([r0_pl, thresh_r0_pl], r0_pl_title, r0_pl_path, formatter=format_xtick)
 
     # Risk
     risk_pl = Curve(range(0, len(losses)*50, 50), losses, '-b', label="risk")
     risk_pl_title = "Risk over epochs  ({}".format(str(area[0])) + str(")")
-    risk_pl_path = os.path.join(exp_path, exp_prefix + "risk_over_epochs.pdf")
+    risk_pl_path = os.path.join(exp_path, exp_prefix + "_risk.pdf")
     generic_plot([risk_pl], risk_pl_title, risk_pl_path)
 
     # normalize wrt population
@@ -159,7 +161,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     _w = [_v / population for _v in w_target]
 
     # SIR dynamic
-    sir_dir_path = os.path.join(exp_path, exp_prefix + "sliding_SIR_global.pdf")
+    sir_dir_path = os.path.join(exp_path, exp_prefix + "_SIR_global.pdf")
     plot_sir_dynamic(RES[:, 0], RES[:, 1], RES[:, 2], area[0], sir_dir_path)
 
     # Deaths
@@ -167,7 +169,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     w_hat_pl = Curve(pl_w_hat, w_hat, '-', label='$w$')
 
     deaths_pl_title = 'Deaths  ({}'.format(str(area[0])) + str(")")
-    deaths_pl_path = os.path.join(exp_path, exp_prefix + "sliding_W_global.pdf")
+    deaths_pl_path = os.path.join(exp_path, exp_prefix + "_W_global.pdf")
 
     generic_plot([w_hat_pl], deaths_pl_title, deaths_pl_path, 'Time in days', 'Deaths')
 
@@ -177,7 +179,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     y_hats = Curve(list(range(dataset_size)), _y[:dataset_size], '.b', label='$\hat{y}$')
 
     infected_pl_title = 'Infectious  ({}'.format(str(area[0])) + str(")")
-    infected_pl_path = os.path.join(exp_path, exp_prefix + "sliding_I_fit.pdf")
+    infected_pl_path = os.path.join(exp_path, exp_prefix + "_I_fit.pdf")
 
     generic_plot([y_fits, y_preds, y_hats], infected_pl_title, infected_pl_path, y_label='Infectious', formatter=format_xtick)
 
@@ -187,28 +189,28 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     w_hats = Curve(list(range(dataset_size)), _w[:dataset_size], '.r', label='$\hat{w}$')
 
     w_pl_title = 'Deaths  ({}'.format(str(area[0])) + str(")")
-    w_pl_path = os.path.join(exp_path, exp_prefix + "sliding_W_fit.pdf")
+    w_pl_path = os.path.join(exp_path, exp_prefix + "_W_fit.pdf")
 
     generic_plot([w_fits, w_preds, w_hats], w_pl_title, w_pl_path, y_label="Deaths", formatter=format_xtick)
 
 
 if __name__ == "__main__":
-    n_epochs = 5001
+    n_epochs = 4001
     # Veneto b0.8_g0.35_d0.015_lrb0.05_lrg0.01_lrd0.0005_ts40_st_der1000.0_nd_der0.0
     # Lombardia b0.81_g0.2_d0.02_lrb0.05_lrg0.01_lrd1e-05_ts40_st_der1000.0_nd_der10000.0
     # Emilia-Romagna b0.8_g0.35_d0.015_lrb0.05_lrg0.01_lrd5e-05_ts40_st_der1000.0_nd_der0.0
-    regions = ["Lombardia"]
+    regions = ["Lombardia", "Veneto"]
     population = {"Lombardia": 1e7, "Emilia-Romagna": 4.45e6, "Veneto": 4.9e6, "Piemonte": 4.36e6,
                   "Toscana": 3.73e6, "Umbria": 0.882e6, "Lazio": 5.88e6, "Marche": 1.525e6, "Campania": 5.802e6,
                   "Puglia": 1.551e6,
                   "Liguria": 4.029e6}
-    beta_ts, gamma_ts, delta_ts = [0.81], [0.2], [0.025]
-    lr_bs, lr_gs, lr_ds = [5e-2], [1e-2], [2e-5]
+    beta_ts, gamma_ts, delta_ts = [0.81, 0.7], [0.2, 0.3], [0.005, 0.01, 0.03]
+    lr_bs, lr_gs, lr_ds, lr_as = [1e-3, 1e-5], [1e-3, 1e-5], [1e-7], [1e-3]
     train_sizes = list(range(40, 41, 5))
     derivative_regs = [0.0]  # [0.0, 1e2, 1e3]
     der_2nd_regs = [0.0]  # [0.0, 1e2, 1e3]
 
     import itertools
-    for region, beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, train_size, derivative_reg,der_2nd_reg in itertools.product(regions, beta_ts, gamma_ts, delta_ts, lr_bs, lr_gs, lr_ds, train_sizes, derivative_regs, der_2nd_regs):
+    for region, beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, train_size, derivative_reg,der_2nd_reg in itertools.product(regions, beta_ts, gamma_ts, delta_ts, lr_bs, lr_gs, lr_ds, lr_as, train_sizes, derivative_regs, der_2nd_regs):
         print(region)
-        exp(region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, n_epochs, name=region, train_size=train_size, derivative_reg=derivative_reg, der_2nd_reg=der_2nd_reg)
+        exp(region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, n_epochs, name=region, train_size=train_size, derivative_reg=derivative_reg, der_2nd_reg=der_2nd_reg)

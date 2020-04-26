@@ -1,7 +1,7 @@
 import numpy
 import torch
 import torch.nn as nn
-from torch.optim import SGD
+from torch.optim import SGD, Adam
 from torch.optim.optimizer import Optimizer
 from torch_euler import euler
 
@@ -53,16 +53,17 @@ class SirOptimizer(Optimizer):
                 # update = torch.cumsum(lr_t * mu_t, dim=0)
 
                 d_p = parameter.grad.data
-                update = [torch.tensor(-etas[idx][0] * d_p[0])]
+                update = [torch.tensor(-etas[idx][0] * d_p[0]).view(1, -1)]
                 for t in range(1, d_p.size(0)):
                     momentum_term = -etas[idx][t] * d_p[t] + mu[t] * update[t-1]
-                    update.append(momentum_term)
+                    update.append(momentum_term.view(1, -1))
 
 
 
                 # print("UPDATE: {}".format(update))
                 # parameter.data.add_(-self.etas[idx] * d_p)
-                parameter.data.add_(torch.tensor(update))
+                update = torch.cat(update, dim=0)
+                parameter.data.add_(update.squeeze())
 
 
 class SirEq:
@@ -82,7 +83,7 @@ class SirEq:
 
         use_alpha = kwargs.get("use_alpha", False)
         input_size = kwargs.get("mlp_input", 4)
-        hidden_size = kwargs.get("mlp_hidden", 3)
+        hidden_size = kwargs.get("mlp_hidden", 6)
         self.init_alpha(use_alpha, input_size=input_size, hidden_size=hidden_size)
 
         if mode == "dynamic":
@@ -92,7 +93,7 @@ class SirEq:
 
     def get_policy_code(self, t):
         policy_code = torch.zeros(4)
-        if 6 < t <= 13:
+        if 3 < t <= 13:
             policy_code[0] = 1.0
         elif 13 < t <= 27:
             policy_code[1] = 1.0
@@ -112,12 +113,13 @@ class SirEq:
         t = T.long()
 
         policy_code = self.get_policy_code(t)
+        alpha = self.alpha(policy_code)
 
-        if t < self.beta.shape[0]:
-            beta = (self.beta[t] / self.population) * self.alpha(policy_code).squeeze()
+        if 0 < t < self.beta.shape[0]:
+            beta = (self.beta[t] / self.population) * alpha
             gamma = self.gamma[t]
         else:
-            beta = (self.beta[-1] / self.population) * self.alpha(policy_code).squeeze()
+            beta = (self.beta[-1] / self.population) * alpha
             gamma = self.gamma[-1]
 
         return [
@@ -145,13 +147,21 @@ class SirEq:
         """mlp"""
 
         if use_alpha:
-            self.alpha = nn.Sequential(nn.Linear(in_features=input_size, out_features=hidden_size),
-                                       nn.Linear(in_features=hidden_size, out_features=output_size),
-                                       nn.Sigmoid())
-        else:
-            self.alpha = self._foo_alpha
+            self.nn_alpha = nn.Sequential(nn.Linear(in_features=input_size, out_features=hidden_size),
+                                           nn.Linear(in_features=hidden_size, out_features=output_size),
+                                           nn.Sigmoid())
 
-    def _foo_alpha(self, policy):
+            self.alpha = self.net_alpha
+        else:
+            self.alpha = self._constant_alpha
+
+    def net_alpha(self, policy):
+        alpha = self.nn_alpha(policy).squeeze()
+        return torch.where(torch.gt(policy.sum(), 0), alpha, torch.tensor(1.0))
+
+
+
+    def _constant_alpha(self, policy):
         return torch.tensor([1.0])
 
     def loss(self, w_hat, w_target, y_hat=None, y_target=None):
@@ -258,6 +268,7 @@ class SirEq:
         return w_hat, sol[:, 1], sol
 
     def params(self):
+        # return [self.beta, self.gamma, self.delta] + list(self.alpha.parameters())
         return [self.beta, self.gamma, self.delta]
 
     def set_params(self, beta, gamma, delta):
@@ -282,7 +293,7 @@ class SirEq:
         use_alpha = params.get("use_alpha", True)
 
         t_inc = 1
-        lr_b, lr_g, lr_d = params["lr_b"], params["lr_g"], params["lr_d"]
+        lr_b, lr_g, lr_d, lr_a = params["lr_b"], params["lr_g"], params["lr_d"], params["lr_a"]
 
         time_grid = torch.arange(t_start, t_end+t_inc, t_inc)
         w_target = torch.tensor(w_target[t_start:t_end], dtype=torch.float32)
@@ -309,12 +320,17 @@ class SirEq:
 
         # todo: implement custom optimizer
         # optimizer = SGD(sir.params(), lr=1e-9)
+        # print(sir.params())
+        print(len(sir.params()))
+        # optimizer = SirOptimizer(sir.params(), [lr_b, lr_g, lr_d, lr_a, lr_a, lr_a, lr_a], alpha=1 / 7, a=3.0, b=0.05) # fixme assigning of lrs
         optimizer = SirOptimizer(sir.params(), [lr_b, lr_g, lr_d], alpha=1 / 7, a=3.0, b=0.05)
+        net_optimizer = Adam(sir.nn_alpha.parameters(), lr_a)
 
         losses = []
         for i in range(n_epochs):
             w_hat, y_hat, _ = sir.inference(time_grid)
             optimizer.zero_grad()
+            net_optimizer.zero_grad()
             mse_loss, total_loss = sir.loss(w_hat, w_target, y_hat, y_target)
 
             total_loss.backward()
@@ -322,6 +338,7 @@ class SirEq:
             torch.nn.utils.clip_grad_norm_(sir.params(), 7.0)
             # print(f"after: \n {sir.beta.grad} \n \n")
             optimizer.step()
+            net_optimizer.step()
 
             if i % 50 == 0:
                 losses.append(mse_loss.detach().numpy())
@@ -346,7 +363,8 @@ class SirEq:
                 # when patience is over reduce learning rate by 2
                 print("Reducing learning rate at step: %d" % i)
                 lr_frac = 2.0
-                lr_b, lr_g, lr_d = lr_b / lr_frac, lr_g / lr_frac, lr_d / lr_frac
+                lr_b, lr_g, lr_d, lr_a = lr_b / lr_frac, lr_g / lr_frac, lr_d / lr_frac, lr_a / lr_frac
+                # optimizer.etas = [lr_b, lr_g, lr_d, lr_a, lr_a, lr_a, lr_a]
                 optimizer.etas = [lr_b, lr_g, lr_d]
                 n_lr_updts += 1
                 patience = 0
