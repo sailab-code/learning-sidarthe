@@ -43,7 +43,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     if not os.path.exists(base_path):
         os.mkdir(base_path)
 
-    exp_path = os.path.join(base_path, "torch_sir_validation_only_beta_t")
+    exp_path = os.path.join(base_path, "torch_sir_validation_only_beta_t_test_grafici")
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 
@@ -80,7 +80,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     }
 
     sir, mse_losses, der_1st_losses, der_2nd_losses = SirEq.train(w_target=w_target, y_target=y_target, **dy_params)
-    w_hat, y_hat, sol = sir.inference(torch.arange(dy_params["t_start"], max(100, dataset_size), t_inc))
+    w_hat, y_hat, sol = sir.inference(torch.arange(dy_params["t_start"], 100, t_inc))
     train_slice = slice(dy_params["t_start"], int(train_size/t_inc), int(1/t_inc))
     val_slice = slice(int(train_size/t_inc), int(val_size/t_inc), int(1/t_inc))
     test_slice = slice(int(val_size/t_inc), int(dataset_size/t_inc), int(1/t_inc))
@@ -179,14 +179,15 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     generic_plot([r0_pl, thresh_r0_pl], r0_pl_title, r0_pl_path, formatter=format_xtick)
 
     # Risk
-    risk_pl = Curve(range(0, len(mse_losses)*50, 50), mse_losses, '-b', label="risk")
-    risk_pl_title = "Risk over epochs  ({}".format(str(area[0])) + str(")")
-    risk_pl_path = os.path.join(exp_path, exp_prefix + "_risk" + file_format)
-    generic_plot([risk_pl], risk_pl_title, risk_pl_path)
+    # risk_pl = Curve(range(0, len(mse_losses)*50, 50), mse_losses, '-b', label="risk")
+    # risk_pl_title = "Risk over epochs  ({}".format(str(area[0])) + str(")")
+    # risk_pl_path = os.path.join(exp_path, exp_prefix + "_risk" + file_format)
+    # generic_plot([risk_pl], risk_pl_title, risk_pl_path)
 
     # normalize wrt population
     w_hat = w_hat[dataset_slice].detach().numpy() / population
-    RES = sol[dataset_slice].detach().numpy() / population
+    RES = sol.detach().numpy() / population
+    print(len(RES[:,0]))
     _y = [_v / population for _v in y_target]
     _w = [_v / population for _v in w_target]
 
@@ -207,45 +208,48 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     y_fits = Curve(list(range(train_size)), RES[:train_size, 1], '-r', label='$y$ fit')
     y_val_preds = Curve(list(range(train_size, val_size)), RES[train_size:val_size, 1], '-r', color='darkblue', label='$y$ validation')
     y_test_preds = Curve(list(range(val_size, dataset_size)), RES[val_size:dataset_size, 1], '-r', color='orange', label='$y$ prediction')
-    y_truth = Curve(list(range(dataset_size)), _y[:dataset_size], '.b', label='$\hat{y}$')
+    y_truth_train = Curve(list(range(train_size)), _y[:train_size], '.r', label='$\hat{y}$ fit')
+    y_truth_val = Curve(list(range(train_size, val_size)), _y[train_size:val_size], '.', color="darkblue", label='$\hat{y}$ validation')
+    y_truth_test = Curve(list(range(val_size, dataset_size)), _y[val_size:dataset_size], '.', color="orange", label='$\hat{y}$ prediction')
 
     infected_pl_title = 'Infectious  ({}'.format(str(area[0])) + str(")")
     infected_pl_path = os.path.join(exp_path, exp_prefix + "_I_fit" + file_format)
 
-    generic_plot([y_fits, y_val_preds, y_test_preds, y_truth], infected_pl_title, infected_pl_path, y_label='Infectious', formatter=format_xtick)
+    generic_plot([y_fits, y_val_preds, y_test_preds, y_truth_train, y_truth_val, y_truth_test], infected_pl_title, infected_pl_path, y_label='Infectious', formatter=format_xtick)
 
     # Deaths Train/Test/Real
     w_fits = Curve(list(range(train_size)), w_hat[:train_size], '-', label='$w$ fit')
     w_val_preds = Curve(list(range(train_size, val_size)), w_hat[train_size:val_size], '-', color='darkblue', label='$w$ validation')
     w_test_preds = Curve(list(range(val_size, dataset_size)), w_hat[val_size:dataset_size], '-', color='orange', label='$w$ prediction')
-    w_truth = Curve(list(range(dataset_size)), _w[:dataset_size], '.r', label='$\hat{w}$')
+    w_truth_train = Curve(list(range(train_size)), _w[:train_size], '.r', label='$\hat{w}$ fit')
+    w_truth_val = Curve(list(range(train_size, val_size)), _w[train_size:val_size], '.', color="darkblue", label='$\hat{w}$ validation')
+    w_truth_test = Curve(list(range(val_size, dataset_size)), _w[val_size:dataset_size], '.', color="orange", label='$\hat{w}$ prediction')
 
     w_pl_title = 'Deaths  ({}'.format(str(area[0])) + str(")")
     w_pl_path = os.path.join(exp_path, exp_prefix + "_W_fit" + file_format)
 
-    generic_plot([w_fits, w_val_preds, w_test_preds, w_truth], w_pl_title, w_pl_path, y_label="Deaths", formatter=format_xtick)
+    generic_plot([w_fits, w_val_preds, w_test_preds, w_truth_train, w_truth_val, w_truth_test], w_pl_title, w_pl_path, y_label="Deaths", formatter=format_xtick)
 
 
 if __name__ == "__main__":
     # todo provare ad inizializzare rete con pesi random
-    n_epochs = 3501
+    n_epochs = 101
     # Veneto b0.8_g0.35_d0.015_lrb0.05_lrg0.01_lrd0.0005_ts40_st_der1000.0_nd_der0.0
     # Lombardia b0.81_g0.2_d0.02_lrb0.05_lrg0.01_lrd1e-05_ts40_st_der1000.0_nd_der10000.0
     # Emilia-Romagna b0.8_g0.35_d0.015_lrb0.05_lrg0.01_lrd5e-05_ts40_st_der1000.0_nd_der0.0
-    regions = ["Lombardia", "Emilia-Romagna", "Veneto", "Piemonte",  "Toscana", "Umbria", "Lazio", "Marche", "Campania",
-               "Puglia", "Liguria"]  # ["Lombardia", "Veneto"]
+    regions = ["Marche", "Umbria", "Toscana", "Lazio"]  # ["Lombardia", "Emilia-Romagna", "Veneto", "Piemonte",  "Toscana", "Umbria", "Lazio", "Marche", "Campania","Puglia", "Liguria"]
 
     population = {"Lombardia": 1e7, "Emilia-Romagna": 4.45e6, "Veneto": 4.9e6, "Piemonte": 4.36e6,
                   "Toscana": 3.73e6, "Umbria": 0.882e6, "Lazio": 5.88e6, "Marche": 1.525e6, "Campania": 5.802e6,
                   "Puglia": 1.551e6,
                   "Liguria": 4.029e6}
-    beta_ts, gamma_ts, delta_ts = [0.8, 0.7], [0.2, 0.3], [0.005, 0.015, 0.03]
-    lr_bs, lr_gs, lr_ds, lr_as = [1e-4], [1e-5], [1e-6], [1e-3]
+    beta_ts, gamma_ts, delta_ts = [0.9, 0.75, 0.6], [0.35, 0.25], [0.005, 0.008, 0.0125, 0.02]
+    lr_bs, lr_gs, lr_ds, lr_as = [1e-4], [1e-5], [3e-6], [1e-3]
     train_sizes = [40]  # list(range(40, 41, 5))
     derivative_regs = [-1.0]  # [0.0, 1e2, 1e3]
     der_2nd_regs = [-1.0]  # [0.0, 1e2, 1e3]
-    use_alphas = [False, True]
-    y_loss_weights = [0.0, 3e-4]
+    use_alphas = [False]
+    y_loss_weights = [0.0]
     t_incs = [1.0]
 
     import itertools

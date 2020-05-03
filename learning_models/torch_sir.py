@@ -90,8 +90,8 @@ class SirEq:
         self.c_reg = kwargs.get("c_reg", 1e5)
         self.d_reg = kwargs.get("d_reg", 1e9)
         self.bc_reg = kwargs.get("bc_reg", 1e5)
-        self.der_1st_reg = kwargs.get("der_1st_reg", 1e4)
-        self.der_2nd_reg = kwargs.get("der_2nd_reg", 1e1)
+        self.der_1st_reg = kwargs.get("der_1st_reg", -1)
+        self.der_2nd_reg = kwargs.get("der_2nd_reg", -1)
 
         use_alpha = kwargs.get("use_alpha", False)
         input_size = kwargs.get("mlp_input", 4)
@@ -182,6 +182,11 @@ class SirEq:
 
     def _constant_alpha(self, policy):
         return torch.tensor(1.0)
+
+    def mape(self, w_hat, w_target):
+        if isinstance(w_target, numpy.ndarray) or isinstance(w_target, list):
+            w_target = torch.tensor(w_target, dtype=w_hat.dtype)
+        return torch.mean(torch.abs((w_hat-w_target)/w_target))
 
     def loss(self, w_hat, w_target, y_hat=None, y_target=None):
         if isinstance(w_target, numpy.ndarray) or isinstance(w_target, list):

@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+plt.rcParams.update({'font.size': 12})
+
 from collections import namedtuple
 import datetime
 
@@ -30,7 +32,7 @@ def plot_data_and_fit(data, fitted_data, future_data, save_path, plot_name, curv
     ax.margins(0.05)
     plt.subplots_adjust(bottom=0.15)
     ax.legend()
-    plt.savefig(save_path)
+    plt.savefig(save_path, bbox_inches='tight')
     # plt.show()
 
 
@@ -85,7 +87,7 @@ def plot_sir_dynamic(s, i, r, region, save_path):
     plt.subplots_adjust(bottom=0.15)
     plt.ylabel('R')
     plt.legend(loc=0)
-    plt.savefig(save_path)  # os.path.join(exp_path, exp_prefix + "sliding_SIR_global.pdf")
+    plt.savefig(save_path, bbox_inches='tight')  # os.path.join(exp_path, exp_prefix + "sliding_SIR_global.pdf")
 
 
 def generic_plot(xy_curves, title, save_path, x_label=None, y_label=None, formatter=None, use_legend=True, use_grid=True):
@@ -123,4 +125,4 @@ def generic_plot(xy_curves, title, save_path, x_label=None, y_label=None, format
     if use_legend:
         ax.legend()
 
-    plt.savefig(save_path)
+    plt.savefig(save_path, bbox_inches='tight')
