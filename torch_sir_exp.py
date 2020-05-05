@@ -63,19 +63,20 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
          "t_start": 0, "t_end": train_size,
          "lr_b": lr_b, "lr_g": lr_g, "lr_d": lr_d,
         "t_inc": t_inc,
-        "der_1st_reg": 1e4,
-        "der_2nd_reg": 1e3,
-        "momentum": False
+        "der_1st_reg": 0.,
+        "der_2nd_reg": 1,
+        "momentum": True,
+        "run_name": name
     }
 
-    sir, mse_losses, der_1st_losses, der_2nd_losses = SirEq.train(target=w_target, y0 = y_target[0], z0=0., **dy_params)
+    sir, mse_losses = SirEq.train(target=w_target, y0 = y_target[0], z0=0., **dy_params)
     w_hat, sol = sir.inference(torch.arange(dy_params["t_start"], max(100, dataset_size), t_inc))
     train_slice = slice(dy_params["t_start"], int(train_size/t_inc), int(1/t_inc))
     dataset_slice = slice(dy_params["t_start"], int(dataset_size/t_inc), int(1/t_inc))
     w_hat_train = w_hat[train_slice]
     w_hat_dataset = w_hat[dataset_slice]
-    train_risk, _, _, _ = sir.loss(w_hat_train, w_target[dy_params["t_start"]:train_size])
-    dataset_risk, _, _, _ = sir.loss(w_hat_dataset, w_target[dy_params["t_start"]:dataset_size])
+    train_risk, _, = sir.loss(w_hat_train, w_target[dy_params["t_start"]:train_size])
+    dataset_risk, _, = sir.loss(w_hat_dataset, w_target[dy_params["t_start"]:dataset_size])
 
     log_file = os.path.join(exp_path, exp_prefix + "sir_" + area[0] + "_results.txt")
     with open(log_file, "w") as f:
@@ -130,21 +131,10 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
 
     pl.figure()
     pl.title("Losses (MSE/1st derivate/2nd derivate")
-    t_range = np.arange(0, len(mse_losses)*50, 50)
     pl.subplot(311)
     pl.grid(True)
     pl.xlabel('Epochs')
     pl.ylabel('1st der loss')
-    pl.plot(t_range, der_1st_losses, '-g', label="1st derivate loss")
-    pl.subplot(312)
-    pl.xlabel('Epochs')
-    pl.ylabel('2nd der loss')
-    pl.grid(True)
-    pl.plot(t_range, der_2nd_losses, '-r', label="2nd derivate loss")
-    pl.subplot(313)
-    pl.xlabel('Epochs')
-    pl.ylabel('mse loss')
-    pl.plot(t_range, mse_losses, '-k', label="mse losses")
     pl.savefig(os.path.join(exp_path, exp_prefix + "losses.png"))
 
     pl.figure()
@@ -179,9 +169,9 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
 
 
 if __name__ == "__main__":
-    n_epochs = 2001
+    n_epochs = 8001
     region = "Lombardia"
     population = {"Lombardia": 1e7, "Emilia-Romagna": 4.45e6, "Veneto": 4.9e6, "Piemonte": 4.36e6}
     beta_t, gamma_t, delta_t = 0.81, 0.29, 0.03
-    lr_b, lr_g, lr_d = 0.05, 0.01, 1e-7
-    exp(region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, n_epochs, name="first_run", train_size=40)
+    lr_b, lr_g, lr_d = 0.05, 0.05, 1e-7
+    exp(region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, n_epochs, name="single_stage_der_2", train_size=40)
