@@ -58,9 +58,10 @@ class SirOptimizer(Optimizer):
 
 class SirEq:
     def __init__(self, beta, gamma, delta, population, init_cond, mode="dynamic", **kwargs):
-        self.beta = torch.tensor(beta, requires_grad=True, dtype=torch.float64)
-        self.gamma = torch.tensor(gamma, requires_grad=True, dtype=torch.float64)
-        self.delta = torch.tensor(delta, requires_grad=True, dtype=torch.float64)
+        self.beta = torch.tensor(beta, requires_grad=True)
+        self.gamma = torch.tensor(gamma, requires_grad=True)
+        self.delta = torch.tensor(delta, requires_grad=True)
+
         self.population = population
         self.init_cond = init_cond
 
@@ -135,7 +136,8 @@ class SirEq:
         central = self.__first_derivative_central(parameter[2:], parameter[:-2], sample_time)
         backward = self.__first_derivative_backward(parameter[-1], parameter[-2], sample_time).unsqueeze(0)
 
-        return central
+        t_grid = torch.arange(central.shape[0], dtype=torch.float32)
+        return central * (torch.pow(t_grid, 3) + 1.)
         #return torch.cat((forward, central, backward), dim=0)
 
     def first_derivative_loss(self):
@@ -185,15 +187,16 @@ class SirEq:
 
     @staticmethod
     def __loss_gte_one(parameter):
-        return torch.where(parameter.ge(1.), torch.ones(1, dtype=torch.float64), torch.zeros(1, dtype=torch.float64)) * parameter.abs()
+        return torch.where(parameter.ge(1.), torch.ones(1), torch.zeros(1)) * parameter.abs()
 
     @staticmethod
     def __loss_lte_zero(parameter: torch.Tensor):
-        return torch.where(parameter.le(0.), torch.ones(1, dtype=torch.float64), torch.zeros(1, dtype=torch.float64)) * parameter.abs()
+        return torch.where(parameter.le(0.), torch.ones(1), torch.zeros(1)) * parameter.abs()
 
     def loss(self, w_hat, w_target):
         if isinstance(w_target, numpy.ndarray):
-            w_target = torch.tensor(w_target, dtype=w_hat.dtype)
+            w_target = torch.tensor(w_target)
+        w_target = w_target.to(w_hat.dtype)
 
         # compute mse loss
         mse_loss = 0.5 * torch.mean(torch.pow((w_hat - w_target), 2))
@@ -210,7 +213,7 @@ class SirEq:
         return mse_loss, torch.mean(total_loss)
 
     def inference(self, time_grid):
-        time_grid = time_grid.to(dtype=torch.float64)
+        time_grid = time_grid.to(dtype=torch.float32)
         sol = euler(self.diff_eqs, self.omega, time_grid)
         z_hat = sol[:, 2]
 
@@ -267,8 +270,8 @@ class SirEq:
         run_name = params.get("run_name", "test")
         lr_b, lr_g, lr_d = params["lr_b"], params["lr_g"], params["lr_d"]
 
-        w_target = torch.tensor(target[t_start:t_end], dtype=torch.float64)
-        time_grid = torch.arange(t_start, t_end + t_inc, t_inc, dtype=torch.float64)
+        w_target = torch.tensor(target[t_start:t_end])
+        time_grid = torch.arange(t_start, t_end + t_inc, t_inc)
 
         # init parameters
         epsilon = y0 / population
@@ -299,7 +302,7 @@ class SirEq:
         log_epoch_steps = 10
 
         # add initial params
-        summary.add_figure("params_over_time", sir.plot_params_over_time(), close=True, global_step=0)
+        summary.add_figure("params_over_time", sir.plot_params_over_time(), close=True, global_step=-1)
 
         mse_losses = []
         for i in range(n_epochs):
@@ -315,7 +318,8 @@ class SirEq:
             der_2nd_loss = sir.second_derivative_loss()
 
             #total loss
-            total_loss = reg_mse_loss + der_1st_loss
+            # total_loss = reg_mse_loss + der_1st_loss
+            total_loss = der_1st_loss
 
             retain_graph = (i % log_epoch_steps == 0)
             total_loss.backward()
@@ -376,7 +380,7 @@ class SirEq:
                 best_gamma = sir.gamma
                 best_delta = sir.delta
                 patience = 0
-            elif patience < max_no_improve:
+            """elif patience < max_no_improve:
                 patience += 1
             elif n_lr_updts < max_n_lr_updts:
                 # when patience is over reduce learning rate by 2
@@ -388,7 +392,7 @@ class SirEq:
             else:
                 # after too many reductions early stops
                 print("Early stop at step: %d" % i)
-                break
+                break"""
 
         print("Best: " + str(best))
         print(best_beta)
