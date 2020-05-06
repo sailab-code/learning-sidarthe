@@ -41,8 +41,8 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     gamma = [gamma_t0 for _ in range(train_size - minus)]
     delta = [delta_t0 for _ in range(train_size - minus)]
     """
-    beta = [beta_t0 for _ in range(int(train_size/t_inc))]
-    gamma = [gamma_t0 for _ in range(int(train_size/t_inc))]
+    beta = [beta_t0 + np.random.normal(0, 0.05) for _ in range(int(train_size/t_inc))]
+    gamma = [gamma_t0 + np.random.normal(0, 0.05) for _ in range(int(train_size/t_inc))]
     delta = [delta_t0 for _ in range(int(train_size/t_inc))]
 
     # BETA, GAMMA, DELTA plots
@@ -63,9 +63,9 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
          "t_start": 0, "t_end": train_size,
          "lr_b": lr_b, "lr_g": lr_g, "lr_d": lr_d,
         "t_inc": t_inc,
-        "der_1st_reg": 0.,
-        "der_2nd_reg": 1,
-        "momentum": True,
+        "der_1st_reg": 1.,
+        "der_2nd_reg": 1.,
+        "momentum": False,
         "run_name": name
     }
 
@@ -173,5 +173,5 @@ if __name__ == "__main__":
     region = "Lombardia"
     population = {"Lombardia": 1e7, "Emilia-Romagna": 4.45e6, "Veneto": 4.9e6, "Piemonte": 4.36e6}
     beta_t, gamma_t, delta_t = 0.81, 0.29, 0.03
-    lr_b, lr_g, lr_d = 0.05, 0.05, 1e-7
-    exp(region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, n_epochs, name="single_stage_der_2", train_size=40)
+    lr_b, lr_g, lr_d = 0.01, 0.01, 1e-7
+    exp(region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, n_epochs, name="noise_11", train_size=40)
