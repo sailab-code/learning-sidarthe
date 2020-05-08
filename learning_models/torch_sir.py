@@ -11,7 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as pl
 
 class SirOptimizer(Optimizer):
-    def __init__(self, params, etas, alpha, a, b, momentum=True):
+    def __init__(self, params, etas, alpha, a, b, sample_time, momentum=True):
         """
 
         :param params: iterable containing parameters to be optimized
@@ -27,6 +27,7 @@ class SirOptimizer(Optimizer):
         self.a = a
         self.alpha = alpha
         self.momentum = momentum
+        self.sample_time = sample_time
         defaults = dict()
 
         super(SirOptimizer, self).__init__(params, defaults)
@@ -43,6 +44,7 @@ class SirOptimizer(Optimizer):
                 d_p = parameter.grad.data
                 if self.momentum:
                     times = torch.arange(group["params"][0].shape[0], dtype=torch.float32)
+                    times = times * self.sample_time #added AB
                     mu = torch.sigmoid(self.alpha * times)
                     eta_mod = self.a / (self.a + self.b * times)
                     etas = torch.tensor(self.etas)
@@ -137,7 +139,8 @@ class SirEq:
         backward = self.__first_derivative_backward(parameter[-1], parameter[-2], sample_time).unsqueeze(0)
 
         t_grid = torch.arange(central.shape[0], dtype=torch.float32)
-        return central * (torch.pow(t_grid, 3) + 1.)
+        return central #* (torch.pow(t_grid, 3) + 1.)
+        #return central * (torch.pow(t_grid, 3) + 1.)
         #return torch.cat((forward, central, backward), dim=0)
 
     def first_derivative_loss(self):
@@ -295,7 +298,7 @@ class SirEq:
         patience, n_lr_updts, max_no_improve, max_n_lr_updts = 0, 0, 75, 20
         best_beta, best_gamma, best_delta = sir.beta, sir.gamma, sir.delta
 
-        optimizer = SirOptimizer(sir.params(), [lr_b, lr_g, lr_d], alpha=1 / 10, a=1.0, b=0.05, momentum=momentum)
+        optimizer = SirOptimizer(sir.params(), [lr_b, lr_g, lr_d], alpha=1 / 10, a=1.0, b=0.05, sample_time=t_inc, momentum=momentum)
         der_optimizer = SGD(sir.params(), lr=0.1)
         summary = SummaryWriter(f"runs/{run_name}")
         time_start = time.time()
@@ -318,8 +321,8 @@ class SirEq:
             der_2nd_loss = sir.second_derivative_loss()
 
             #total loss
-            # total_loss = reg_mse_loss + der_1st_loss
-            total_loss = der_1st_loss
+            total_loss = reg_mse_loss + der_1st_loss
+            #total_loss = der_1st_loss
 
             retain_graph = (i % log_epoch_steps == 0)
             total_loss.backward()
