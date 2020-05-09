@@ -270,7 +270,7 @@ class SirEq:
         momentum = params.get("momentum", True)
         n_epochs = params.get("n_epochs", 2000)
         t_inc = params.get("t_inc", 1)
-        run_name = params.get("run_name", "test")
+        summary = params.get("tensorboard", None)
         lr_b, lr_g, lr_d = params["lr_b"], params["lr_g"], params["lr_d"]
 
         w_target = torch.tensor(target[t_start:t_end])
@@ -305,7 +305,8 @@ class SirEq:
         log_epoch_steps = 10
 
         # add initial params
-        summary.add_figure("params_over_time", sir.plot_params_over_time(), close=True, global_step=-1)
+        if summary is not None:
+            summary.add_figure("params_over_time", sir.plot_params_over_time(), close=True, global_step=-1)
 
         mse_losses = []
         for i in range(n_epochs):
@@ -334,21 +335,22 @@ class SirEq:
 
             if i % log_epoch_steps == 0:
                 print(f"epoch {i} / {n_epochs}")
-                # add current plot of params
-                fig = sir.plot_params_over_time()
-                summary.add_figure("params_over_time", fig, close=True, global_step=i)
-                # add current fit
-                fig = sir.plot_sir_fit(w_hat, w_target)
-                summary.add_figure("sir fit", fig, close=True, global_step=i)
-
                 mse_losses.append(mse_loss.detach().clone().numpy())
-                summary.add_scalar("losses/mse_loss", mse_loss, global_step=i)
-                summary.add_scalar("losses/tot_loss", total_loss, global_step=i)
-                summary.add_scalar("losses/der_1st_loss", der_1st_loss, global_step=i)
-                summary.add_scalar("losses/der_2nd_loss", der_2nd_loss, global_step=i)
-                summary.add_scalar("losses/beta_grad_norm", sir.beta.grad.detach().clone().norm(), global_step=i)
-                summary.add_scalar("losses/gamma_grad_norm", sir.gamma.grad.detach().clone().norm(), global_step=i)
-                summary.add_scalar("losses/delta_grad_norm", sir.delta.grad.detach().clone().norm(), global_step=i)
+                if summary is not None:
+                    # add current plot of params
+                    fig = sir.plot_params_over_time()
+                    summary.add_figure("params_over_time", fig, close=True, global_step=i)
+                    # add current fit
+                    fig = sir.plot_sir_fit(w_hat, w_target)
+                    summary.add_figure("sir fit", fig, close=True, global_step=i)
+
+                    summary.add_scalar("losses/mse_loss", mse_loss, global_step=i)
+                    summary.add_scalar("losses/tot_loss", total_loss, global_step=i)
+                    summary.add_scalar("losses/der_1st_loss", der_1st_loss, global_step=i)
+                    summary.add_scalar("losses/der_2nd_loss", der_2nd_loss, global_step=i)
+                    summary.add_scalar("losses/beta_grad_norm", sir.beta.grad.detach().clone().norm(), global_step=i)
+                    summary.add_scalar("losses/gamma_grad_norm", sir.gamma.grad.detach().clone().norm(), global_step=i)
+                    summary.add_scalar("losses/delta_grad_norm", sir.delta.grad.detach().clone().norm(), global_step=i)
 
                 """optimizer.zero_grad()
                 sir.loss(w_hat, w_target)[1].backward()

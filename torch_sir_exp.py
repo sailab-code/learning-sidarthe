@@ -58,6 +58,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     ax.legend()
     pl.savefig(os.path.join(exp_path, exp_prefix + "initial_params_bcd_over_time.png"))
 
+    summary = SummaryWriter(f"runs/{name}")
 
     dy_params = {
         "beta": beta, "gamma": gamma, "delta": delta, "n_epochs": n_epochs,
@@ -68,7 +69,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
         "der_1st_reg": 0.,
         "der_2nd_reg": 0.,
         "momentum": True,
-        "run_name": name
+        "tensorboard": summary
     }
 
     sir, mse_losses = SirEq.train(target=w_target, y0 = y_target[0], z0=0., **dy_params)
@@ -103,6 +104,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     ax.margins(0.05)
     ax.legend()
     pl.savefig(os.path.join(exp_path, exp_prefix + "bcd_over_time.png"))
+    summary.add_figure("final/params_over_time", figure=fig)
 
     # normalize wrt population
     w_hat = w_hat[dataset_slice].detach().numpy() / population
@@ -111,7 +113,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     _w = [_v / population for _v in w_target]
 
     # Plotting
-    pl.figure()
+    fig = pl.figure()
     pl.subplot(311)
     pl.grid(True)
     pl.title('SIR - Coronavirus in ' + str(area[0]))
@@ -130,24 +132,18 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     pl.xlabel('Time in days')
     pl.ylabel('R')
     pl.savefig(os.path.join(exp_path, exp_prefix + "sliding_SIR_global.png"))
+    summary.add_figure("final/global_sir", figure=fig)
 
-    pl.figure()
-    pl.title("Losses (MSE/1st derivate/2nd derivate")
-    pl.subplot(311)
-    pl.grid(True)
-    pl.xlabel('Epochs')
-    pl.ylabel('1st der loss')
-    pl.savefig(os.path.join(exp_path, exp_prefix + "losses.png"))
-
-    pl.figure()
+    fig = pl.figure()
     pl.grid(True)
     pl.title("Estimated Deaths")
     pl.plot(w_hat, '-', label='Estimated Deaths')
     pl.xlabel('Time in days')
     pl.ylabel('Deaths')
     pl.savefig(os.path.join(exp_path, exp_prefix + "sliding_W_global.png"))
+    summary.add_figure("final/W_global", figure=fig)
 
-    pl.figure()
+    fig = pl.figure()
     pl.grid(True)
     pl.title('SIR on fit')
     pl.plot(RES[:train_size, 1], '-r', label='I')
@@ -156,8 +152,9 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     pl.xlabel('Time in days')
     pl.ylabel('Infectious')
     pl.savefig(os.path.join(exp_path, exp_prefix + "sliding_I_fit.png"))
+    summary.add_figure("final/infected_fit", fig)
 
-    pl.figure()
+    fig = pl.figure()
     pl.grid(True)
     pl.title("Estimated Deaths on fit")
     pl.plot(w_hat[:train_size], '-', label='Estimated Deaths')
@@ -168,7 +165,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
     pl.ylabel('Deaths')
     pl.savefig(os.path.join(exp_path, exp_prefix + "sliding_W_fit.png"))
     pl.show()
-
+    summary.add_figure("final/death_fit", fig)
 
 if __name__ == "__main__":
     n_epochs = 5001
