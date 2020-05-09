@@ -37,9 +37,9 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, n_epo
                  "_lrb" + str(lr_b) + "_lrg" + str(lr_g) + "_lrd" + str(lr_d)
 
     t_inc = 0.1
-    beta = [beta_t0 for _ in range(train_size)]
-    gamma = [gamma_t0 for _ in range(train_size)]
-    delta = [delta_t0 for _ in range(train_size)]
+    beta = [beta_t0 for _ in range(int(train_size / t_inc))]
+    gamma = [gamma_t0 for _ in range(int(train_size / t_inc))]
+    delta = [delta_t0 for _ in range(int(train_size / t_inc))]
 
     """
     beta = [beta_t0 + np.random.normal(0, 0.05) for _ in range(int(train_size/t_inc))]
