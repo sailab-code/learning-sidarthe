@@ -8,6 +8,9 @@ START_DATE = datetime.date(2020, 2, 24)
 # TODAY = datetime.datetime.now().date()
 
 
+Plot = namedtuple("Plot", ("x_label", "y_label", "use_grid", "use_legend", "curves", "bottom_adjust", "margins", "formatter", "h_pos", "v_pos"))
+Plot.__new__.__defaults__ = (None,) * len(Plot._fields)
+
 Curve = namedtuple("Curve", ("x", "y", "style", "label", "color"))
 Curve.__new__.__defaults__ = (None,) * len(Curve._fields)
 
@@ -88,6 +91,7 @@ def plot_sir_dynamic(s, i, r, region, save_path):
     plt.ylabel('R')
     plt.legend(loc=0)
     plt.savefig(save_path, bbox_inches='tight')  # os.path.join(exp_path, exp_prefix + "sliding_SIR_global.pdf")
+    plt.close('all')
 
 
 def generic_plot(xy_curves, title, save_path, x_label=None, y_label=None, formatter=None, use_legend=True, use_grid=True):
@@ -126,3 +130,46 @@ def generic_plot(xy_curves, title, save_path, x_label=None, y_label=None, format
         ax.legend()
 
     plt.savefig(save_path, bbox_inches='tight')
+    plt.close('all')
+
+
+def generic_sub_plot(subplots, title, save_path):
+    """
+
+    :param subplots:
+    :param title:
+    :param save_path:
+    :return:
+    """
+
+    n_subplots = len(subplots)
+    fig, axarr = plt.subplots(n_subplots, sharex=True, sharey=False, figsize=(9, 9))
+    fig.suptitle(title)
+
+    # ax = fig.add_subplot(n_subplots, sub_plot.h_pos, sub_plot.v_pos)
+    for i,sub_plot in enumerate(subplots):
+        for curve in sub_plot.curves:
+            if curve.color is not None:
+                axarr[i].plot(curve.x, curve.y, curve.style, label=curve.label, color=curve.color)
+            else:
+                axarr[i].plot(curve.x, curve.y, curve.style, label=curve.label)
+
+            if sub_plot.formatter is not None:
+                axarr[i].xaxis.set_major_formatter(plt.FuncFormatter(format_xtick))
+
+        if sub_plot.use_legend:
+            axarr[i].legend()
+
+        if sub_plot.margins is not None:
+            axarr[i].margins(sub_plot.margins)
+
+        if sub_plot.y_label is not None:
+            plt.ylabel(sub_plot.y_label)
+
+    fig.subplots_adjust(hspace=0)
+    # Hide x labels and tick labels for all but bottom plot.
+    for ax in axarr:
+        ax.label_outer()
+
+    plt.savefig(save_path, bbox_inches='tight')
+    plt.close('all')

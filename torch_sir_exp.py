@@ -7,7 +7,7 @@ import numpy as np
 
 from learning_models.torch_sir import SirEq
 from utils.data_utils import select_data
-from utils.visualization_utils import plot_sir_dynamic, generic_plot, Curve, format_xtick
+from utils.visualization_utils import generic_plot, Curve, format_xtick, generic_sub_plot, Plot
 
 
 def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a, n_epochs, name, train_size, der_1st_reg, der_2nd_reg, use_alpha, y_loss_weight, t_inc):
@@ -21,17 +21,20 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
 
     x_target, w_target = select_data(df_file, area, area_col_name, value_col_name, groupby_cols, file_sep=",")
     _, y_target = select_data(df_file, area, area_col_name, "totale_positivi", groupby_cols, file_sep=",")
+    _, healed = select_data(df_file, area, area_col_name, "dimessi_guariti", groupby_cols, file_sep=",")
     print(y_target[0])
     print(w_target)
 
     initial_len = len(y_target)
-    tmp_y, tmp_w = [], []
+    tmp_y, tmp_w, tmp_h = [], [], []
     for i in range(len(y_target)):
         if y_target[i] > 0:
             tmp_y.append(y_target[i])
             tmp_w.append(w_target[i])
+            tmp_h.append(healed[i])
     y_target = tmp_y
     w_target = tmp_w
+    healed = tmp_h
 
     # START_DATE = datetime.date(2020, 2, 24 + initial_len - len(y_target))
 
@@ -43,7 +46,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     if not os.path.exists(base_path):
         os.mkdir(base_path)
 
-    exp_path = os.path.join(base_path, "torch_sir_validation_only_beta_t_test_grafici")
+    exp_path = os.path.join(base_path, "torch_sir_validation_only_beta_t_test_grafici2")
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 
@@ -178,22 +181,43 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
 
     generic_plot([r0_pl, thresh_r0_pl], r0_pl_title, r0_pl_path, formatter=format_xtick)
 
-    # Risk
-    # risk_pl = Curve(range(0, len(mse_losses)*50, 50), mse_losses, '-b', label="risk")
-    # risk_pl_title = "Risk over epochs  ({}".format(str(area[0])) + str(")")
-    # risk_pl_path = os.path.join(exp_path, exp_prefix + "_risk" + file_format)
-    # generic_plot([risk_pl], risk_pl_title, risk_pl_path)
-
     # normalize wrt population
     w_hat = w_hat[dataset_slice].detach().numpy() / population
     RES = sol.detach().numpy() / population
     print(len(RES[:,0]))
     _y = [_v / population for _v in y_target]
     _w = [_v / population for _v in w_target]
+    _healed = [_v / population for _v in healed]
 
     # SIR dynamic
+    recovered = np.array(_healed) +  np.array(_w)
+    assert(len(RES[:, 0]) == len(RES[:, 1]) == len(RES[:, 2]))
+    sir_len = len(RES[:, 0])
+    pl_sir_x = list(range(sir_len))
+    assert(len(_w) == len(_y) == len(_healed))
+    sir_truth_len = len(_w)
+    pl_sir_truth_x = list(range(sir_truth_len))
+
     sir_dir_path = os.path.join(exp_path, exp_prefix + "_SIR_global" + file_format)
-    plot_sir_dynamic(RES[:, 0], RES[:, 1], RES[:, 2], area[0], sir_dir_path)
+    # plot_sir_dynamic(RES[:, 0], RES[:, 1], RES[:, 2], area[0], sir_dir_path)
+    s_fit_curve = Curve(pl_sir_x, RES[:, 0], '-g', label='$x$')
+    s_truth = np.ones(len(_w))-( np.array(_y) + recovered)
+    s_truth_points = Curve(pl_sir_truth_x, s_truth, '.g', label='$x$')
+    s_curves = [s_fit_curve, s_truth_points]
+    s_sub_pl = Plot(x_label=None, y_label="S", use_grid=True, use_legend=True, curves=s_curves, bottom_adjust=0.15, margins=0.05, formatter=format_xtick,
+                    h_pos=1, v_pos=1)
+    i_fit_curve = Curve(pl_sir_x, RES[:, 1], '-r', label='$y$')
+    i_truth_points = Curve(pl_sir_truth_x, _y, '.r', label='$y$')
+    i_curves = [i_fit_curve, i_truth_points]
+    i_sub_pl = Plot(x_label=None, y_label="I", use_grid=True, use_legend=True, curves=i_curves, bottom_adjust=0.15, margins=0.05, formatter=format_xtick,
+                    h_pos=1, v_pos=2)
+    r_fit_curve = Curve(pl_sir_x, RES[:, 2], '-k', label='$z$')
+    r_truth_points = Curve(pl_sir_truth_x, recovered, '.k', label='$z$')
+    r_curves = [r_fit_curve, r_truth_points]
+    r_sub_pl = Plot(x_label=None, y_label="R", use_grid=True, use_legend=True, curves=r_curves, bottom_adjust=0.15, margins=0.05, formatter=format_xtick,
+                    h_pos=1, v_pos=3)
+    sir_title = 'SIR  ({}'.format(region) + str(")")
+    generic_sub_plot([s_sub_pl, i_sub_pl, r_sub_pl], sir_title, sir_dir_path)
 
     # Deaths
     pl_w_hat = list(range(len(w_hat)))
@@ -233,7 +257,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
 
 if __name__ == "__main__":
     # todo provare ad inizializzare rete con pesi random
-    n_epochs = 101
+    n_epochs = 2501
     # Veneto b0.8_g0.35_d0.015_lrb0.05_lrg0.01_lrd0.0005_ts40_st_der1000.0_nd_der0.0
     # Lombardia b0.81_g0.2_d0.02_lrb0.05_lrg0.01_lrd1e-05_ts40_st_der1000.0_nd_der10000.0
     # Emilia-Romagna b0.8_g0.35_d0.015_lrb0.05_lrg0.01_lrd5e-05_ts40_st_der1000.0_nd_der0.0
@@ -243,7 +267,7 @@ if __name__ == "__main__":
                   "Toscana": 3.73e6, "Umbria": 0.882e6, "Lazio": 5.88e6, "Marche": 1.525e6, "Campania": 5.802e6,
                   "Puglia": 1.551e6,
                   "Liguria": 4.029e6}
-    beta_ts, gamma_ts, delta_ts = [0.9, 0.75, 0.6], [0.35, 0.25], [0.005, 0.008, 0.0125, 0.02]
+    beta_ts, gamma_ts, delta_ts = [0.8, 0.75, 0.6], [0.3, 0.25], [0.01, 0.008, 0.0125, 0.02]
     lr_bs, lr_gs, lr_ds, lr_as = [1e-4], [1e-5], [3e-6], [1e-3]
     train_sizes = [40]  # list(range(40, 41, 5))
     derivative_regs = [-1.0]  # [0.0, 1e2, 1e3]
