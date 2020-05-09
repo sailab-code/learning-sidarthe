@@ -44,7 +44,7 @@ class SirOptimizer(Optimizer):
                 d_p = parameter.grad.data
                 if self.momentum:
                     times = torch.arange(group["params"][0].shape[0], dtype=torch.float32)
-                    times = times * self.sample_time #added AB
+                    # times = times * self.sample_time #added AB
                     mu = torch.sigmoid(self.alpha * times)
                     eta_mod = self.a / (self.a + self.b * times)
                     etas = torch.tensor(self.etas)
