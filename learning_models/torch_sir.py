@@ -366,9 +366,22 @@ class SirEq:
         lr_b, lr_g, lr_d, lr_a = params["lr_b"], params["lr_g"], params["lr_d"], params["lr_a"]
 
         t_inc = params.get("t_inc", 1)
-        time_grid = torch.arange(t_start, t_end + t_inc, t_inc)
-        train_w_target = torch.tensor(w_target[t_start:t_end], dtype=torch.float32)
-        train_y_target = torch.tensor(y_target[t_start:t_end], dtype=torch.float32)
+
+
+        train_time_grid = torch.arange(t_start, t_end + t_inc, t_inc)
+        train_target_slice = slice(t_start, t_end, 1)
+        train_hat_slice = slice(int(t_start / t_inc), int(t_end / t_inc), int(1 / t_inc))
+
+        val_time_grid = torch.arange(t_start, t_end + val_size + t_inc, t_inc)
+        val_target_slice = slice(t_end, t_end + val_size, 1)
+        val_hat_slice = slice(int(t_end / t_inc), int((t_end + val_size) / t_inc), int(1 / t_inc))
+
+
+        train_w_target = torch.tensor(w_target[train_target_slice], dtype=torch.float32)
+        train_y_target = torch.tensor(y_target[train_target_slice], dtype=torch.float32)
+
+        val_w_target = torch.tensor(w_target[val_target_slice], dtype=torch.float32)
+        val_y_target = torch.tensor(y_target[val_target_slice], dtype=torch.float32)
 
         # init parameters
         epsilon = train_y_target[t_start].item() / population
@@ -400,9 +413,7 @@ class SirEq:
         time_start = time.time()
         mse_losses, der_1st_losses, der_2nd_losses = [], [], []
 
-        train_slice = slice(int(t_start / t_inc), int(t_end / t_inc), int(1 / t_inc))
-        val_slice = slice(int(t_end / t_inc), int((t_end + val_size) / t_inc), int(1 / t_inc))
-        val_time_grid = torch.arange(t_start, t_end + val_size + t_inc, t_inc)
+
 
         log_epoch_steps = 50
         validation_epoch_steps = 10
@@ -412,9 +423,9 @@ class SirEq:
             summary.add_figure("params_over_time", sir.plot_params_over_time(), close=True, global_step=-1)
 
         for i in range(n_epochs):
-            w_hat, y_hat, _ = sir.inference(time_grid)
-            w_hat = w_hat[train_slice]
-            y_hat = y_hat[train_slice]
+            w_hat, y_hat, _ = sir.inference(train_time_grid)
+            w_hat = w_hat[train_hat_slice]
+            y_hat = y_hat[train_hat_slice]
             optimizer.zero_grad()
 
             if use_alpha:
@@ -469,9 +480,10 @@ class SirEq:
             if i % validation_epoch_steps == 0:
                 with torch.no_grad():
                     val_w_hat, val_y_hat, _ = sir.inference(val_time_grid)
-                    val_w_hat, val_y_hat = val_w_hat[val_slice], val_y_hat[val_slice]
+                    val_w_hat, val_y_hat = val_w_hat[val_hat_slice], val_y_hat[val_hat_slice]
                     val_mse_loss, val_w_loss, val_y_loss, val_total_loss = sir.loss(
-                        val_w_hat, w_target[val_slice], val_y_hat, y_target[val_slice])
+                        val_w_hat, val_w_target, val_y_hat, val_y_target
+                    )
                     print("Validation Loss at step %d: %.7f" % (i, val_mse_loss))
                     summary.add_scalar("losses/validation_mse_loss", val_mse_loss, global_step=i)
                 if val_mse_loss + thresh < best:
