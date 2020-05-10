@@ -11,7 +11,7 @@ from utils.visualization_utils import generic_plot, Curve, format_xtick, generic
 from torch.utils.tensorboard import SummaryWriter
 
 
-def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a, n_epochs, name, train_size, der_1st_reg, der_2nd_reg, use_alpha, y_loss_weight, t_inc, exp_prefix):
+def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a, n_epochs, name, train_size, val_len, der_1st_reg, der_2nd_reg, use_alpha, y_loss_weight, t_inc, exp_prefix):
 
     df_file = os.path.join(os.getcwd(), "dati-regioni", "dpc-covid19-ita-regioni.csv")
     # df_file = os.path.join(os.getcwd(), "train.csv")
@@ -55,7 +55,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 
-    val_size = train_size + 10  # validation on the next 10 days
+    val_size = train_size + val_len  # validation on the next 10 days
     dataset_size = len(w_target)
 
     beta = [beta_t0 for _ in range(int(train_size))]
@@ -278,19 +278,20 @@ if __name__ == "__main__":
                   "Toscana": 3.73e6, "Umbria": 0.882e6, "Lazio": 5.88e6, "Marche": 1.525e6, "Campania": 5.802e6,
                   "Puglia": 1.551e6,
                   "Liguria": 4.029e6}
-    beta_ts, gamma_ts, delta_ts = [0.8, 0.75, 0.6], [0.3, 0.25], [0.01, 0.008, 0.0125, 0.02]
+    beta_ts, gamma_ts, delta_ts = [0.7, 0.5, 0.35], [0.3, 0.25, 0.1], [0.0075, 0.01, 0.02, 0.03]
     lr_bs, lr_gs, lr_ds, lr_as = [1e-4], [1e-5], [3e-6], [1e-3]
-    train_sizes = [40]  # list(range(40, 41, 5))
-    derivative_regs = [-1.0]  # [0.0, 1e2, 1e3]
-    der_2nd_regs = [-1.0]  # [0.0, 1e2, 1e3]
+    train_sizes = [40, 45]  # list(range(40, 41, 5))
+    val_lens = [10, 20]
+    derivative_regs = [5e3, 1e4, 2e4, 1e5]  # [0.0, 1e2, 1e3]
+    der_2nd_regs = [0]  # [0.0, 1e2, 1e3]
     use_alphas = [False]
     y_loss_weights = [0.0]
-    t_incs = [1.0]
+    t_incs = [0.1]
 
     import itertools
-    for hyper_params in itertools.product(regions, beta_ts, gamma_ts, delta_ts, lr_bs, lr_gs, lr_ds, lr_as, train_sizes, derivative_regs, der_2nd_regs, use_alphas, y_loss_weights, t_incs):
-        region, beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, train_size, derivative_reg, der_2nd_reg, use_alpha, y_loss_w, t_inc = hyper_params
+    for hyper_params in itertools.product(regions, beta_ts, gamma_ts, delta_ts, lr_bs, lr_gs, lr_ds, lr_as, train_sizes, val_lens, derivative_regs, der_2nd_regs, use_alphas, y_loss_weights, t_incs):
+        region, beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, train_size, val_len, derivative_reg, der_2nd_reg, use_alpha, y_loss_w, t_inc = hyper_params
         exp_prefix = get_exp_prefix(region, beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, train_size, derivative_reg, der_2nd_reg, t_inc, use_alpha, y_loss_w)
         print(region)
-        exp(region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, n_epochs, name=region, train_size=train_size,
+        exp(region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, n_epochs, name=region, train_size=train_size, val_len=val_len,
             der_1st_reg=derivative_reg, der_2nd_reg=der_2nd_reg, use_alpha=use_alpha, y_loss_weight=y_loss_w, t_inc=t_inc, exp_prefix=exp_prefix)
