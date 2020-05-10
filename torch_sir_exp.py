@@ -11,7 +11,7 @@ from utils.visualization_utils import generic_plot, Curve, format_xtick, generic
 from torch.utils.tensorboard import SummaryWriter
 
 
-def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a, n_epochs, name, train_size, der_1st_reg, der_2nd_reg, use_alpha, y_loss_weight, t_inc):
+def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a, n_epochs, name, train_size, der_1st_reg, der_2nd_reg, use_alpha, y_loss_weight, t_inc, exp_prefix):
 
     df_file = os.path.join(os.getcwd(), "dati-regioni", "dpc-covid19-ita-regioni.csv")
     # df_file = os.path.join(os.getcwd(), "train.csv")
@@ -57,17 +57,13 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
 
     val_size = train_size + 10  # validation on the next 10 days
     dataset_size = len(w_target)
-    exp_prefix = area[0] + "_b" + str(beta_t0) + "_g" + str(gamma_t0) + "_d" + str(delta_t0) + \
-                 "_lrb" + str(lr_b) + "_lrg" + str(lr_g) + "_lrd" + str(lr_d) + "_ts" + str(train_size) \
-                 + "_st_der" + str(der_1st_reg) + "_nd_der" + str(der_2nd_reg) + "_t_inc" + str(t_inc) + "_use_alpha" + str(use_alpha) \
-                 + "_y_loss_weight" + str(y_loss_weight)
 
     beta = [beta_t0 for _ in range(int(train_size))]
     # beta = [beta_t0]
     # gamma = [gamma_t0 for _ in range(int(train_size))]
     gamma = [gamma_t0]
     delta = [delta_t0]
-    summary = SummaryWriter(f"runs/{name}")
+    summary = SummaryWriter(f"runs/{name}/{exp_prefix}")
 
     dy_params = {
         "beta": beta, "gamma": gamma, "delta": delta, "n_epochs": n_epochs,
@@ -165,8 +161,8 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     print(sir.beta.shape)
 
     bgd_pl_path = os.path.join(exp_path, exp_prefix + "_bcd_over_time" + file_format)
-    generic_plot(params_curves, bgd_pl_title, bgd_pl_path, formatter=format_xtick)
-    # summary.add_figure("final/params_over_time", figure=fig)
+    fig = generic_plot(params_curves, bgd_pl_title, bgd_pl_path, formatter=format_xtick)
+    summary.add_figure("final/params_over_time", figure=fig)
 
     # R0
     pl_x = list(range(len(beta)))
@@ -181,7 +177,8 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     r0_pl_title = '$R_0$  ({}'.format(str(area[0])) + str(")")
     r0_pl_path = os.path.join(exp_path, exp_prefix + "_r0" + file_format)
 
-    generic_plot([r0_pl, thresh_r0_pl], r0_pl_title, r0_pl_path, formatter=format_xtick)
+    fig = generic_plot([r0_pl, thresh_r0_pl], r0_pl_title, r0_pl_path, formatter=format_xtick)
+    summary.add_figure("final/r0", figure=fig)
 
     # normalize wrt population
     w_hat = w_hat[dataset_slice].detach().numpy() / population
@@ -219,7 +216,8 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     r_sub_pl = Plot(x_label=None, y_label="R", use_grid=True, use_legend=True, curves=r_curves, bottom_adjust=0.15, margins=0.05, formatter=format_xtick,
                     h_pos=1, v_pos=3)
     sir_title = 'SIR  ({}'.format(region) + str(")")
-    generic_sub_plot([s_sub_pl, i_sub_pl, r_sub_pl], sir_title, sir_dir_path)
+    fig = generic_sub_plot([s_sub_pl, i_sub_pl, r_sub_pl], sir_title, sir_dir_path)
+    summary.add_figure("final/sir_dynamic", figure=fig)
 
     # Deaths
     pl_w_hat = list(range(len(w_hat)))
@@ -228,7 +226,8 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     deaths_pl_title = 'Deaths  ({}'.format(str(area[0])) + str(")")
     deaths_pl_path = os.path.join(exp_path, exp_prefix + "_W_global" + file_format)
 
-    generic_plot([w_hat_pl], deaths_pl_title, deaths_pl_path, 'Time in days', 'Deaths')
+    fig = generic_plot([w_hat_pl], deaths_pl_title, deaths_pl_path, 'Time in days', 'Deaths')
+    summary.add_figure("final/deaths_predicted", figure=fig)
 
     # Infectious Train/Test/Real
     y_fits = Curve(list(range(train_size)), RES[:train_size, 1], '-r', label='$y$ fit')
@@ -241,8 +240,8 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     infected_pl_title = 'Infectious  ({}'.format(str(area[0])) + str(")")
     infected_pl_path = os.path.join(exp_path, exp_prefix + "_I_fit" + file_format)
 
-    generic_plot([y_fits, y_val_preds, y_test_preds, y_truth_train, y_truth_val, y_truth_test], infected_pl_title, infected_pl_path, y_label='Infectious', formatter=format_xtick)
-
+    fig = generic_plot([y_fits, y_val_preds, y_test_preds, y_truth_train, y_truth_val, y_truth_test], infected_pl_title, infected_pl_path, y_label='Infectious', formatter=format_xtick)
+    summary.add_figure("final/infected_fit", figure=fig)
     # Deaths Train/Test/Real
     w_fits = Curve(list(range(train_size)), w_hat[:train_size], '-', label='$w$ fit')
     w_val_preds = Curve(list(range(train_size, val_size)), w_hat[train_size:val_size], '-', color='darkblue', label='$w$ validation')
@@ -254,7 +253,17 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     w_pl_title = 'Deaths  ({}'.format(str(area[0])) + str(")")
     w_pl_path = os.path.join(exp_path, exp_prefix + "_W_fit" + file_format)
 
-    generic_plot([w_fits, w_val_preds, w_test_preds, w_truth_train, w_truth_val, w_truth_test], w_pl_title, w_pl_path, y_label="Deaths", formatter=format_xtick)
+    fig = generic_plot([w_fits, w_val_preds, w_test_preds, w_truth_train, w_truth_val, w_truth_test], w_pl_title, w_pl_path, y_label="Deaths", formatter=format_xtick)
+    summary.add_figure("final/deaths_fit", figure=fig)
+
+
+def get_exp_prefix(area, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a, train_size, der_1st_reg,
+                   der_2nd_reg, t_inc, use_alpha, y_loss_weight):
+    return area[0] + "_b" + str(beta_t0) + "_g" + str(gamma_t0) + "_d" + str(delta_t0) + \
+           "_lrb" + str(lr_b) + "_lrg" + str(lr_g) + "_lrd" + str(lr_d) + "_lra" + str(lr_a) + "_ts" + str(train_size) \
+           + "_st_der" + str(der_1st_reg) + "_nd_der" + str(der_2nd_reg) + "_t_inc" + str(t_inc) + "_use_alpha" + str(
+        use_alpha) \
+           + "_y_loss_weight" + str(y_loss_weight)
 
 
 if __name__ == "__main__":
@@ -281,6 +290,7 @@ if __name__ == "__main__":
     import itertools
     for hyper_params in itertools.product(regions, beta_ts, gamma_ts, delta_ts, lr_bs, lr_gs, lr_ds, lr_as, train_sizes, derivative_regs, der_2nd_regs, use_alphas, y_loss_weights, t_incs):
         region, beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, train_size, derivative_reg, der_2nd_reg, use_alpha, y_loss_w, t_inc = hyper_params
+        exp_prefix = get_exp_prefix(region, beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, train_size, derivative_reg, der_2nd_reg, t_inc, use_alpha, y_loss_w)
         print(region)
         exp(region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, n_epochs, name=region, train_size=train_size,
-            der_1st_reg=derivative_reg, der_2nd_reg=der_2nd_reg, use_alpha=use_alpha, y_loss_weight=y_loss_w, t_inc=t_inc)
+            der_1st_reg=derivative_reg, der_2nd_reg=der_2nd_reg, use_alpha=use_alpha, y_loss_weight=y_loss_w, t_inc=t_inc, exp_prefix=exp_prefix)

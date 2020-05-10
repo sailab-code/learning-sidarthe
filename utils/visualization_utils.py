@@ -129,8 +129,11 @@ def generic_plot(xy_curves, title, save_path, x_label=None, y_label=None, format
     if use_legend:
         ax.legend()
 
-    plt.savefig(save_path, bbox_inches='tight')
+    if save_path is not None:
+        plt.savefig(save_path, bbox_inches='tight')
+
     plt.close('all')
+    return fig
 
 
 def generic_sub_plot(subplots, title, save_path):
@@ -173,3 +176,4 @@ def generic_sub_plot(subplots, title, save_path):
 
     plt.savefig(save_path, bbox_inches='tight')
     plt.close('all')
+    return fig

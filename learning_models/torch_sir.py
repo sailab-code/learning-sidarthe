@@ -10,6 +10,8 @@ from torchdiffeq import odeint
 
 import matplotlib.pyplot as pl
 
+from utils.visualization_utils import generic_plot, format_xtick, Curve
+
 
 class SirOptimizer(Optimizer):
     def __init__(self, params, etas, alpha, a, b, sample_time, momentum=True):
@@ -82,10 +84,10 @@ class SirEq:
         self.der_1st_reg = kwargs.get("der_1st_reg", -1)
         self.der_2nd_reg = kwargs.get("der_2nd_reg", -1)
 
-        use_alpha = kwargs.get("use_alpha", False)
+        self.use_alpha = kwargs.get("use_alpha", False)
         input_size = kwargs.get("mlp_input", 4)
         hidden_size = kwargs.get("mlp_hidden", 6)
-        self.init_alpha(use_alpha, input_size=input_size, hidden_size=hidden_size)
+        self.init_alpha(self.use_alpha, input_size=input_size, hidden_size=hidden_size)
 
         self.sample_time = kwargs.get("sample_time", 1)
 
@@ -191,15 +193,15 @@ class SirEq:
         return torch.mean(torch.abs((w_hat - w_target) / w_target))
 
     def __first_derivative_loss(self, parameter):
+        if parameter.shape[0] < 3: # must have at least 3 values to properly compute first derivative
+            return 0.
         sample_time = self.sample_time
         forward = self.__first_derivative_forward(parameter[1], parameter[0], sample_time).unsqueeze(0)
         central = self.__first_derivative_central(parameter[2:], parameter[:-2], sample_time)
         backward = self.__first_derivative_backward(parameter[-1], parameter[-2], sample_time).unsqueeze(0)
 
-        t_grid = torch.arange(central.shape[0], dtype=torch.float32)
-        return central  # * (torch.pow(t_grid, 3) + 1.)
-        # return central * (torch.pow(t_grid, 3) + 1.)
-        # return torch.cat((forward, central, backward), dim=0)
+        return torch.cat((forward, central, backward), dim=0)
+        # return central
 
     def first_derivative_loss(self):
         if self.der_1st_reg != 0:
@@ -228,6 +230,9 @@ class SirEq:
         return (f_x - 2 * f_x_minus_h + f_x_minus_2h) / (h ** 2)
 
     def __second_derivative_loss(self, parameter: torch.Tensor):
+        if parameter.shape[0] < 3: # must have at least 3 values to properly compute first derivative
+            return 0.
+
         sample_time = self.sample_time
         forward = self.__second_derivative_forward(parameter[2], parameter[1], parameter[0], sample_time).unsqueeze(0)
         central = self.__second_derivative_central(parameter[2:], parameter[1:-1], parameter[:-2], sample_time)
@@ -294,22 +299,31 @@ class SirEq:
         return w_hat, sol[:, 1], sol
 
     def plot_params_over_time(self):
-        fig, ax = pl.subplots()
-        pl.title("Beta, Gamma, Delta over time")
-        pl.grid(True)
-        ax.plot(self.beta.detach().numpy(), '-g', label="beta")
-        ax.plot(self.gamma.detach().numpy(), '-r', label="gamma")
-        ax.plot(self.delta.detach().numpy(), '-b', label="delta")
-        ax.margins(0.05)
-        ax.legend()
-        return fig
+        # BETA, GAMMA, DELTA
+        size = self.beta.shape[0]
+        pl_x = list(range(size))  # list(range(len(beta)))
+        beta_pl = Curve(pl_x, self.beta.detach().numpy(), '-g', "$\\beta$")
+        gamma_pl = Curve(pl_x, [self.gamma.detach().numpy()] * size, '-r', "$\gamma$")
+        delta_pl = Curve(pl_x, [self.delta.detach().numpy()] * size, '-b', "$\delta$")
+        params_curves = [beta_pl, gamma_pl, delta_pl]
+
+        if self.use_alpha:
+            alpha = numpy.np.concatenate(
+                [self.alpha(self.get_policy_code(t)).detach().numpy().reshape(1) for t in range(size)], axis=0)
+            alpha_pl = Curve(pl_x, alpha, '-', "$\\alpha$")
+            beta_alpha_pl = Curve(pl_x, alpha * self.beta.detach().numpy(), '-', "$\\alpha \cdot \\beta$")
+            params_curves.append(alpha_pl)
+            params_curves.append(beta_alpha_pl)
+
+        bgd_pl_title = "beta, gamma, delta"
+        return generic_plot(params_curves, bgd_pl_title, None, formatter=format_xtick)
 
     def plot_sir_fit(self, w_hat, w_target):
         fig = pl.figure()
         pl.grid(True)
         pl.title("Estimated Deaths on fit")
         pl.plot(w_hat.detach().numpy(), '-', label='Estimated Deaths')
-        pl.plot(w_target.detach().numpy(), '.r', label='Actual Deaths')
+        pl.plot(w_target, '.r', label='Actual Deaths')
         pl.xlabel('Time in days')
         pl.ylabel('Deaths')
         return fig
@@ -480,6 +494,7 @@ class SirEq:
                     val_mse_loss, val_w_loss, val_y_loss, val_total_loss = sir.loss(
                         val_w_hat, w_target[val_slice], val_y_hat, y_target[val_slice])
                     print("Validation Loss at step %d: %.7f" % (i, val_mse_loss))
+                    summary.add_scalar("losses/validation_mse_loss", val_mse_loss, global_step=i)
                 if val_mse_loss + thresh < best:
                     # maintains the best solution found so far
                     best = val_mse_loss
