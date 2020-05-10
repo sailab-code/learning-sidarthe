@@ -47,7 +47,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     if not os.path.exists(base_path):
         os.mkdir(base_path)
 
-    exp_path = os.path.join(base_path, "torch_sir_validation_only_beta_t_test_grafici2")
+    exp_path = os.path.join(base_path, "torch_sir_validation_only_merge")
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 

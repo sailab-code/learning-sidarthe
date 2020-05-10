@@ -388,7 +388,7 @@ class SirEq:
         # early stopping stuff
         best = 1e12
         thresh = 5e-5
-        patience, n_lr_updts, max_no_improve, max_n_lr_updts = 0, 0, 25, 25
+        patience, n_lr_updts, max_no_improve, max_n_lr_updts = 0, 0, 25, 5
         best_beta, best_gamma, best_delta = sir.beta, sir.gamma, sir.delta
 
         # optimizer = SirOptimizer(sir.params(), [lr_b, lr_g, lr_d, lr_a, lr_a, lr_a, lr_a], alpha=1 / 7, a=3.0, b=0.05) # fixme assigning of lrs
@@ -465,27 +465,6 @@ class SirEq:
                 time_step = time.time() - time_start
                 time_start = time.time()
                 print("Average time for epoch: {}".format(time_step / log_epoch_steps))
-
-            if mse_loss + thresh < best:
-                # maintains the best solution found so far
-                best = mse_loss
-                best_beta = sir.beta
-                best_gamma = sir.gamma
-                best_delta = sir.delta
-                patience = 0
-            elif patience < max_no_improve:
-                patience += 1
-            elif n_lr_updts < max_n_lr_updts:
-                # when patience is over reduce learning rate by 2
-                print("Reducing learning rate at step: %d" % i)
-                lr_b, lr_g, lr_d = lr_b / 2, lr_g / 2, lr_d / 2
-                optimizer.etas = [lr_b, lr_g, lr_d]
-                n_lr_updts += 1
-                patience = 0
-            else:
-                # after too many reductions early stops
-                print("Early stop at step: %d" % i)
-                break
 
             if i % validation_epoch_steps == 0:
                 with torch.no_grad():
