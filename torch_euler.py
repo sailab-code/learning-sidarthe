@@ -46,7 +46,6 @@ def euler(f, omega, time_grid):
     time_grid = time_grid.to(y0[0])
     values = y0.clone()
 
-
     for i in range(0, time_grid.shape[0] - 1):
         t_i = time_grid[i]
         t_next = time_grid[i+1]
