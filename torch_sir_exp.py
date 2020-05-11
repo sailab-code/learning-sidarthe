@@ -121,7 +121,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     if not os.path.exists(csv_file):
         with open(csv_file, "w") as f:
             f.write("name\tbeta_t0\tgamma_t0\tdelta_t0\tbeta\tgamma\tdelta\tlr_beta\tlr_gamma\tlr_delta\t"
-                    "train_size\tfirst_derivative_reg\tsecond_derivative_reg\tuse_alpha\ty_loss_weight\tt_inc\t"
+                    "train_size\tval_size\tfirst_derivative_reg\tsecond_derivative_reg\tuse_alpha\ty_loss_weight\tt_inc\t"
                     "w_train_risk\tw_val_risk\tw_test_risk\t"
                     "train_risk\tval_risk\ttest_risk\tdataset_risk\n")
 
@@ -130,7 +130,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
             [exp_prefix, str(beta_t0), str(gamma_t0), str(delta_t0),
              str(list(sir.beta.detach().numpy())).replace("\n", " "), str(list(sir.gamma.detach().numpy())).replace("\n", " "),
              str(list(sir.delta.detach().numpy())).replace("\n", " "),
-             str(dy_params["lr_b"]), str(dy_params["lr_g"]), str(dy_params["lr_d"]), str(train_size),
+             str(dy_params["lr_b"]), str(dy_params["lr_g"]), str(dy_params["lr_d"]), str(train_size), str(val_len),
              str(der_1st_reg), str(der_2nd_reg), str(use_alpha), str(y_loss_weight), str(t_inc),
              str(train_w_risk.detach().numpy()), str(validation_w_risk.detach().numpy()), str(test_w_risk.detach().numpy()),
              str(train_risk.detach().numpy()), str(validation_risk.detach().numpy()), str(test_risk.detach().numpy()), str(dataset_risk.detach().numpy()) + "\n"])
@@ -286,9 +286,9 @@ if __name__ == "__main__":
         "Liguria"
     ]  # ["Lombardia", "Emilia-Romagna", "Veneto", "Piemonte",  "Toscana", "Umbria", "Lazio", "Marche", "Campania","Puglia", "Liguria"]
 
-    regions = regions[0:4]
+    #regions = regions[0:4]
     #regions = regions[4:8]
-    #regions = regions[8:11]
+    regions = regions[8:11]
     
     population = {
         "Lombardia": 1e7, 
