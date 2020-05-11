@@ -52,7 +52,7 @@ def euler(f, omega, time_grid):
         y_i = values[i]
         dt = torch.tensor([t_next - t_i])
         t_series = TimeSeries(time_grid, values, omega)
-        dy = torch.stack(tuple(f_t.unsqueeze(0) for f_t in f(t_i, t_series, dt)), dim=1) * dt
+        dy = torch.stack(tuple(f_t.unsqueeze(0) for f_t in f(t_i, t_series)), dim=1) * dt
         y_next = y_i + dy
         #y_next = y_next.unsqueeze(0)
         values = torch.cat((values, y_next), dim=0)
@@ -78,7 +78,7 @@ def omega(t):
         0.
     )
 
-def dynamic_f(T, X, dt):
+def dynamic_f(T, X):
     X_t = X(T)
     t = T.long()
 
