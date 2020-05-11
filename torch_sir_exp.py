@@ -13,7 +13,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a, n_epochs, name, train_size, val_len, der_1st_reg, der_2nd_reg, use_alpha, y_loss_weight, t_inc, exp_prefix):
 
-    df_file = os.path.join(os.getcwd(), "dati-regioni", "dpc-covid19-ita-regioni.csv")
+    df_file = os.path.join(os.getcwd(), "COVID-19", "dati-regioni", "dpc-covid19-ita-regioni.csv")
     # df_file = os.path.join(os.getcwd(), "train.csv")
     area = [region]  # list(df["denominazione_regione"].unique())
     area_col_name = "denominazione_regione"  # "Country/Region"
@@ -55,7 +55,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 
-    val_size = train_size + val_len  # validation on the next 10 days
+    val_size = min(train_size + val_len, len(w_target) - 5)  # validation on the next val_len days (or less if we have less data)
     dataset_size = len(w_target)
 
     beta = [beta_t0 for _ in range(int(train_size))]
@@ -258,11 +258,11 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
 
 
 def get_exp_prefix(area, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a, train_size, der_1st_reg,
-                   der_2nd_reg, t_inc, use_alpha, y_loss_weight):
+                   der_2nd_reg, t_inc, use_alpha, y_loss_weight, val_len):
     return area[0] + "_b" + str(beta_t0) + "_g" + str(gamma_t0) + "_d" + str(delta_t0) + \
            "_lrb" + str(lr_b) + "_lrg" + str(lr_g) + "_lrd" + str(lr_d) + "_lra" + str(lr_a) + "_ts" + str(train_size) \
-           + "_st_der" + str(der_1st_reg) + "_nd_der" + str(der_2nd_reg) + "_t_inc" + str(t_inc) + "_use_alpha" + str(
-        use_alpha) \
+           + "_vl" + str(val_len) + "_st_der" + str(der_1st_reg) + "_nd_der" + str(der_2nd_reg) + "_t_inc" + str(t_inc) \
+           + "_use_alpha" + str(use_alpha) \
            + "_y_loss_weight" + str(y_loss_weight)
 
 
@@ -272,13 +272,45 @@ if __name__ == "__main__":
     # Veneto b0.8_g0.35_d0.015_lrb0.05_lrg0.01_lrd0.0005_ts40_st_der1000.0_nd_der0.0
     # Lombardia b0.81_g0.2_d0.02_lrb0.05_lrg0.01_lrd1e-05_ts40_st_der1000.0_nd_der10000.0
     # Emilia-Romagna b0.8_g0.35_d0.015_lrb0.05_lrg0.01_lrd5e-05_ts40_st_der1000.0_nd_der0.0
-    regions = ["Marche", "Umbria", "Toscana", "Lazio"]  # ["Lombardia", "Emilia-Romagna", "Veneto", "Piemonte",  "Toscana", "Umbria", "Lazio", "Marche", "Campania","Puglia", "Liguria"]
+    regions = [
+        "P.A. Bolzano",
+        "P.A. Trento",
+        "Valle d'Aosta",
+        "Sicilia",
+        "Sardegna",
+        "Abruzzo",
+        "Lazio",
+        "Marche",
+        "Campania", 
+        "Puglia",
+        "Liguria"
+    ]  # ["Lombardia", "Emilia-Romagna", "Veneto", "Piemonte",  "Toscana", "Umbria", "Lazio", "Marche", "Campania","Puglia", "Liguria"]
 
-    population = {"Lombardia": 1e7, "Emilia-Romagna": 4.45e6, "Veneto": 4.9e6, "Piemonte": 4.36e6,
-                  "Toscana": 3.73e6, "Umbria": 0.882e6, "Lazio": 5.88e6, "Marche": 1.525e6, "Campania": 5.802e6,
-                  "Puglia": 1.551e6,
-                  "Liguria": 4.029e6}
-    beta_ts, gamma_ts, delta_ts = [0.7, 0.5, 0.35], [0.3, 0.25, 0.1], [0.0075, 0.01, 0.02, 0.03]
+    regions = regions[0:4]
+    #regions = regions[4:8]
+    #regions = regions[8:11]
+    
+    population = {
+        "Lombardia": 1e7, 
+        "Emilia-Romagna": 4.45e6, 
+        "Veneto": 4.9e6, 
+        "Piemonte": 4.36e6,
+        "Toscana": 3.73e6, 
+        "Umbria": 0.882e6, 
+        "Lazio": 5.88e6, 
+        "Marche": 1.525e6, 
+        "Campania": 5.802e6,
+        "Puglia": 1.551e6, 
+        "Liguria": 4.029e6,
+        "P.A. Bolzano": 5.209e5,
+        "P.A. Trento": 5.414e5,
+        "Valle d'Aosta": 1.257e5,
+        "Sicilia": 5e6,
+        "Sardegna": 1.64e6,
+        "Abruzzo": 1.312e6,
+        "Lazio": 5.879e6,
+    }
+    beta_ts, gamma_ts, delta_ts = [0.8, 0.75, 0.6], [0.3, 0.25], [0.01, 0.008, 0.0125, 0.02]
     lr_bs, lr_gs, lr_ds, lr_as = [1e-4], [1e-5], [3e-6], [1e-3]
     train_sizes = [40, 45]  # list(range(40, 41, 5))
     val_lens = [10, 20]
@@ -291,7 +323,7 @@ if __name__ == "__main__":
     import itertools
     for hyper_params in itertools.product(regions, beta_ts, gamma_ts, delta_ts, lr_bs, lr_gs, lr_ds, lr_as, train_sizes, val_lens, derivative_regs, der_2nd_regs, use_alphas, y_loss_weights, t_incs):
         region, beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, train_size, val_len, derivative_reg, der_2nd_reg, use_alpha, y_loss_w, t_inc = hyper_params
-        exp_prefix = get_exp_prefix(region, beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, train_size, derivative_reg, der_2nd_reg, t_inc, use_alpha, y_loss_w)
+        exp_prefix = get_exp_prefix(region, beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, train_size, derivative_reg, der_2nd_reg, t_inc, use_alpha, y_loss_w, val_len)
         print(region)
         exp(region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, n_epochs, name=region, train_size=train_size, val_len=val_len,
             der_1st_reg=derivative_reg, der_2nd_reg=der_2nd_reg, use_alpha=use_alpha, y_loss_weight=y_loss_w, t_inc=t_inc, exp_prefix=exp_prefix)
