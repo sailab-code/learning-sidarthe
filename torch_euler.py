@@ -51,10 +51,72 @@ def euler(f, omega, time_grid):
         t_next = time_grid[i+1]
         y_i = values[i]
         dt = torch.tensor([t_next - t_i])
-        t_series = TimeSeries(time_grid, values, omega)
-        dy = f(t_i, t_series) * dt
+        dy = f(t_i, y_i) * dt
         y_next = y_i + dy
-        #y_next = y_next.unsqueeze(0)
+        y_next = y_next.unsqueeze(0)
+        values = torch.cat((values, y_next), dim=0)
+
+    return values
+
+def Heun(f, omega, time_grid):
+    """
+
+    Heun's method
+    :param f: function describing the differential equations
+    :param omega: function returning values from -inf to 0 as a N-Dim tuple
+    :param time_grid: 1-Dim tensor representing the time-grid on which to integrate
+    :return: 1-Dim tensor the same size as time_grid with values computed on the time grid
+
+    NOTE: not expected to reach second-order accuracy if dt is variable
+    """
+
+    y0 = torch.tensor([omega(0)])
+    time_grid = time_grid.to(y0[0])
+    values = y0
+
+    for i in range(0, time_grid.shape[0] - 1):
+        t_i = time_grid[i]
+        t_next = time_grid[i+1]
+        y_i = values[i]
+        dt = torch.tensor([t_next - t_i])
+        f1 = f(t_i, y_i)
+        f2 = f(t_next, y_i + dt * f1)
+        dy = 0.5 * dt * (f1 + f2)
+        y_next = y_i + dy
+        y_next = y_next.unsqueeze(0)
+        values = torch.cat((values, y_next), dim=0)
+
+    return values
+
+def RK4(f, omega, time_grid):
+    """
+
+    Fourth order explicit Runge-Kutta method
+    :param f: function describing the differential equations
+    :param omega: function returning values from -inf to 0 as a N-Dim tuple
+    :param time_grid: 1-Dim tensor representing the time-grid on which to integrate
+    :return: 1-Dim tensor the same size as time_grid with values computed on the time grid
+
+    NOTE: not expected to reach second-order accuracy if dt is variable
+    """
+
+    y0 = torch.tensor([omega(0)])
+    time_grid = time_grid.to(y0[0])
+    values = y0
+
+    for i in range(0, time_grid.shape[0] - 1):
+        t_i = time_grid[i]
+        t_next = time_grid[i+1]
+        y_i = values[i]
+        dt = torch.tensor([t_next - t_i])
+        dtd2 = 0.5 * dt
+        f1 = f(t_i, y_i)
+        f2 = f(t_i + dtd2, y_i + dtd2 * f1)
+        f3 = f(t_i + dtd2, y_i + dtd2 * f2)
+        f4 = f(t_next, y_i + dt * f3)
+        dy = 1/6 * dt * (f1 + 2 * (f2 + f3) +f4)
+        y_next = y_i + dy
+        y_next = y_next.unsqueeze(0)
         values = torch.cat((values, y_next), dim=0)
 
     return values
@@ -79,7 +141,7 @@ def omega(t):
     )
 
 def dynamic_f(T, X):
-    X_t = X(T)
+    X_t = X
     t = T.long()
 
     if t < beta.shape[0]:
@@ -89,15 +151,21 @@ def dynamic_f(T, X):
         beta_t = beta[-1] / population
         gamma_t = gamma[-1]
 
-    temp = [
-        - beta_t * X_t[0] * X_t[1],
-        beta_t * X_t[0] * X_t[1] - gamma_t * X_t[1],
-        gamma_t * X_t[1]
-    ]
+    return torch.cat((
+        - beta * X_t[0] * X_t[1],
+        beta * X_t[0] * X_t[1] - gamma * X_t[1],
+        gamma * X_t[1]
+    ), dim=0)        
 
-    out =torch.stack(tuple(f_t.unsqueeze(0) for f_t in temp), dim=1)
+    # temp = [
+    #     - beta_t * X_t[0] * X_t[1],
+    #     beta_t * X_t[0] * X_t[1] - gamma_t * X_t[1],
+    #     gamma_t * X_t[1]
+    # ]
 
-    return out
+    # out = torch.stack(tuple(f_t.unsqueeze(0) for f_t in temp), dim=1)
+
+    # return out
 
 def f_past(t, X, dt):
 
@@ -130,7 +198,9 @@ if __name__ == '__main__':
     for epoch in range(0, epochs):
         print("epoch {}".format(epoch))
         optimizer.zero_grad()
-        sol = euler(dynamic_f, omega, t_range)
+        # sol = euler(dynamic_f, omega, t_range)
+        # sol = Heun(dynamic_f, omega, t_range)
+        sol = RK4(dynamic_f, omega, t_range)
         z_hat = sol[-1][2]
 
         z_target = torch.tensor([[0.6]])
