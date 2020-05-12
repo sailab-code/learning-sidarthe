@@ -1,4 +1,4 @@
-from torch_euler import euler
+from torch_euler import euler, Heun, RK4
 from torchdiffeq import odeint, odeint_adjoint
 from scipy.integrate import odeint as scipy_odeint
 import torch
@@ -6,14 +6,14 @@ import torch
 from matplotlib import pyplot as plt
 
 
-gamma = torch.tensor([0.1])
+gamma = torch.tensor([0.3])
 beta = torch.tensor([0.8])
 population = 1
 epsilon_s = 1e-6
 S0 = 1 - epsilon_s
 I0 = epsilon_s
 ND = 300
-TS = 0.01
+TS = 1
 
 
 def omega(t):
@@ -34,8 +34,8 @@ def f_odeint(X_t, t):
         gamma_t * X_t[1]
     ]
 
-def f_euler(T, X, dt):
-    X_t = X(T)
+def f_euler(T, X):
+    X_t = X
 
     #beta_t = beta
     #gamma_t = gamma
@@ -46,6 +46,22 @@ def f_euler(T, X, dt):
         gamma * X_t[1]
     ), dim=0)
 
+def dynamic_f(T, X):
+    X_t = X
+    t = T.long()
+
+    if t < beta.shape[0]:
+        beta_t = beta[t] / population
+        gamma_t = gamma[t]
+    else:
+        beta_t = beta[-1] / population
+        gamma_t = gamma[-1]
+
+    return torch.cat((
+        - beta * X_t[0] * X_t[1],
+        beta * X_t[0] * X_t[1] - gamma * X_t[1],
+        gamma * X_t[1]
+    ), dim=0)
 
 class Sir(torch.nn.Module):
     def forward(self, t, y):
@@ -70,33 +86,53 @@ if __name__ == '__main__':
     sol_odeint = torch.tensor(sol_odeint)
 
     print("solving with explicit euler")
-    sol_euler = euler(f_euler, omega, t_range)
+    sol_euler = euler(dynamic_f, omega, t_range)
+
+    print("solving with explicit Heun")
+    sol_Heun = Heun(dynamic_f, omega, t_range)
+
+    print("solving with explicit RK4")
+    sol_RK4 = RK4(dynamic_f, omega, t_range)
 
     print("Solving with torchdiffeq odeint")
     sol_tdiffeq = odeint(Sir(), init_cond, t_range)
 
+    plots_path = "./plots"
     a = plt.figure()
     plt.plot(t_range.numpy(), sol_odeint[:,0].numpy(), label="scipy_odeint", linestyle='-')
     plt.plot(t_range.numpy(), sol_euler[:,0].detach().numpy(), label="euler odeint", linestyle='-.')
+    plt.plot(t_range.numpy(), sol_Heun[:,0].detach().numpy(), label="Heun odeint", linestyle=':')
+    plt.plot(t_range.numpy(), sol_RK4[:,0].detach().numpy(), label="RK4 odeint", linestyle=':')
     plt.plot(t_range.numpy(), sol_tdiffeq[:,0].detach().numpy(), label="torchdiffeq odeint", linestyle='--')
     plt.legend()
-    a.show()
+    plt.savefig(plots_path + "/x.png")
+    # a.show()
 
     b = plt.figure()
     plt.plot(t_range.numpy(), sol_odeint[:,1].numpy(), label="scipy_odeint", linestyle='-')
     plt.plot(t_range.numpy(), sol_euler[:,1].detach().numpy(), label="euler odeint", linestyle='-.')
+    plt.plot(t_range.numpy(), sol_Heun[:,1].detach().numpy(), label="Heun odeint", linestyle=':')
+    plt.plot(t_range.numpy(), sol_RK4[:,1].detach().numpy(), label="RK4 odeint", linestyle=':')
     plt.plot(t_range.numpy(), sol_tdiffeq[:,1].detach().numpy(), label="torchdiffeq odeint", linestyle='--')
     plt.legend()
-    b.show()
+    plt.savefig(plots_path + "/y.png")
+    # b.show()
+    plt.plot()
 
     c = plt.figure()
     plt.plot(t_range.numpy(), sol_odeint[:,2].numpy(), label="scipy_odeint", linestyle='-')
     plt.plot(t_range.numpy(), sol_euler[:,2].detach().numpy(), label="euler odeint", linestyle='-.')
+    plt.plot(t_range.numpy(), sol_Heun[:,2].detach().numpy(), label="Heun odeint", linestyle=':')
+    plt.plot(t_range.numpy(), sol_RK4[:,2].detach().numpy(), label="RK4 odeint", linestyle=':')
     plt.plot(t_range.numpy(), sol_tdiffeq[:,2].detach().numpy(), label="torchdiffeq odeint", linestyle='--')
     plt.legend()
-    c.show()
+    plt.savefig(plots_path + "/z.png")
+    # c.show()
 
-    max_odeint = max(sol_odeint[:,1])
-    max_euler = max(sol_euler[:,1])
+    L_inf_error_euler = abs(max(sol_euler[:,1]-sol_odeint[:,1]))
+    L_inf_error_Heun = abs(max(sol_Heun[:,1]-sol_odeint[:,1]))
+    L_inf_error_RK4 = abs(max(sol_RK4[:,1]-sol_odeint[:,1]))
 
-    print(max_euler - max_odeint)
+    print("L_inf error for the Euler method: " + str(L_inf_error_euler))
+    print("L_inf error for the Heun method: " + str(L_inf_error_Heun))
+    print("L_inf error for the Runge-Kutta-4 method: " + str(L_inf_error_RK4))
