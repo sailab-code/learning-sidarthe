@@ -192,7 +192,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     recovered = np.array(_healed) +  np.array(_w)
     assert(len(RES[:, 0]) == len(RES[:, 1]) == len(RES[:, 2]))
     sir_len = len(RES[:, 0])
-    pl_sir_x = list(range(sir_len))
+    pl_sir_x = np.array(list(range(sir_len))) * t_inc
     assert(len(_w) == len(_y) == len(_healed))
     sir_truth_len = len(_w)
     pl_sir_truth_x = list(range(sir_truth_len))
@@ -230,9 +230,9 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     summary.add_figure("final/deaths_predicted", figure=fig)
 
     # Infectious Train/Test/Real
-    y_fits = Curve(list(range(train_size)), RES[:train_size, 1], '-r', label='$y$ fit')
-    y_val_preds = Curve(list(range(train_size, val_size)), RES[train_size:val_size, 1], '-r', color='darkblue', label='$y$ validation')
-    y_test_preds = Curve(list(range(val_size, dataset_size)), RES[val_size:dataset_size, 1], '-r', color='orange', label='$y$ prediction')
+    y_fits = Curve(list(range(train_size)), y_hat_train, '-r', label='$y$ fit')
+    y_val_preds = Curve(list(range(train_size, val_size)), y_hat_val, '-r', color='darkblue', label='$y$ validation')
+    y_test_preds = Curve(list(range(val_size, dataset_size)), y_hat_test, '-r', color='orange', label='$y$ prediction')
     y_truth_train = Curve(list(range(train_size)), _y[:train_size], '.r', label='$\hat{y}$ fit')
     y_truth_val = Curve(list(range(train_size, val_size)), _y[train_size:val_size], '.', color="darkblue", label='$\hat{y}$ validation')
     y_truth_test = Curve(list(range(val_size, dataset_size)), _y[val_size:dataset_size], '.', color="orange", label='$\hat{y}$ prediction')
