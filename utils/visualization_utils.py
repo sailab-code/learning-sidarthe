@@ -35,7 +35,7 @@ def plot_data_and_fit(data, fitted_data, future_data, save_path, plot_name, curv
     ax.margins(0.05)
     plt.subplots_adjust(bottom=0.15)
     ax.legend()
-    plt.savefig(save_path, bbox_inches='tight')
+    plt.savefig(save_path, bbox_inches='tight', transparent=True)
     # plt.show()
 
 
@@ -90,7 +90,7 @@ def plot_sir_dynamic(s, i, r, region, save_path):
     plt.subplots_adjust(bottom=0.15)
     plt.ylabel('R')
     plt.legend(loc=0)
-    plt.savefig(save_path, bbox_inches='tight')  # os.path.join(exp_path, exp_prefix + "sliding_SIR_global.pdf")
+    plt.savefig(save_path, bbox_inches='tight', transparent=True)  # os.path.join(exp_path, exp_prefix + "sliding_SIR_global.pdf")
     plt.close('all')
 
 
@@ -130,7 +130,7 @@ def generic_plot(xy_curves, title, save_path, x_label=None, y_label=None, format
         ax.legend()
 
     if save_path is not None:
-        plt.savefig(save_path, bbox_inches='tight')
+        plt.savefig(save_path, bbox_inches='tight', transparent=True)
 
     plt.close('all')
     return fig
@@ -174,6 +174,6 @@ def generic_sub_plot(subplots, title, save_path):
     for ax in axarr:
         ax.label_outer()
 
-    plt.savefig(save_path, bbox_inches='tight')
+    plt.savefig(save_path, bbox_inches='tight', transparent=True)
     plt.close('all')
     return fig
