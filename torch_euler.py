@@ -97,7 +97,7 @@ def RK4(f, omega, time_grid):
     :param time_grid: 1-Dim tensor representing the time-grid on which to integrate
     :return: 1-Dim tensor the same size as time_grid with values computed on the time grid
 
-    NOTE: not expected to reach second-order accuracy if dt is variable
+    NOTE: not expected to reach fourth-order accuracy if dt is variable
     """
 
     y0 = torch.tensor([omega(0)])
