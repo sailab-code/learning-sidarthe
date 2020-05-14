@@ -129,9 +129,9 @@ if __name__ == '__main__':
     plt.savefig(plots_path + "/z.png")
     # c.show()
 
-    L_inf_error_euler = abs(max(sol_euler[:,1]-sol_odeint[:,1]))
-    L_inf_error_Heun = abs(max(sol_Heun[:,1]-sol_odeint[:,1]))
-    L_inf_error_RK4 = abs(max(sol_RK4[:,1]-sol_odeint[:,1]))
+    L_inf_error_euler = torch.dist(sol_euler[:,1], sol_odeint[:,1], float('inf'))
+    L_inf_error_Heun = torch.dist(sol_Heun[:,1], sol_odeint[:,1], float('inf'))
+    L_inf_error_RK4 = torch.dist(sol_RK4[:,1], sol_odeint[:,1], float('inf'))
 
     print("L_inf error for the Euler method: " + str(L_inf_error_euler))
     print("L_inf error for the Heun method: " + str(L_inf_error_Heun))
