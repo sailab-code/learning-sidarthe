@@ -8,3 +8,6 @@ runs/
 runs.old/
 regioni.old/
 dati-regioni/
+regioni.old.2/
+.ipynb_checkpoints/
+.vscode/
