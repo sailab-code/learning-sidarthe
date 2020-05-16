@@ -50,7 +50,7 @@ def euler(f, omega, time_grid):
         t_i = time_grid[i]
         t_next = time_grid[i+1]
         y_i = values[i]
-        dt = torch.tensor([t_next - t_i])
+        dt = t_next - t_i
         dy = f(t_i, y_i) * dt
         y_next = y_i + dy
         y_next = y_next.unsqueeze(0)
@@ -78,7 +78,7 @@ def Heun(f, omega, time_grid):
         t_i = time_grid[i]
         t_next = time_grid[i+1]
         y_i = values[i]
-        dt = torch.tensor([t_next - t_i])
+        dt = t_next - t_i
         f1 = f(t_i, y_i)
         f2 = f(t_next, y_i + dt * f1)
         dy = 0.5 * dt * (f1 + f2)
@@ -108,7 +108,7 @@ def RK4(f, omega, time_grid):
         t_i = time_grid[i]
         t_next = time_grid[i+1]
         y_i = values[i]
-        dt = torch.tensor([t_next - t_i])
+        dt = t_next - t_i
         dtd2 = 0.5 * dt
         f1 = f(t_i, y_i)
         f2 = f(t_i + dtd2, y_i + dtd2 * f1)

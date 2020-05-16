@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 from torch.optim import SGD, Adam
 from torch.optim.optimizer import Optimizer
-from torch_euler import euler
+from torch_euler import euler, Heun
 from torchdiffeq import odeint
 
 import matplotlib.pyplot as pl
@@ -14,7 +14,7 @@ from utils.visualization_utils import generic_plot, format_xtick, Curve
 
 
 class SirOptimizer(Optimizer):
-    def __init__(self, params, etas, alpha, a, b, sample_time, momentum=True):
+    def __init__(self, params, etas, m, a, b, momentum=True):
         """
 
         :param params: iterable containing parameters to be optimized
@@ -26,11 +26,10 @@ class SirOptimizer(Optimizer):
         """
 
         self.etas = etas
-        self.b = b
         self.a = a
-        self.alpha = alpha
+        self.b = b
+        self.m = m
         self.momentum = momentum
-        self.sample_time = sample_time
         defaults = dict()
 
         super(SirOptimizer, self).__init__(params, defaults)
@@ -55,7 +54,7 @@ class SirOptimizer(Optimizer):
                 if self.momentum:
                     times = torch.arange(group["params"][0].shape[0], dtype=torch.float32)
                     # times = times * self.sample_time #added AB
-                    mu = torch.sigmoid(self.alpha * times)
+                    mu = torch.sigmoid(self.m * times)
                     eta_mod = self.a / (self.a + self.b * times)
                     etas = torch.tensor(self.etas)
                     etas = etas.unsqueeze(1) * eta_mod.unsqueeze(0)
@@ -83,8 +82,8 @@ class SirEq:
         self.bc_reg = kwargs.get("bc_reg", 1e5)
         self.der_1st_reg = kwargs.get("der_1st_reg", -1)
         self.der_2nd_reg = kwargs.get("der_2nd_reg", -1)
-
         self.use_alpha = kwargs.get("use_alpha", False)
+        self.integrator = kwargs.get("integrator", euler)
         input_size = kwargs.get("mlp_input", 4)
         hidden_size = kwargs.get("mlp_hidden", 6)
         self.init_alpha(self.use_alpha, input_size=input_size, hidden_size=hidden_size)
@@ -115,9 +114,8 @@ class SirEq:
         else:
             return [1, 0, 0]
 
-    def dynamic_diff_eqs(self, T, X, dt):
-        X_t = X(T)
-        # t = (T / self.sample_time).round().long()
+    def dynamic_diff_eqs(self, T, X):
+        X_t = X
         t = T.long()
 
         policy_code = self.get_policy_code(t)
@@ -140,8 +138,8 @@ class SirEq:
             gamma * X_t[1]
         ), dim=0)
 
-    def static_diff_eqs(self, T, X, dt):
-        X_t = X(T)
+    def static_diff_eqs(self, T, X):
+        X_t = X
         t = T.long()
 
         policy_code = self.get_policy_code(t)
@@ -286,7 +284,7 @@ class SirEq:
 
     def inference(self, time_grid):
         time_grid = time_grid.to(dtype=torch.float32)
-        sol = euler(self.diff_eqs, self.omega, time_grid)
+        sol = self.integrator(self.diff_eqs, self.omega, time_grid)
         z_hat = sol[:, 2]
 
         delta = self.delta
@@ -358,10 +356,15 @@ class SirEq:
         der_2nd_reg = params.get("der_2nd_reg", 1e3)
 
         summary = params.get("tensorboard", None)
+        integrator = params.get("integrator", None)
 
         y_loss_weight = params.get("y_loss_weight", 0.0)
         use_alpha = params.get("use_alpha", True)
         val_size = params.get("val_size", 7)
+
+        m = params.get("m", 1/9)
+        a = params.get("a", 3.0)
+        b = params.get("b", 0.05)
 
         lr_b, lr_g, lr_d, lr_a = params["lr_b"], params["lr_g"], params["lr_d"], params["lr_a"]
 
@@ -396,16 +399,18 @@ class SirEq:
         sir = SirEq(beta, gamma, delta, population, init_cond,
                     b_reg=b_reg, c_reg=c_reg, d_reg=d_reg, bc_reg=bc_reg,
                     der_1st_reg=der_1st_reg, der_2nd_reg=der_2nd_reg,
-                    sample_time=t_inc, use_alpha=use_alpha, y_loss_weight=y_loss_weight)
+                    sample_time=t_inc, use_alpha=use_alpha, y_loss_weight=y_loss_weight,
+                    integrator=integrator)
 
         # early stopping stuff
         best = 1e12
+        best_epoch = -1
         thresh = 5e-5
         patience, n_lr_updts, max_no_improve, max_n_lr_updts = 0, 0, 25, 5
         best_beta, best_gamma, best_delta = sir.beta, sir.gamma, sir.delta
 
         # optimizer = SirOptimizer(sir.params(), [lr_b, lr_g, lr_d, lr_a, lr_a, lr_a, lr_a], alpha=1 / 7, a=3.0, b=0.05) # fixme assigning of lrs
-        optimizer = SirOptimizer(sir.params(), [lr_b, lr_g, lr_d], alpha=1 / 7, a=3.0, b=0.05, sample_time=t_inc,
+        optimizer = SirOptimizer(sir.params(), [lr_b, lr_g, lr_d], m=m, a=a, b=b,
                                  momentum=momentum)
         if use_alpha:
             net_optimizer = Adam(sir.nn_alpha.parameters(), lr_a)
@@ -437,7 +442,7 @@ class SirEq:
             der_1st_loss = sir.first_derivative_loss()
             der_2nd_loss = sir.second_derivative_loss()
 
-            total_loss = total_loss + der_1st_loss
+            total_loss = torch.sqrt(mse_loss) + der_1st_loss
             total_loss.backward()
 
             torch.nn.utils.clip_grad_norm_(sir.beta, 7.)
@@ -492,6 +497,7 @@ class SirEq:
                     best_beta = sir.beta.clone()
                     best_gamma = sir.gamma.clone()
                     best_delta = sir.delta.clone()
+                    best_epoch = i
                     patience = 0
                 elif patience < max_no_improve:
                     patience += 1
@@ -520,4 +526,4 @@ class SirEq:
         print("\n")
 
         sir.set_params(best_beta, best_gamma, best_delta)
-        return sir, mse_losses, der_1st_losses, der_2nd_losses
+        return sir, mse_losses, der_1st_losses, der_2nd_losses, best_epoch
