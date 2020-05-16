@@ -50,7 +50,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     if not os.path.exists(base_path):
         os.mkdir(base_path)
 
-    exp_path = os.path.join(base_path, "momentum_terms")
+    exp_path = os.path.join(base_path, "torch_sir_heun_validation_grid_search")
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 
@@ -343,7 +343,7 @@ if __name__ == "__main__":
         proc.start()
         procs.append(proc)
 
-        # run 16 exps at a time
+        # run 6 exps at a time
         if len(procs) == 6:
             for proc in procs:
                 proc.join()
