@@ -50,7 +50,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     if not os.path.exists(base_path):
         os.mkdir(base_path)
 
-    exp_path = os.path.join(base_path, "torch_sir_heun_validation_grid_search")
+    exp_path = os.path.join(base_path, "torch_sir_heun_finetune")
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 
@@ -308,7 +308,7 @@ if __name__ == "__main__":
     y_loss_weights = [0.0]
     t_incs = [0.1]"""
 
-    beta_ts, gamma_ts, delta_ts = [0.8, 0.5], [0.3, 0.15], [0.01, 0.03]
+    beta_ts, gamma_ts, delta_ts = [0.8, 0.75, 0.85], [0.3, 0.25, 0.35], [0.025, 0.015]
     lr_bs, lr_gs, lr_ds, lr_as = [1e-4], [1e-5], [3e-6], [1e-3]
     train_sizes = [45, 50]  # list(range(40, 41, 5))
     val_lens = [15]
