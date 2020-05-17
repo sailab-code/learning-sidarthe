@@ -4,7 +4,7 @@ import pylab as pl
 import torch
 import datetime
 import numpy as np
-from multiprocessing import Process
+import multiprocessing as mp
 
 from learning_models.torch_sir import SirEq
 from torch_euler import Heun, euler, RK4
@@ -280,6 +280,7 @@ def get_exp_prefix(area, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a, tr
 
 if __name__ == "__main__":
     # todo provare ad inizializzare rete con pesi random
+    mp.set_start_method('spawn')
     n_epochs = 2501
     # Veneto b0.8_g0.35_d0.015_lrb0.05_lrg0.01_lrd0.0005_ts40_st_der1000.0_nd_der0.0
     # Lombardia b0.81_g0.2_d0.02_lrb0.05_lrg0.01_lrd1e-05_ts40_st_der1000.0_nd_der10000.0
