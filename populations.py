@@ -9,7 +9,7 @@ population = {
         "Liguria": 4.029e6,
         "Lombardia": 1e7,
         "Marche": 1.525e6,
-        "Molise": 3.05e5
+        "Molise": 3.05e5,
         "P.A. Bolzano": 5.209e5,
         "P.A. Trento": 5.414e5,
         "Piemonte": 4.36e6,
