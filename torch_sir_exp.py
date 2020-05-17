@@ -291,12 +291,7 @@ if __name__ == "__main__":
         "Valle d'Aosta",
         "Sicilia",
         "Sardegna",
-        "Abruzzo",
-        "Lazio",
-        "Marche",
-        "Campania", 
-        "Puglia",
-        "Liguria"
+        "Abruzzo"
     ]  # ["Lombardia", "Emilia-Romagna", "Veneto", "Piemonte",  "Toscana", "Umbria", "Lazio", "Marche", "Campania","Puglia", "Liguria"]
 
     """beta_ts, gamma_ts, delta_ts = [0.8, 0.75, 0.6], [0.3, 0.25], [0.01, 0.008, 0.0125, 0.02]
@@ -335,7 +330,7 @@ if __name__ == "__main__":
         #exp(region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, n_epochs, name=region, train_size=train_size, val_len=val_len,
         #        der_1st_reg=derivative_reg, der_2nd_reg=der_2nd_reg, use_alpha=use_alpha, y_loss_weight=y_loss_w, t_inc=t_inc, exp_prefix=exp_prefix, integrator=integrator)
 
-        proc = Process(target=exp,
+        proc = mp.Process(target=exp,
                        args=(
                        region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, n_epochs, region,
                        train_size, val_len, derivative_reg, der_2nd_reg, use_alpha, y_loss_w, t_inc, exp_prefix,
