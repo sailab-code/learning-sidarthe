@@ -99,17 +99,17 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
         y_hat_train, y_hat_val, y_hat_test = y_hat[train_slice], y_hat[val_slice], y_hat[test_slice]
         y_hat_dataset = y_hat[dataset_slice]
 
-        train_risk, train_w_risk, train_y_risk, _ = sir.loss(w_hat_train, w_target[dy_params["t_start"]:train_size],
-                                                             y_hat_train, y_target[dy_params["t_start"]:train_size])
+        train_risk, train_w_risk, train_y_risk, _ = sir.losses(w_hat_train, w_target[dy_params["t_start"]:train_size],
+                                                               y_hat_train, y_target[dy_params["t_start"]:train_size])
 
-        validation_risk, validation_w_risk, validation_y_risk, _ = sir.loss(w_hat_val, w_target[dy_params["t_end"]:val_size],
-                                                                            y_hat_val, y_target[dy_params["t_end"]:val_size])
+        validation_risk, validation_w_risk, validation_y_risk, _ = sir.losses(w_hat_val, w_target[dy_params["t_end"]:val_size],
+                                                                              y_hat_val, y_target[dy_params["t_end"]:val_size])
 
-        test_risk, test_w_risk, test_y_risk, _ = sir.loss(w_hat_test, w_target[val_size:dataset_size],
-                                                          y_hat_test, y_target[val_size:dataset_size])
+        test_risk, test_w_risk, test_y_risk, _ = sir.losses(w_hat_test, w_target[val_size:dataset_size],
+                                                            y_hat_test, y_target[val_size:dataset_size])
 
-        dataset_risk, _, _, _ = sir.loss(w_hat_dataset, w_target[dy_params["t_start"]:dataset_size],
-                                         y_hat_dataset, y_target[dy_params["t_start"]:dataset_size])
+        dataset_risk, _, _, _ = sir.losses(w_hat_dataset, w_target[dy_params["t_start"]:dataset_size],
+                                           y_hat_dataset, y_target[dy_params["t_start"]:dataset_size])
 
         log_file = os.path.join(exp_path, exp_prefix + "sir_" + area[0] + "_results.txt")
         with open(log_file, "w") as f:

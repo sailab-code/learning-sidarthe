@@ -186,7 +186,7 @@ def exp(beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, ws, n_epochs, fine_tune, lea
                  "learning_setup": learning_setup}
     _, _, _, _, dynamic_sir, _ = SirEq.train(target=_w, y_0=_y[0], z_0=0.0, params=dy_params)  # configure dynamic_syr only
     RES, w_hat = dynamic_sir.inference(np.arange(dy_params["t_start"], 100), dynamic_sir.dynamic_bc_diff_eqs)  # run it on the first 100 days
-    global_risk, _, _ = dynamic_sir.loss(np.arange(dy_params["t_start"], train_size), _w[dy_params["t_start"]:dy_params["t_end"]], dynamic_sir.dynamic_bc_diff_eqs)
+    global_risk, _, _ = dynamic_sir.losses(np.arange(dy_params["t_start"], train_size), _w[dy_params["t_start"]:dy_params["t_end"]], dynamic_sir.dynamic_bc_diff_eqs)
 
     # BETA, GAMMA, DELTA plots
     fig, ax = pl.subplots()

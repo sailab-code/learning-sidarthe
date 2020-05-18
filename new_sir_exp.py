@@ -7,6 +7,7 @@ import torch
 import datetime
 import numpy as np
 
+from learning_models.new_torch_sir import NewSir
 from learning_models.torch_sir import SirEq
 from torch_euler import Heun, euler
 from utils.data_utils import select_data
@@ -51,7 +52,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     if not os.path.exists(base_path):
         os.mkdir(base_path)
 
-    exp_path = os.path.join(base_path, "test_heun")
+    exp_path = os.path.join(base_path, "new_sir_test")
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 
@@ -70,24 +71,59 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     summary = SummaryWriter(f"runs/{name}/{exp_prefix}")
 
     dy_params = {
-        "beta": beta, "gamma": gamma, "delta": delta, "n_epochs": n_epochs,
-        "population": population,
-        "t_start": 0, "t_end": train_size,
-        "lr_b": lr_b, "lr_g": lr_g, "lr_d": lr_d, "lr_a": lr_a,
-        "der_1st_reg": der_1st_reg,
-        "der_2nd_reg": der_2nd_reg,
-        "t_inc": t_inc,
-        "momentum": True,
-        "use_alpha": use_alpha,
-        "y_loss_weight": y_loss_weight,
+
         "tensorboard": summary,
         "integrator": integrator,
-        "m": m,
-        "a": a,
-        "b": b
     }
 
-    sir, mse_losses, der_1st_losses, der_2nd_losses = SirEq.train(w_target=w_target, y_target=y_target, **dy_params)
+    targets = {
+        "w": w_target,
+        "y": y_target
+    }
+
+    initial_params = {
+        "beta": beta,
+        "gamma": gamma,
+        "delta": delta
+    }
+
+    learning_rates = {
+        "lr_b": lr_b,
+        "lr_g": lr_g,
+        "lr_d": lr_d
+    }
+
+    model_params = {
+        "der_1st_reg": der_1st_reg,
+        "der_2nd_reg": der_2nd_reg,
+        "population": population,
+        "y_loss_weight": y_loss_weight,
+        "integrator": integrator,
+        "t_inc": t_inc
+    }
+
+    train_params = {
+        "t_start": 0,
+        "t_end": train_size,
+        "val_size": val_size,
+        "t_inc": t_inc,
+        "m": m,
+        "a": a,
+        "b": b,
+        "momentum": True,
+    }
+
+
+
+
+    sir, mse_losses, der_1st_losses, der_2nd_losses = \
+        NewSir.train(targets,
+                     initial_params,
+                     learning_rates,
+                     n_epochs,
+                     model_params,
+                     **train_params)
+
     with torch.no_grad():
         w_hat, y_hat, sol = sir.inference(torch.arange(dy_params["t_start"], 100, t_inc))
         train_slice = slice(dy_params["t_start"], int(train_size/t_inc), int(1/t_inc))
@@ -316,4 +352,4 @@ if __name__ == "__main__":
     exp(region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, n_epochs, name=region,
         train_size=train_size, val_len=val_len,
         der_1st_reg=der_1st_reg, der_2nd_reg=der_2nd_reg, use_alpha=use_alpha, y_loss_weight=y_loss_weight, t_inc=t_inc,
-        exp_prefix=f"euler_tinc0.1_sqrt_mseloss_clip7_der{der_1st_reg}_m{m}_a{a}_b{b}", integrator=integrator, m=m, a=a, b=b)
+        exp_prefix=exp_prefix, integrator=integrator, m=m, a=a, b=b)
