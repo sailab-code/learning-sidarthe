@@ -112,7 +112,7 @@ class SirEq:
         if t >= 0:
             return self.init_cond
         else:
-            return [1, 0, 0]
+            return [1, 0]
 
     def dynamic_diff_eqs(self, T, X):
         X_t = X
@@ -134,8 +134,7 @@ class SirEq:
 
         return torch.cat((
             - beta * X_t[0] * X_t[1],
-            beta * X_t[0] * X_t[1] - gamma * X_t[1],
-            gamma * X_t[1]
+            beta * X_t[0] * X_t[1] - gamma * X_t[1]
         ), dim=0)
 
     def static_diff_eqs(self, T, X):
@@ -285,7 +284,8 @@ class SirEq:
     def inference(self, time_grid):
         time_grid = time_grid.to(dtype=torch.float32)
         sol = self.integrator(self.diff_eqs, self.omega, time_grid)
-        z_hat = sol[:, 2]
+        z_hat = self.population - sol[:, 0] - sol[:, 1]
+        sol = torch.cat((sol, z_hat.unsqueeze(1)), dim=1)
 
         delta = self.delta
         len_diff = z_hat.shape[0] - delta.shape[0]
@@ -395,7 +395,7 @@ class SirEq:
         I0 = I0 * population
         Z0 = epsilon_z
 
-        init_cond = (S0, I0, Z0)  # initialization of SIR parameters (Suscettible, Infected, Recovered)
+        init_cond = (S0, I0)  # initialization of SIR parameters (Suscettible, Infected, Recovered)
         sir = SirEq(beta, gamma, delta, population, init_cond,
                     b_reg=b_reg, c_reg=c_reg, d_reg=d_reg, bc_reg=bc_reg,
                     der_1st_reg=der_1st_reg, der_2nd_reg=der_2nd_reg,

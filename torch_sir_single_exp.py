@@ -1,10 +1,10 @@
 import os
 from time import sleep
+from datetime import datetime
 
 import pylab as pl
 # import matplotlib.pyplot as pl
 import torch
-import datetime
 import numpy as np
 
 from learning_models.torch_sir import SirEq
@@ -67,7 +67,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     # gamma = [gamma_t0 for _ in range(int(train_size))]
     gamma = [gamma_t0]
     delta = [delta_t0]
-    summary = SummaryWriter(f"runs/{name}/{exp_prefix}")
+    summary = SummaryWriter(f"runs/{name}/{exp_prefix}_{datetime.now()}")
 
     dy_params = {
         "beta": beta, "gamma": gamma, "delta": delta, "n_epochs": n_epochs,
@@ -87,7 +87,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
         "b": b
     }
 
-    sir, mse_losses, der_1st_losses, der_2nd_losses = SirEq.train(w_target=w_target, y_target=y_target, **dy_params)
+    sir, mse_losses, der_1st_losses, der_2nd_losses, _ = SirEq.train(w_target=w_target, y_target=y_target, **dy_params)
     with torch.no_grad():
         w_hat, y_hat, sol = sir.inference(torch.arange(dy_params["t_start"], 100, t_inc))
         train_slice = slice(dy_params["t_start"], int(train_size/t_inc), int(1/t_inc))
@@ -290,9 +290,9 @@ if __name__ == "__main__":
     beta_t = 0.8
     gamma_t = 0.3
     delta_t = 0.02
-    lr_b = 1e-6
-    lr_g = 1e-7
-    lr_d = 3e-8
+    lr_b = 1e-4
+    lr_g = 1e-5
+    lr_d = 3e-6
     lr_a = 1e-3
     train_size = 45
     val_len = 20
@@ -300,15 +300,15 @@ if __name__ == "__main__":
     der_2nd_reg = 0.
     use_alpha = False
     y_loss_weight = 0
-    t_inc = 0.1
+    t_inc = 1
 
     m = 0.2
     a = 1.0
     b = 0.05
 
 
-    # integrator = Heun
-    integrator = euler
+    integrator = Heun
+    # integrator = euler
 
     exp_prefix = get_exp_prefix(region, beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, train_size, der_1st_reg,
                                 der_2nd_reg, t_inc, use_alpha, y_loss_weight, val_len)
