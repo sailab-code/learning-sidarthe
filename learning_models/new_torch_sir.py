@@ -4,10 +4,12 @@ from typing import List
 import numpy
 import torch
 from torch.optim.optimizer import Optimizer
+from torch.utils.tensorboard import SummaryWriter
 
 from learning_models.abstract_model import AbstractModel
 import utils.derivatives as derivatives
 from learning_models.sir_optimizer import SirOptimizer
+from utils.visualization_utils import Curve, generic_plot, format_xtick
 
 
 class NewSir(AbstractModel):
@@ -28,6 +30,18 @@ class NewSir(AbstractModel):
         self.der_2nd_reg = kwargs.get("der_2nd_reg", 0.)
 
         self.y_loss_weight = kwargs.get("y_loss_weight", 0.0)
+
+    @property
+    def beta(self) -> torch.Tensor:
+        return self.params["beta"]
+
+    @property
+    def gamma(self) -> torch.Tensor:
+        return self.params["gamma"]
+
+    @property
+    def delta(self) -> torch.Tensor:
+        return self.params["delta"]
 
     @property
     def params(self):
@@ -77,6 +91,7 @@ class NewSir(AbstractModel):
             loss_1st_derivative_total = (
                     loss_1st_derivative_beta + loss_1st_derivative_gamma + loss_1st_derivative_delta
             )
+            loss_1st_derivative_total = 0.5 * torch.pow(loss_1st_derivative_total, 2)
 
             return self.der_1st_reg * torch.mean(loss_1st_derivative_total)
         else:
@@ -106,7 +121,8 @@ class NewSir(AbstractModel):
     def losses(self, inferences, targets):
         def mapper(target):
             if isinstance(target, numpy.ndarray) or isinstance(target, list):
-                return torch.tensor(target)
+                return torch.tensor(target, dtype=torch.float32)
+            return target.to(dtype=torch.float32)
 
         def mse_loss(a, b):
             return torch.sqrt(
@@ -115,7 +131,7 @@ class NewSir(AbstractModel):
                 )
             )
 
-        targets = {key: mapper(value) for key, value in targets}
+        targets = {key: mapper(value) for key, value in targets.items()}
 
         w_target = targets["w"]
         w_hat = inferences["w"]
@@ -128,22 +144,27 @@ class NewSir(AbstractModel):
         if y_target is not None:
             y_mse_loss = mse_loss(w_hat, w_target)
 
-        loss_reg_beta = self.b_reg * (
+        loss_reg_beta = self.b_reg * torch.mean(
                 self.__loss_gte_one(self.params["beta"]) + self.__loss_lte_zero(self.params["beta"]))
-        loss_reg_gamma = self.b_reg * (
+        loss_reg_gamma = self.b_reg * torch.mean(
                 self.__loss_gte_one(self.params["gamma"]) + self.__loss_lte_zero(self.params["gamma"]))
-        loss_reg_delta = self.b_reg * (
+        loss_reg_delta = self.b_reg * torch.mean(
                 self.__loss_gte_one(self.params["delta"]) + self.__loss_lte_zero(self.params["delta"]))
 
         mse = ((1.0 - self.y_loss_weight) * w_mse_loss) + self.y_loss_weight * y_mse_loss
-        total_loss = mse_loss + \
-                     torch.mean(loss_reg_beta + loss_reg_gamma + loss_reg_delta)
+
+        der_1st_loss = self.first_derivative_loss()
+        der_2nd_loss = self.second_derivative_loss()
+
+        total_loss = mse + loss_reg_beta + loss_reg_gamma + loss_reg_delta + der_1st_loss
 
         return {
-            "mse": mse,
+            self.val_loss_checked: mse,
             "w_mse": w_mse_loss,
             "y_mse": y_mse_loss,
-            [self.backward_loss_key]: total_loss
+            "der_1st": der_1st_loss,
+            "der_2nd": der_2nd_loss,
+            self.backward_loss_key: total_loss
         }
 
     def inference(self, time_grid):
@@ -190,7 +211,7 @@ class NewSir(AbstractModel):
                       integrator=integrator)
 
     @classmethod
-    def init_optimizers(cls, model: AbstractModel, optimizer_params: dict, learning_rates: dict) -> List[Optimizer]:
+    def init_optimizers(cls, model: AbstractModel, learning_rates: dict, optimizer_params: dict = {}) -> List[Optimizer]:
         lr_b = learning_rates["beta"]
         lr_g = learning_rates["gamma"]
         lr_d = learning_rates["delta"]
@@ -225,3 +246,65 @@ class NewSir(AbstractModel):
         Z0 = epsilon_z
 
         return S0, I0, Z0
+
+    def plot_params_over_time(self):
+        # BETA, GAMMA, DELTA
+        size = self.beta.shape[0]
+        pl_x = list(range(size))  # list(range(len(beta)))
+        beta_pl = Curve(pl_x, self.beta.detach().numpy(), '-g', "$\\beta$")
+        gamma_pl = Curve(pl_x, [self.gamma.detach().numpy()] * size, '-r', "$\gamma$")
+        delta_pl = Curve(pl_x, [self.delta.detach().numpy()] * size, '-b', "$\delta$")
+        params_curves = [beta_pl, gamma_pl, delta_pl]
+
+        bgd_pl_title = "beta, gamma, delta"
+        return generic_plot(params_curves, bgd_pl_title, None, formatter=format_xtick)
+
+    def plot_sir_fit(self, w_hat, w_target):
+        pl_x = list(range(0, w_hat.shape[0]))
+        hat_curve = Curve(pl_x, w_hat.detach().numpy(), '-', label="Estimated Deaths")
+        target_curve = Curve(pl_x, w_target, '.r', label="Actual Deaths")
+        pl_title = "Estimated Deaths on fit"
+        return generic_plot([hat_curve, target_curve], pl_title, None, formatter=format_xtick)
+
+    def log_initial_info(self, summary: SummaryWriter):
+        print(f"Initial params.")
+        print(f"Beta: {self.beta.detach().numpy()}")
+        print(f"Gamma: {self.gamma.detach().numpy()}")
+        print(f"Delta: {self.gamma.detach().numpy()}")
+        print("\n")
+
+        if summary is not None:
+            summary.add_figure("params_over_time", self.plot_params_over_time(), close=True, global_step=-1)
+
+
+    def log_info(self, epoch, losses, inferences, targets, summary: SummaryWriter = None):
+        print(f"Params at epoch {epoch}.")
+        print(f"Beta: {self.beta.detach().numpy()}")
+        print(f"Gamma: {self.gamma.detach().numpy()}")
+        print(f"Delta: {self.gamma.detach().numpy()}")
+        print("\n")
+
+        if summary is not None:
+            summary.add_figure("params_over_time", self.plot_params_over_time(), close=True, global_step=epoch)
+            fig = self.plot_sir_fit(inferences["w"], targets["w"])
+            summary.add_figure("sir fit", fig, close=True, global_step=epoch)
+            summary.add_scalar("losses/mse_loss", losses["mse"], global_step=epoch)
+            summary.add_scalar("losses/tot_loss", losses[self.backward_loss_key], global_step=epoch)
+            summary.add_scalar("losses/der_1st_loss", losses["der_1st"], global_step=epoch)
+            summary.add_scalar("losses/der_2nd_loss", losses["der_2nd"], global_step=epoch)
+            summary.add_scalar("losses/beta_grad_norm", self.beta.grad.detach().clone().norm(), global_step=epoch)
+            summary.add_scalar("losses/gamma_grad_norm", self.gamma.grad.detach().clone().norm(), global_step=epoch)
+            summary.add_scalar("losses/delta_grad_norm", self.delta.grad.detach().clone().norm(), global_step=epoch)
+
+        return {
+            "epoch": epoch,
+            "mse": losses["mse"]
+        }
+
+    def log_validation_error(self, epoch, val_losses, summary: SummaryWriter = None):
+        summary.add_scalar("losses/validation_mse_loss", val_losses["mse"], global_step=epoch)
+
+    def regularize_gradients(self):
+        torch.nn.utils.clip_grad_norm_(self.beta, 7.)
+        torch.nn.utils.clip_grad_norm_(self.gamma, 7.)
+        torch.nn.utils.clip_grad_norm_(self.delta, 7.)

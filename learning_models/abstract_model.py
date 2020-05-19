@@ -23,12 +23,12 @@ class AbstractModel(metaclass=abc.ABCMeta):
 
     @property
     @abc.abstractmethod
-    def params(self):
+    def params(self) -> Dict:
         pass
 
     @params.setter
     @abc.abstractmethod
-    def params(self, value):
+    def params(self, value: Dict):
         pass
 
     @abc.abstractmethod
@@ -40,19 +40,19 @@ class AbstractModel(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def losses(self, inferences, targets):
+    def losses(self, inferences, targets) -> Dict:
         pass
 
     def integrate(self, time_grid):
         return self.integrator(self.differential_equations, self.omega, time_grid)
 
     @abc.abstractmethod
-    def inference(self, time_grid):
+    def inference(self, time_grid) -> Dict:
         pass;
 
     @property
     def trainable_parameters(self):
-        return [value for key, value in self.params]
+        return [value for key, value in self.params.items()]
 
     def set_params(self, params):
         self.params = params
@@ -90,9 +90,10 @@ class AbstractModel(metaclass=abc.ABCMeta):
     def log_initial_info(self, summary: SummaryWriter):
         pass
 
-    def log_info(self, epoch, summary: SummaryWriter = None):
+    def log_info(self, epoch, losses, inferences, targets, summary: SummaryWriter = None):
         return {
-            epoch: epoch
+            "epoch": epoch,
+            "mse": losses[self.val_loss_checked]
         }
 
     def log_time_per_epoch(self, epoch, time_per_epoch, summary: SummaryWriter = None):
@@ -175,7 +176,7 @@ class AbstractModel(metaclass=abc.ABCMeta):
                 optimizer.zero_grad()
 
             inferences = model.inference(train_time_grid)
-            train_hats = {key: value[train_hat_slice] for key, value in inferences}
+            train_hats = {key: value[train_hat_slice] for key, value in inferences.items()}
 
             losses = model.losses(train_hats, train_targets)
             losses[model.backward_loss_key].backward()
@@ -187,7 +188,7 @@ class AbstractModel(metaclass=abc.ABCMeta):
 
             if epoch % log_epoch_steps == 0:
                 print(f"epoch {epoch} / {n_epochs}")
-                log_info = model.log_info(epoch, summary)
+                log_info = model.log_info(epoch, losses, train_hats, train_targets, summary)
                 logged_info.append(log_info)
                 time_step = time.time() - time_start
                 time_per_epoch = time_step / log_epoch_steps
@@ -198,7 +199,7 @@ class AbstractModel(metaclass=abc.ABCMeta):
             if epoch % validation_epoch_steps == 0:
                 with torch.no_grad():
                     val_inferences = model.inference(val_time_grid)
-                    val_hats = {key: value[val_hat_slice] for key, value in val_inferences}
+                    val_hats = {key: value[val_hat_slice] for key, value in val_inferences.items()}
                     val_losses = model.losses(val_hats, val_targets)
                     model.log_validation_error(epoch, val_losses, summary)
                 val_loss = val_losses[model.val_loss_checked]
@@ -213,7 +214,7 @@ class AbstractModel(metaclass=abc.ABCMeta):
                 elif n_lr_updates < max_n_lr_updates:
                     # when patience is over reduce learning rate by lr_fraction
                     print(f"Reducing learning rate at step {epoch}")
-                    learning_rates = {key: value / lr_fraction for key, value in learning_rates}
+                    learning_rates = {key: value / lr_fraction for key, value in learning_rates.items()}
                     cls.update_optimizers(optimizers, model, learning_rates)
                     n_lr_updates += 1
                     patience = 0
