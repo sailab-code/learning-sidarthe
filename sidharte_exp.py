@@ -1,10 +1,11 @@
+import json
 import os
 from uuid import uuid4
 
 import torch
 import numpy as np
 
-from learning_models.sidarthe import Sidarthe, Parameters
+from learning_models.sidarthe import Sidarthe
 from torch_euler import Heun
 from utils.data_utils import select_data
 from utils.visualization_utils import generic_plot, Curve, format_xtick, generic_sub_plot, Plot
@@ -16,6 +17,8 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         train_size, val_len, loss_weights, der_1st_reg, bound_reg, time_step, integrator,
         momentum, m, a,
         exp_prefix):
+
+    # region directory creation
     # creating folders, if necessary
     base_path = os.path.join(os.getcwd(), "regioni")
     if not os.path.exists(base_path):
@@ -31,11 +34,29 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 
-    dir_name = uuid4()
+    uuid = uuid4()
+
+    # adds directory with the uuid
+    exp_path = os.path.join(exp_path, str(uuid))
+    if not os.path.exists(exp_path):
+        os.mkdir(exp_path)
+
+    # endregion
 
     # tensorboard summary
-    summary = SummaryWriter(f"runs/{model_name}/{dir_name}")
-    summary.add_text("settings", exp_prefix)
+    summary = SummaryWriter(f"runs/{model_name}/{uuid}")
+
+    # creates the json description file with all settings
+    description = get_description(region, initial_params, learning_rates, loss_weights, train_size, val_len, der_1st_reg, t_inc, m, a, integrator)
+    json_description = json.dumps(description, indent=4)
+    json_file = "settings.json"
+    with open(os.path.join(exp_path, json_file), "a") as f:
+        f.write(json_description)
+
+    # pushes the html version of the summary on tensorboard
+    summary.add_text("settings/summary", get_exp_description_html(description, uuid))
+
+    # region target extraction
 
     # extract targets from csv
     df_file = os.path.join(os.getcwd(), "COVID-19", "dati-regioni", "dpc-covid19-ita-regioni.csv")
@@ -79,6 +100,8 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         "h_detected": h_detected_target,
         "e": e_target
     }
+
+    # endregion
 
     dataset_size = len(x_target)
     # validation on the next val_len days (or less if we have less data)
@@ -133,8 +156,13 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
                        **train_params)
 
 
+
+    summary.flush()
+
+
+
 def get_exp_prefix(area, initial_params, learning_rates, train_size, val_len, der_1st_reg,
-                   t_inc, m, a, b, integrator ):
+                   t_inc, m, a, integrator):
     prefix = f"{area[0]}_{integrator.__name__}"
     for key, value in initial_params.items():
         prefix += f"_{key[0]}{value}"
@@ -147,6 +175,47 @@ def get_exp_prefix(area, initial_params, learning_rates, train_size, val_len, de
     prefix += f"{datetime.now().strftime('%B_%d_%Y_%H_%M_%S')}"
 
     return prefix
+
+def get_description(area, initial_params, learning_rates, target_weights, train_size, val_len, der_1st_reg,
+                             t_inc, m, a, integrator):
+    return {
+        "region": area,
+        "initial_values": initial_params,
+        "learning_rates": learning_rates,
+        "target_weights": target_weights,
+        "train_size": train_size,
+        "val_len": val_len,
+        "der_1st_reg": der_1st_reg,
+        "t_inc": t_inc,
+        "m": m,
+        "a": a,
+        "integrator": integrator.__name__,
+        "started": datetime.now().strftime('%d/%B/%Y %H:%M:%S')
+    }
+
+
+def get_exp_description_html(description, uuid):
+    """
+    creates an html representation of the experiment description for tensorboard
+    """
+    def get_tabs(tabIdx):
+        return '&emsp;' * tabIdx
+
+    def get_html_str_from_dict(dictionary, tabIdx=1):
+        dict_str = "{<br>"
+        for key, value in dictionary.items():
+            dict_str += f"{get_tabs(tabIdx)}{key}:"
+            if not isinstance(value, dict):
+                dict_str += f"{value},<br>"
+            else:
+                dict_str += get_html_str_from_dict(value, tabIdx + 1) + ",<br>"
+        dict_str += get_tabs(tabIdx-1)+"}"
+        return dict_str
+
+    description_str = f"Experiment id: {uuid}<br><br>"
+    description_str += get_html_str_from_dict(description)
+
+    return description_str
 
 
 if __name__ == "__main__":
@@ -172,22 +241,22 @@ if __name__ == "__main__":
     }
 
     learning_rates = {
-        "alpha": 1e-3,
-        "beta": 1e-3,
-        "gamma": 1e-3,
-        "delta": 1e-3,
-        "epsilon": 1e-3,
-        "theta": 1e-3,
-        "xi": 1e-3,
-        "eta": 1e-3,
-        "mu": 1e-3,
-        "ni": 1e-3,
-        "tau": 1e-3,
-        "lambda": 1e-3,
-        "kappa": 1e-3,
-        "zeta": 1e-3,
-        "rho": 1e-3,
-        "sigma": 1e-3
+        "alpha": 1e-4,
+        "beta": 1e-4,
+        "gamma": 1e-4,
+        "delta": 1e-4,
+        "epsilon": 1e-4,
+        "theta": 1e-4,
+        "xi": 1e-4,
+        "eta": 1e-4,
+        "mu": 1e-4,
+        "ni": 1e-4,
+        "tau": 1e-4,
+        "lambda": 1e-4,
+        "kappa": 1e-4,
+        "zeta": 1e-4,
+        "rho": 1e-4,
+        "sigma": 1e-4
     }
 
     loss_weights = {
@@ -214,7 +283,7 @@ if __name__ == "__main__":
     integrator = Heun
 
     exp_prefix = get_exp_prefix(region, params, learning_rates, train_size,
-                                val_len, der_1st_reg, t_inc, m, a, b, integrator)
+                                val_len, der_1st_reg, t_inc, m, a, integrator)
     print(region)
     exp(region, populations[region], params,
         learning_rates, n_epochs, region, train_size, val_len,

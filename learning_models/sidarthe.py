@@ -12,29 +12,6 @@ from learning_models.sir_optimizer import SirOptimizer
 from utils import derivatives
 from utils.visualization_utils import Curve, generic_plot, format_xtick
 
-Parameters = namedtuple("Parameters", (
-    "alpha",
-    "beta",
-    "gamma",
-    "delta",
-    "epsilon",
-    "theta",
-    "xi",
-    "eta",
-    "mu",
-    "ni",
-    "tau",
-    "Lambda",
-    "kappa",
-    "zeta",
-    "rho",
-    "sigma"
-))
-Parameters.__new__.__defaults__ = (0.,) * len(Parameters._fields)
-
-
-# {key: torch.tensor(value, dtype=self.dtype, requires_grad=True) for key, value in parameters._asdict().items()}
-
 
 class Sidarthe(AbstractModel):
     dtype = torch.float64
@@ -334,7 +311,6 @@ class Sidarthe(AbstractModel):
             "sol": sol
         }
 
-    # TODO
     @classmethod
     def init_trainable_model(cls, initial_params: dict, initial_conditions, **model_params):
         time_step = model_params["time_step"]
@@ -361,10 +337,9 @@ class Sidarthe(AbstractModel):
                         bound_reg=bound_reg
                         )
 
-    # TODO
     @classmethod
     def init_optimizers(cls, model: AbstractModel, learning_rates: dict, optimizers_params: dict) -> List[Optimizer]:
-        m = optimizers_params.get("m", 1 / 9)
+        m = optimizers_params.get("m", 1/9)
         a = optimizers_params.get("a", 0.05)
         momentum = optimizers_params.get("momentum", True)
 
@@ -471,6 +446,8 @@ class Sidarthe(AbstractModel):
 
             for key, value in losses.items():
                 summary.add_scalar(f"losses/{key}", value.detach().numpy(), global_step=epoch)
+
+            for key, value in self._params.items():
                 if value.grad is not None:
                     summary.add_scalar(f"grads/{key}", value.grad.detach().norm(), global_step=epoch)
 
