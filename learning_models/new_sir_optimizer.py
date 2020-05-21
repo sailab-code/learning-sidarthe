@@ -23,7 +23,7 @@ class NewSirOptimizer(Optimizer):
             params_list.append(param_dict)
 
         defaults = dict()
-        super().__init__(self, params_list, defaults)
+        super().__init__(params_list, defaults)
 
     def step(self, closure=None):
         for group in self.param_groups:
@@ -42,7 +42,7 @@ class NewSirOptimizer(Optimizer):
                         momentum_term = -eta[t] * d_p[t] + mu[t] * update[t - 1]
                         update.append(momentum_term)
 
-                    parameter.add_(torch.tensor(update))
+                    parameter.data.add_(torch.tensor(update))
                 else:
-                    parameter.add_(-lr * d_p)
+                    parameter.data.add_(-lr * d_p)
 

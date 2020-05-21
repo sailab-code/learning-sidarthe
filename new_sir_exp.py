@@ -13,7 +13,7 @@ from torch_euler import Heun, euler
 from utils.data_utils import select_data
 from utils.visualization_utils import generic_plot, Curve, format_xtick, generic_sub_plot, Plot
 from torch.utils.tensorboard import SummaryWriter
-from populations import population
+from populations import populations
 from datetime import datetime
 
 
@@ -411,7 +411,7 @@ if __name__ == "__main__":
     exp_prefix = get_exp_prefix(region, beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, train_size, der_1st_reg,
                                 der_2nd_reg, t_inc, use_alpha, y_loss_weight, val_len)
     print(region)
-    exp(region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, n_epochs, name=region,
+    exp(region, populations[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, n_epochs, name=region,
         train_size=train_size, val_len=val_len,
         der_1st_reg=der_1st_reg, der_2nd_reg=der_2nd_reg, use_alpha=use_alpha, y_loss_weight=y_loss_weight, t_inc=t_inc,
         #exp_prefix=exp_prefix,

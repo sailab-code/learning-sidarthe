@@ -8,6 +8,8 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 class AbstractModel(metaclass=abc.ABCMeta):
+    dtype=torch.float64
+
     def __init__(self, init_cond, integrator, sample_time = 1.):
         """
         Abstract model with integration
@@ -19,7 +21,6 @@ class AbstractModel(metaclass=abc.ABCMeta):
         self.init_cond = init_cond
         self.integrator = integrator
         self.sample_time = sample_time
-
 
     @property
     @abc.abstractmethod
@@ -54,8 +55,9 @@ class AbstractModel(metaclass=abc.ABCMeta):
     def trainable_parameters(self):
         return [value for key, value in self.params.items()]
 
+    @abc.abstractmethod
     def set_params(self, params):
-        self.params = params
+        pass
 
     @classmethod
     @abc.abstractmethod
@@ -126,18 +128,18 @@ class AbstractModel(metaclass=abc.ABCMeta):
 
         t_start = train_params["t_start"]
         t_end = train_params["t_end"]
-        t_inc = train_params["t_inc"]
+        time_step = train_params["time_step"]
         val_size = train_params["val_size"]
 
-        train_steps = int((t_end - t_start) / t_inc)
+        train_steps = int((t_end - t_start) / time_step)
         train_time_grid = torch.linspace(t_start, t_end, train_steps)
         train_target_slice = slice(t_start, t_end, 1)
-        train_hat_slice = slice(int(t_start / t_inc), int(t_end / t_inc), int(1 / t_inc))
+        train_hat_slice = slice(int(t_start / time_step), int(t_end / time_step), int(1 / time_step))
 
-        val_steps = int((t_end + val_size - t_start) / t_inc)
+        val_steps = int((t_end + val_size - t_start) / time_step)
         val_time_grid = torch.linspace(t_start, t_end + val_size, val_steps)
         val_target_slice = slice(t_end, t_end + val_size, 1)
-        val_hat_slice = slice(int(t_end / t_inc), int((t_end + val_size) / t_inc), int(1 / t_inc))
+        val_hat_slice = slice(int(t_end / time_step), int((t_end + val_size) / time_step), int(1 / time_step))
 
         def to_torch_sliced_tensor(value, slice):
             if value is None:
@@ -159,7 +161,7 @@ class AbstractModel(metaclass=abc.ABCMeta):
 
         # early stopping stuff
         early_stopping_conf = train_params.get("early_stopping", {})
-        best = torch.tensor(1e12)
+        best = torch.tensor(1e12, dtype=cls.dtype)
         best_epoch = -1
         best_params = model.params
         patience = 0
@@ -190,8 +192,8 @@ class AbstractModel(metaclass=abc.ABCMeta):
                 print(f"epoch {epoch} / {n_epochs}")
                 log_info = model.log_info(epoch, losses, train_hats, train_targets, summary)
                 logged_info.append(log_info)
-                time_step = time.time() - time_start
-                time_per_epoch = time_step / log_epoch_steps
+                epoch_steps_measure = time.time() - time_start
+                time_per_epoch = epoch_steps_measure / log_epoch_steps
                 model.log_time_per_epoch(epoch, time_per_epoch)
                 print("Average time for epoch: {}".format(time_per_epoch))
                 time_start = time.time()

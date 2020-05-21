@@ -1,4 +1,4 @@
-population = {
+populations = {
         "Abruzzo": 1.312e6,
         "Basilicata": 5.62e5,
         "Calabria": 1.947e6,

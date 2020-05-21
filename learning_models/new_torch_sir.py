@@ -260,8 +260,8 @@ class NewSir(AbstractModel):
         size = self.beta.shape[0]
         pl_x = list(range(size))  # list(range(len(beta)))
         beta_pl = Curve(pl_x, self.beta.detach().numpy(), '-g', "$\\beta$")
-        gamma_pl = Curve(pl_x, [self.gamma.detach().numpy()] * size, '-r', "$\gamma$")
-        delta_pl = Curve(pl_x, [self.delta.detach().numpy()] * size, '-b', "$\delta$")
+        gamma_pl = Curve(pl_x, [self.gamma.detach().numpy()] * size, '-r', "$\\gamma$")
+        delta_pl = Curve(pl_x, [self.delta.detach().numpy()] * size, '-b', "$\\delta$")
         params_curves = [beta_pl, gamma_pl, delta_pl]
 
         bgd_pl_title = "beta, gamma, delta"
