@@ -4,7 +4,7 @@ import pylab as pl
 import torch
 import datetime
 import numpy as np
-from multiprocessing import Process
+import multiprocessing as mp
 
 from learning_models.torch_sir import SirEq
 from torch_euler import Heun, euler, RK4
@@ -50,7 +50,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     if not os.path.exists(base_path):
         os.mkdir(base_path)
 
-    exp_path = os.path.join(base_path, "torch_sir_heun_validation_grid_search")
+    exp_path = os.path.join(base_path, "torch_sir_heun_finetune")
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 
@@ -280,6 +280,7 @@ def get_exp_prefix(area, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a, tr
 
 if __name__ == "__main__":
     # todo provare ad inizializzare rete con pesi random
+    mp.set_start_method('spawn')
     n_epochs = 2501
     # Veneto b0.8_g0.35_d0.015_lrb0.05_lrg0.01_lrd0.0005_ts40_st_der1000.0_nd_der0.0
     # Lombardia b0.81_g0.2_d0.02_lrb0.05_lrg0.01_lrd1e-05_ts40_st_der1000.0_nd_der10000.0
@@ -309,7 +310,7 @@ if __name__ == "__main__":
     y_loss_weights = [0.0]
     t_incs = [0.1]"""
 
-    beta_ts, gamma_ts, delta_ts = [0.8, 0.5], [0.3, 0.15], [0.01, 0.03]
+    beta_ts, gamma_ts, delta_ts = [0.8, 0.75, 0.85], [0.3, 0.25, 0.35], [0.025, 0.015]
     lr_bs, lr_gs, lr_ds, lr_as = [1e-4], [1e-5], [3e-6], [1e-3]
     train_sizes = [45, 50]  # list(range(40, 41, 5))
     val_lens = [15]
@@ -335,7 +336,7 @@ if __name__ == "__main__":
         #exp(region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, n_epochs, name=region, train_size=train_size, val_len=val_len,
         #        der_1st_reg=derivative_reg, der_2nd_reg=der_2nd_reg, use_alpha=use_alpha, y_loss_weight=y_loss_w, t_inc=t_inc, exp_prefix=exp_prefix, integrator=integrator)
 
-        proc = Process(target=exp,
+        proc = mp.Process(target=exp,
                        args=(
                        region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, n_epochs, region,
                        train_size, val_len, derivative_reg, der_2nd_reg, use_alpha, y_loss_w, t_inc, exp_prefix,

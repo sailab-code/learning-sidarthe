@@ -4,11 +4,10 @@ material-dashboard-react-master
 regioni/
 COVID-19/
 .DS_Store
-runs/
-runs.old/
-regioni.old/
+runs*/
+runs.old*/
+regioni.old*/
 dati-regioni/
-regioni.old.2/
 .ipynb_checkpoints/
 .vscode/
 runs.1/
