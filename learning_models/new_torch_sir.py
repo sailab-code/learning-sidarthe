@@ -211,7 +211,7 @@ class NewSir(AbstractModel):
                       integrator=integrator)
 
     @classmethod
-    def init_optimizers(cls, model: AbstractModel, learning_rates: dict, optimizer_params: dict = {}) -> List[Optimizer]:
+    def init_optimizers(cls, model: AbstractModel, learning_rates: dict, optimizer_params: dict) -> List[Optimizer]:
         lr_b = learning_rates["beta"]
         lr_g = learning_rates["gamma"]
         lr_d = learning_rates["delta"]
@@ -237,6 +237,12 @@ class NewSir(AbstractModel):
     @staticmethod
     def compute_initial_conditions_from_targets(targets: dict, model_params: dict):
         population = model_params["population"]
+
+        I0 = targets["y"][0].item()
+        Z0 = targets["w"][0].item()
+        S0 = population - (I0 + Z0)
+
+        """
         epsilon = targets["y"][0].item() / population
         epsilon_z = targets["w"][0].item() / population
         S0 = 1 - (epsilon + epsilon_z)
@@ -244,6 +250,8 @@ class NewSir(AbstractModel):
         S0 = S0 * population
         I0 = I0 * population
         Z0 = epsilon_z
+        Z0 = Z0 * population
+        """
 
         return S0, I0, Z0
 
@@ -275,7 +283,6 @@ class NewSir(AbstractModel):
 
         if summary is not None:
             summary.add_figure("params_over_time", self.plot_params_over_time(), close=True, global_step=-1)
-
 
     def log_info(self, epoch, losses, inferences, targets, summary: SummaryWriter = None):
         print(f"Params at epoch {epoch}.")

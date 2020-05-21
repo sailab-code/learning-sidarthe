@@ -287,8 +287,8 @@ def get_exp_prefix(area, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a, tr
 if __name__ == "__main__":
     n_epochs = 1500
     region = "Lombardia"
-    beta_t = 0.8
-    gamma_t = 0.3
+    beta_t = 0.3 # 0.8
+    gamma_t = 0.8 # 0.3
     delta_t = 0.02
     lr_b = 1e-6
     lr_g = 1e-7
@@ -300,7 +300,7 @@ if __name__ == "__main__":
     der_2nd_reg = 0.
     use_alpha = False
     y_loss_weight = 0
-    t_inc = 0.1
+    t_inc = 1.
 
     m = 0.2
     a = 1.0
@@ -316,4 +316,4 @@ if __name__ == "__main__":
     exp(region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, n_epochs, name=region,
         train_size=train_size, val_len=val_len,
         der_1st_reg=der_1st_reg, der_2nd_reg=der_2nd_reg, use_alpha=use_alpha, y_loss_weight=y_loss_weight, t_inc=t_inc,
-        exp_prefix=f"euler_tinc0.1_sqrt_mseloss_clip7_der{der_1st_reg}_m{m}_a{a}_b{b}", integrator=integrator, m=m, a=a, b=b)
+        exp_prefix=f"tst_invert_gamma_beta_1", integrator=integrator, m=m, a=a, b=b)

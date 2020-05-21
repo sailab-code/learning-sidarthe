@@ -71,7 +71,7 @@ class AbstractModel(metaclass=abc.ABCMeta):
 
     @classmethod
     @abc.abstractmethod
-    def init_optimizers(cls, model, optimizers_params: dict, learning_rates: dict) -> List[Optimizer]:
+    def init_optimizers(cls, model, learning_rates: dict, optimizers_params: dict) -> List[Optimizer]:
         pass
 
     @classmethod
@@ -139,14 +139,14 @@ class AbstractModel(metaclass=abc.ABCMeta):
         val_target_slice = slice(t_end, t_end + val_size, 1)
         val_hat_slice = slice(int(t_end / t_inc), int((t_end + val_size) / t_inc), int(1 / t_inc))
 
-        def mapper(value, slice):
+        def to_torch_sliced_tensor(value, slice):
             if value is None:
                 return None
             else:
                 return torch.tensor(value[slice])
 
-        train_targets = {key: mapper(value, train_target_slice) for key, value in targets.items()}
-        val_targets = {key: mapper(value, val_target_slice) for key, value in targets.items()}
+        train_targets = {key: to_torch_sliced_tensor(value, train_target_slice) for key, value in targets.items()}
+        val_targets = {key: to_torch_sliced_tensor(value, val_target_slice) for key, value in targets.items()}
 
         initial_conditions = cls.compute_initial_conditions_from_targets(train_targets, model_params)
 
