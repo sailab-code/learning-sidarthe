@@ -6,7 +6,7 @@ import torch
 import numpy as np
 
 from learning_models.sidarthe import Sidarthe
-from torch_euler import Heun
+from torch_euler import Heun, euler
 from utils.data_utils import select_data
 from utils.visualization_utils import generic_plot, Curve, format_xtick, generic_sub_plot, Plot
 from torch.utils.tensorboard import SummaryWriter
@@ -15,7 +15,7 @@ from datetime import datetime
 
 def exp(region, population, initial_params, learning_rates, n_epochs, region_name,
         train_size, val_len, loss_weights, der_1st_reg, bound_reg, time_step, integrator,
-        momentum, m, a,
+        momentum, m, a, loss_type,
         exp_prefix):
 
     # region directory creation
@@ -47,7 +47,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
     summary = SummaryWriter(f"runs/{model_name}/{uuid}")
 
     # creates the json description file with all settings
-    description = get_description(region, initial_params, learning_rates, loss_weights, train_size, val_len, der_1st_reg, t_inc, m, a, integrator)
+    description = get_description(region, initial_params, learning_rates, loss_weights, train_size, val_len, der_1st_reg, t_inc, m, a, loss_type, integrator)
     json_description = json.dumps(description, indent=4)
     json_file = "settings.json"
     with open(os.path.join(exp_path, json_file), "a") as f:
@@ -103,11 +103,6 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
 
     # endregion
 
-    dataset_size = len(x_target)
-    # validation on the next val_len days (or less if we have less data)
-    val_size = min(train_size + val_len,
-                  len(x_target) - 5)
-
     params = {
         "alpha": [initial_params["alpha"]] * train_size,
         "beta": [initial_params["beta"]] * train_size,
@@ -129,10 +124,11 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
 
     model_params = {
         "der_1st_reg": der_1st_reg,
-        "population": population,
+        "population": 1,
         "integrator": integrator,
         "time_step": time_step,
         "bound_reg": bound_reg,
+        "loss_type": loss_type,
         **loss_weights
     }
 
@@ -143,9 +139,15 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         "time_step": time_step,
         "m": m,
         "a": a,
-        "momentum": True,
+        "momentum": momentum,
         "tensorboard_summary": summary
     }
+
+    def normalize_values(values, norm):
+        """normalize values by a norm, e.g. population"""
+        return {key: np.array(value) / norm for key, value in values.items()}
+
+    targets = normalize_values(targets, population)
 
     sidarthe, logged_info, best_epoch = \
         Sidarthe.train(targets,
@@ -157,12 +159,180 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
 
 
 
+    with torch.no_grad():
+        dataset_size = len(x_target)
+        # validation on the next val_len days (or less if we have less data)
+        val_size = min(train_size + val_len,
+                       len(x_target) - 5)
+
+        t_grid = torch.linspace(0, 100, int(100/t_inc))
+
+        inferences = sidarthe.inference(t_grid)
+        inferences = {key: np.array(value) * population for key, value in inferences.items()}
+
+        # region data slices
+        t_start = train_params["t_start"]
+        train_hat_slice = slice(t_start, int(train_size / t_inc), int(1 / t_inc))
+        val_hat_slice = slice(int(train_size / t_inc), int(val_size / t_inc), int(1 / t_inc))
+        test_hat_slice = slice(int(val_size / t_inc), int(dataset_size / t_inc), int(1 / t_inc))
+        dataset_hat_slice = slice(t_start, int(dataset_size / t_inc), int(1 / t_inc))
+
+        train_target_slice = slice(t_start, train_size, 1)
+        val_target_slice = slice(train_size, val_size, 1)
+        test_target_slice = slice(val_size, dataset_size, 1)
+        dataset_target_slice = slice(t_start, dataset_size, 1)
+        # endregion
+
+        # region slice inferences
+        def slice_values(values, slice_):
+            return {key: value[slice_] for key, value in values.items()}
+
+        hat_train = slice_values(inferences, train_hat_slice)
+        hat_val = slice_values(inferences, val_hat_slice)
+        hat_test = slice_values(inferences, test_hat_slice)
+        hat_dataset = slice_values(inferences, dataset_hat_slice)
+
+        target_train = slice_values(targets, train_target_slice)
+        target_val = slice_values(targets, val_target_slice)
+        target_test = slice_values(targets, test_hat_slice)
+        target_dataset = slice_values(targets, dataset_target_slice)
+        # endregion
+
+        # region losses computation
+        def extract_losses(losses):
+            keys = [
+                "rmse",
+                "d_rmse",
+                "e_rmse",
+                "h_rmse",
+                "r_rmse",
+                "t_rmse"
+            ]
+
+            return (losses[key] for key in keys)
+
+        train_risks = sidarthe.losses(
+            hat_train,
+            target_train
+        )
+
+        val_risks = sidarthe.losses(
+            hat_val,
+            target_val
+        )
+
+        test_risks = sidarthe.losses(
+            hat_test,
+            target_test
+        )
+
+        dataset_risks = sidarthe.losses(
+            hat_dataset,
+            target_dataset
+        )
+        # endregion
+
+        # region generate final report
+
+        def valid_json_dict(tensor_dict):
+            valid_dict = {}
+            for key_, value in tensor_dict.items():
+                if isinstance(value, torch.Tensor):
+                    valid_dict[key_] = value.tolist()
+                elif isinstance(value, dict):
+                    valid_dict[key_] = valid_json_dict(value)
+                else:
+                    valid_dict[key_] = value
+            return valid_dict
+
+        final_dict = {
+            "params": sidarthe.params,
+            "best_epoch": best_epoch,
+            "train_risks": train_risks,
+            "val_risks": val_risks,
+            "test_risks": test_risks,
+            "dataset_risks": dataset_risks
+        }
+
+        json_final = json.dumps(valid_json_dict(final_dict), indent=4)
+        json_file = "final.json"
+        with open(os.path.join(exp_path, json_file), "a") as f:
+            f.write(json_final)
+
+        summary.add_text("settings/final", "Final reporting: " + get_html_str_from_dict(final_dict))
+        # endregion
+
+        # region generate plots for final model
+
+        # plot params
+        params_plots = sidarthe.plot_params_over_time()
+        for (plot, plot_title) in params_plots:
+            summary.add_figure(f"final/{plot_title}", plot, close=True, global_step=-1)
+
+        """
+        # plot r0
+        r0_plot, r0_pl_title = sidarthe.plot_r0(inferences["r0"])
+        summary.add_figure(f"fits/{r0_pl_title}", r0_plot, close=True, global_step=epoch)
+        """
+
+        # plot inferences
+
+        # get normalized values
+        norm_hat_train = normalize_values(hat_train, population)
+        norm_hat_val = normalize_values(hat_val, population)
+        norm_hat_test = normalize_values(hat_test, population)
+        norm_target_train = normalize_values(target_train, population)
+        norm_target_val = normalize_values(target_val, population)
+        norm_target_test = normalize_values(target_test, population)
+
+        # ranges for train/val/test
+        train_range = range(0, train_size)
+        val_range = range(train_size, val_size)
+        test_range = range(val_size, dataset_size)
+
+        def get_curves(x_range, hat, target, key, color=None):
+            pl_x = list(x_range)
+            hat_curve = Curve(pl_x, hat, '-', label=f"Estimated {key.upper()}", color=color)
+            if target is not None:
+                target_curve = Curve(pl_x, target, '.', label=f"Actual {key.upper()}", color=color)
+                return [hat_curve, target_curve]
+            else:
+                return [hat_curve]
+
+        for key in inferences.keys():
+            hat_train = norm_hat_train[key]
+            hat_val = norm_hat_val[key]
+            hat_test = norm_hat_test[key]
+
+            if key in targets:
+                # plot inf and target
+                target_train = norm_target_train[key]
+                target_val = norm_target_val[key]
+                target_test = norm_target_test[key]
+                pass
+            else:
+                target_train = None
+                target_val = None
+                target_test = None
+                pass
+
+            train_curves = get_curves(train_range, hat_train, target_train, key, 'r')
+            val_curves = get_curves(val_range, hat_val, target_val, key, 'b')
+            test_curves = get_curves(test_range, hat_test, target_test, key, 'g')
+
+            tot_curves = train_curves + val_curves + test_curves
+            pl_title = f"{key.upper()} - train/validation/test"
+            fig = generic_plot(tot_curves, pl_title, None, formatter=format_xtick)
+            summary.add_figure(f"final/{key}_global", fig)
+
+        # endregion
+
     summary.flush()
 
 
 
 def get_exp_prefix(area, initial_params, learning_rates, train_size, val_len, der_1st_reg,
-                   t_inc, m, a, integrator):
+                   t_inc, m, a, loss_type, integrator):
     prefix = f"{area[0]}_{integrator.__name__}"
     for key, value in initial_params.items():
         prefix += f"_{key[0]}{value}"
@@ -170,14 +340,14 @@ def get_exp_prefix(area, initial_params, learning_rates, train_size, val_len, de
     for key, value in learning_rates.items():
         prefix += f"_{key[0]}{value}"
 
-    prefix += f"_ts{train_size}_vs{val_len}_der1st{der_1st_reg}_tinc{t_inc}_m{m}_a{a}_b{b}"
+    prefix += f"_ts{train_size}_vs{val_len}_der1st{der_1st_reg}_tinc{t_inc}_m{m}_a{a}_b{b}_loss{loss_type}"
 
     prefix += f"{datetime.now().strftime('%B_%d_%Y_%H_%M_%S')}"
 
     return prefix
 
 def get_description(area, initial_params, learning_rates, target_weights, train_size, val_len, der_1st_reg,
-                             t_inc, m, a, integrator):
+                             t_inc, m, a, loss_type, integrator):
     return {
         "region": area,
         "initial_values": initial_params,
@@ -190,18 +360,15 @@ def get_description(area, initial_params, learning_rates, target_weights, train_
         "m": m,
         "a": a,
         "integrator": integrator.__name__,
+        "loss_type": loss_type,
         "started": datetime.now().strftime('%d/%B/%Y %H:%M:%S')
     }
 
 
-def get_exp_description_html(description, uuid):
-    """
-    creates an html representation of the experiment description for tensorboard
-    """
-    def get_tabs(tabIdx):
+def get_tabs(tabIdx):
         return '&emsp;' * tabIdx
 
-    def get_html_str_from_dict(dictionary, tabIdx=1):
+def get_html_str_from_dict(dictionary, tabIdx=1):
         dict_str = "{<br>"
         for key, value in dictionary.items():
             dict_str += f"{get_tabs(tabIdx)}{key}:"
@@ -212,6 +379,13 @@ def get_exp_description_html(description, uuid):
         dict_str += get_tabs(tabIdx-1)+"}"
         return dict_str
 
+def get_exp_description_html(description, uuid):
+    """
+    creates an html representation of the experiment description for tensorboard
+    """
+
+
+
     description_str = f"Experiment id: {uuid}<br><br>"
     description_str += get_html_str_from_dict(description)
 
@@ -219,7 +393,7 @@ def get_exp_description_html(description, uuid):
 
 
 if __name__ == "__main__":
-    n_epochs = 2500
+    n_epochs = 5000
     region = "Lombardia"
     params = {
         "alpha": 0.570,
@@ -241,22 +415,22 @@ if __name__ == "__main__":
     }
 
     learning_rates = {
-        "alpha": 1e-4,
-        "beta": 1e-4,
-        "gamma": 1e-4,
-        "delta": 1e-4,
-        "epsilon": 1e-4,
-        "theta": 1e-4,
-        "xi": 1e-4,
-        "eta": 1e-4,
-        "mu": 1e-4,
-        "ni": 1e-4,
-        "tau": 1e-4,
-        "lambda": 1e-4,
-        "kappa": 1e-4,
-        "zeta": 1e-4,
-        "rho": 1e-4,
-        "sigma": 1e-4
+        "alpha": 1e-2,
+        "beta": 1e-2,
+        "gamma": 1e-2,
+        "delta": 1e-2,
+        "epsilon": 1e-2,
+        "theta": 1e-2,
+        "xi": 1e-2,
+        "eta": 1e-2,
+        "mu": 1e-2,
+        "ni": 1e-2,
+        "tau": 1e-2,
+        "lambda": 1e-2,
+        "kappa": 1e-2,
+        "zeta": 1e-2,
+        "rho": 1e-2,
+        "sigma": 1e-2
     }
 
     loss_weights = {
@@ -269,23 +443,27 @@ if __name__ == "__main__":
 
     train_size = 45
     val_len = 20
-    der_1st_reg = 1e6
+    der_1st_reg = 0.
     der_2nd_reg = 0.
     t_inc = 1.
 
     momentum = True
-    m = 0.2
+    m = 0.1
     a = 1.0
     b = 0.05
 
     bound_reg = 1e6
 
     integrator = Heun
+    #integrator = euler
+
+    loss_type = "rmse"
+    #loss_type = "mape"
 
     exp_prefix = get_exp_prefix(region, params, learning_rates, train_size,
-                                val_len, der_1st_reg, t_inc, m, a, integrator)
+                                val_len, der_1st_reg, t_inc, m, a, loss_type, integrator)
     print(region)
     exp(region, populations[region], params,
         learning_rates, n_epochs, region, train_size, val_len,
         loss_weights, der_1st_reg, bound_reg, t_inc, integrator,
-        momentum, m, a, exp_prefix)
+        momentum, m, a, loss_type, exp_prefix)

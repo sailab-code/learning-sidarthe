@@ -29,6 +29,8 @@ class Sidarthe(AbstractModel):
         self.e_weight = kwargs["e_weight"]
         self.der_1st_reg = kwargs["der_1st_reg"]
         self.bound_reg = kwargs["bound_reg"]
+        self.verbose = kwargs["verbose"]
+        self.loss_type = kwargs["loss_type"]
 
     @property
     def params(self) -> Dict:
@@ -137,7 +139,7 @@ class Sidarthe(AbstractModel):
         xi = get_param_at_t(self.xi, t)
         eta = get_param_at_t(self.eta, t)
         mu = get_param_at_t(self.mu, t)
-        ni = get_param_at_t(self.alpha, t)
+        ni = get_param_at_t(self.ni, t)
         tau = get_param_at_t(self.tau, t)
         lambda_ = get_param_at_t(self.lambda_, t)
         kappa = get_param_at_t(self.kappa, t)
@@ -196,6 +198,14 @@ class Sidarthe(AbstractModel):
             )
         )
 
+    @staticmethod
+    def __mape_loss(a, b):
+        return torch.mean(
+            torch.abs(
+                (a - b) / b
+            )
+        )
+
     @classmethod
     def __loss_gte_one(cls, parameter):
         return parameter.abs() * torch.where(parameter.ge(1.),
@@ -250,28 +260,57 @@ class Sidarthe(AbstractModel):
         h_rmse_loss = self.__rmse_loss(targets["h_detected"], inferences["h_detected"])
         e_rmse_loss = self.__rmse_loss(targets["e"], inferences["e"])
 
+        d_mape_loss = self.__mape_loss(targets["d"], inferences["d"])
+        r_mape_loss = self.__mape_loss(targets["r"], inferences["r"])
+        t_mape_loss = self.__mape_loss(targets["t"], inferences["t"])
+        h_mape_loss = self.__mape_loss(targets["h_detected"], inferences["h_detected"])
+        e_mape_loss = self.__mape_loss(targets["e"], inferences["e"])
+
         total_rmse = self.d_weight * d_rmse_loss + self.r_weight * r_rmse_loss + self.t_weight * t_rmse_loss \
                      + self.h_weight * h_rmse_loss + self.e_weight * e_rmse_loss
+
+        total_mape = self.d_weight * d_mape_loss + self.r_weight * r_mape_loss + self.t_weight * t_mape_loss \
+                     + self.h_weight * h_mape_loss + self.e_weight * e_mape_loss
 
         der_1st_loss = self.first_derivative_loss()
         der_2nd_loss = self.second_derivative_loss()
 
         bound_reg = self.bound_parameter_regularization()
 
-        total_loss = total_rmse + der_1st_loss + bound_reg
+        if self.loss_type is "rmse":
+            loss = total_rmse
+        elif self.loss_type is "mape":
+            loss = total_mape
+        else:
+            raise ValueError(f"loss type {self.loss_type} not supported")
+
+        total_loss = loss + der_1st_loss + bound_reg
 
         return {
-            self.val_loss_checked: total_rmse,
+            self.val_loss_checked: loss,
             "d_rmse": d_rmse_loss,
             "r_rmse": r_rmse_loss,
             "t_rmse": t_rmse_loss,
             "h_rmse": h_rmse_loss,
             "e_rmse": e_rmse_loss,
+            "d_mape": d_mape_loss,
+            "r_mape": r_mape_loss,
+            "t_mape": t_mape_loss,
+            "h_mape": h_mape_loss,
+            "e_mape": e_mape_loss,
             "der_1st": der_1st_loss,
-            "der_2nd": der_2nd_loss,
+            #"der_2nd": der_2nd_loss,
             "bound_reg": bound_reg,
             self.backward_loss_key: total_loss
         }
+
+    @staticmethod
+    def extend_param(value, length):
+        len_diff = length - value.shape[0]
+        if len_diff > 0:
+            return torch.cat((value, value[-1].expand(len_diff)))
+        else:
+            return value
 
     def inference(self, time_grid) -> Dict:
         sol = self.integrate(time_grid)
@@ -284,19 +323,25 @@ class Sidarthe(AbstractModel):
         e = self.init_cond[7] + torch.cumsum(t, dim=0)
         h = self.population - (s + i + d + a + r + t + e)
 
-        rho = self.rho
-        zeta = self.zeta
-        sigma = self.sigma
-        len_diff = d.shape[0] - rho.shape[0]
-        if len_diff > 0:
-            rho = torch.cat((rho, rho[-1].expand(len_diff)))
-            zeta = torch.cat((zeta, zeta[-1].expand(len_diff)))
-            sigma = torch.cat((sigma, sigma[-1].expand(len_diff)))
+        extended_params = {key: self.extend_param(value, time_grid.shape[0]) for key, value in self._params.items()}
 
         h_detected = self.init_cond[6] + torch.cumsum(
-            rho * d + zeta * r + sigma * t,
+            extended_params['rho'] * d + extended_params['zeta']* r + extended_params['sigma'] * t,
             dim=0
         )
+
+        # region compute R0
+        c1 = extended_params['epsilon'] + extended_params['zeta'] + extended_params['lambda']
+        c2 = extended_params['eta'] + extended_params['rho']
+        c3 = extended_params['theta'] + extended_params['mu'] + extended_params['kappa']
+        c4 = extended_params['ni'] + extended_params['xi']
+
+        r0 = extended_params['alpha'] + extended_params['beta'] * extended_params['epsilon'] / c2
+        r0 = r0 + extended_params['gamma'] * extended_params['zeta'] / c3
+        r0 = r0 + extended_params['delta'] * (extended_params['eta'] * extended_params['epsilon']) / (c2 * c4)
+        r0 = r0 + extended_params['zeta'] * extended_params['theta'] / (c3 * c4)
+        r0 = r0 / c1
+        # endregion
 
         return {
             "s": s,
@@ -308,6 +353,7 @@ class Sidarthe(AbstractModel):
             "h": h,
             "e": e,
             "h_detected": h_detected,
+            "r0": r0,
             "sol": sol
         }
 
@@ -327,6 +373,10 @@ class Sidarthe(AbstractModel):
 
         bound_reg = model_params.get("bound_reg", 1e5)
 
+        verbose = model_params.get("verbose", False)
+
+        loss_type = model_params.get("loss_type", "rmse")
+
         return Sidarthe(initial_params, population, initial_conditions, integrator, time_step,
                         d_weight=d_weight,
                         r_weight=r_weight,
@@ -334,7 +384,9 @@ class Sidarthe(AbstractModel):
                         h_weight=h_weight,
                         e_weight=e_weight,
                         der_1st_reg=der_1st_reg,
-                        bound_reg=bound_reg
+                        bound_reg=bound_reg,
+                        verbose=verbose,
+                        loss_type=loss_type
                         )
 
     @classmethod
@@ -400,7 +452,7 @@ class Sidarthe(AbstractModel):
             size = self.alpha.shape[0]
             pl_x = list(range(size))
             pl_title = f"$\\{key}$ over time"
-            param_curve = Curve(pl_x, value.detach().numpy(), '-', f"$\\{key}$")
+            param_curve = Curve(pl_x, value.detach().numpy(), '-', f"$\\{key}$", color=None)
             plot = generic_plot([param_curve], pl_title, None, formatter=format_xtick)
             param_plots.append((plot, pl_title))
 
@@ -408,34 +460,45 @@ class Sidarthe(AbstractModel):
 
     def plot_fits(self, inferences, targets):
         fit_plots = []
-        for key, value in targets.items():
-            pl_x = list(range(0, value.shape[0]))
+        for key, target in targets.items():
             inference = inferences[key]
-            hat_curve = Curve(pl_x, inference.detach().numpy(), '-', label=f"Estimated {key.upper()}")
-            target_curve = Curve(pl_x, value, '.', label=f"Actual {key.upper()}")
+            pl_x = list(range(0, target.shape[0]))
+            hat_curve = Curve(pl_x, inference.detach().numpy(), '-', label=f"Estimated {key.upper()}", color=None)
+            target_curve = Curve(pl_x, target, '.', label=f"Actual {key.upper()}", color=None)
+            curves = [hat_curve, target_curve]
             pl_title = f"Estimated {key.upper()} on fit"
-            plot = generic_plot([hat_curve, target_curve], pl_title, None, formatter=format_xtick)
+            plot = generic_plot(curves, pl_title, None, formatter=format_xtick)
             fit_plots.append((plot, pl_title))
 
         return fit_plots
+
+    def plot_r0(self, r0):
+        pl_x = list(range(0, r0.shape[0]))
+        hat_curve = Curve(pl_x, r0.detach().numpy(), '-', label=f"Estimated R0", color=None)
+        pl_title = f"Estimated R0"
+        plot = generic_plot([hat_curve], pl_title, None, formatter=format_xtick)
+        return (plot, pl_title)
 
     def print_params(self):
         for key, value in self._params.items():
             print(f"{key}: {value.detach().numpy()}")
 
     def log_initial_info(self, summary: SummaryWriter):
-        print("Initial params")
-        self.print_params()
-        print("\n")
+        if self.verbose:
+            print("Initial params")
+            self.print_params()
+            print("\n")
 
         if summary is not None:
             for fig, fig_title in self.plot_params_over_time():
-                summary.add_figure(f"params_over_time/{fig_title}", fig, close=True, global_step=-1)
+                summary.add_figure(f"params_over_time/{fig_title}", fig, close=True, global_step=0)
 
     def log_info(self, epoch, losses, inferences, targets, summary: SummaryWriter = None):
-        print(f"Params at epoch {epoch}.")
-        self.print_params()
-        print("\n")
+
+        if self.verbose:
+            print(f"Params at epoch {epoch}.")
+            self.print_params()
+            print("\n")
 
         if summary is not None:
             for fig, fig_title in self.plot_params_over_time():
@@ -443,6 +506,9 @@ class Sidarthe(AbstractModel):
 
             for fig, fig_title in self.plot_fits(inferences, targets):
                 summary.add_figure(f"fits/{fig_title}", fig, close=True, global_step=epoch)
+
+            r0_plot, r0_pl_title = self.plot_r0(inferences["r0"])
+            summary.add_figure(f"fits/{r0_pl_title}", r0_plot, close=True, global_step=epoch)
 
             for key, value in losses.items():
                 summary.add_scalar(f"losses/{key}", value.detach().numpy(), global_step=epoch)
@@ -455,13 +521,17 @@ class Sidarthe(AbstractModel):
 
         return {
             "epoch": epoch,
-            **detached_losses
+            "losses": detached_losses
         }
 
     def log_validation_error(self, epoch, val_losses, summary: SummaryWriter = None):
         if summary is not None:
-            summary.add_scalar("losses/validation_mse_loss", val_losses[self.val_loss_checked], global_step=epoch)
+            summary.add_scalar("losses/validation_loss", val_losses[self.val_loss_checked], global_step=epoch)
 
     def regularize_gradients(self):
         for key, value in self._params.items():
             torch.nn.utils.clip_grad_norm_(value, 7.)
+
+    @property
+    def val_loss_checked(self):
+        return self.loss_type

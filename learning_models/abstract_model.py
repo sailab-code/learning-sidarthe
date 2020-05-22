@@ -173,7 +173,7 @@ class AbstractModel(metaclass=abc.ABCMeta):
         logged_info: List[Dict] = []
 
         time_start = time.time()
-        for epoch in range(n_epochs):
+        for epoch in range(1, n_epochs + 1):
             for optimizer in optimizers:
                 optimizer.zero_grad()
 
@@ -209,7 +209,11 @@ class AbstractModel(metaclass=abc.ABCMeta):
                     # maintains the best solution found so far
                     best = val_loss
                     best_params = model.params
-                    best_epoch = epoch
+                    best_epoch = {
+                        "epoch": epoch,
+                        "val_loss": val_loss,
+                        "losses": losses
+                    }
                     patience = 0
                 elif patience < max_no_improve:
                     patience += 1
