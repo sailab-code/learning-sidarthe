@@ -13,6 +13,8 @@ from torch.utils.tensorboard import SummaryWriter
 from populations import populations
 from datetime import datetime
 
+verbose = True
+
 def exp(region, population, initial_params, learning_rates, n_epochs, region_name,
         train_size, val_len, loss_weights, der_1st_reg, bound_reg, time_step, integrator,
         momentum, m, a, loss_type,
@@ -129,6 +131,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         "time_step": time_step,
         "bound_reg": bound_reg,
         "loss_type": loss_type,
+        "verbose": verbose,
         **loss_weights
     }
 
