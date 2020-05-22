@@ -42,10 +42,9 @@ def euler(f, omega, time_grid):
     :return: 1-Dim tensor the same size as time_grid with values computed on the time grid
     """
 
-    # TODO: change this like in Heun
-    y0 = torch.tensor([omega(0)], requires_grad=True)
+    y0 = omega(0)
     time_grid = time_grid.to(y0[0])
-    values = y0.clone()
+    values = y0
 
     for i in range(0, time_grid.shape[0] - 1):
         t_i = time_grid[i]
