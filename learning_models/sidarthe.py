@@ -123,7 +123,7 @@ class Sidarthe(AbstractModel):
         t = t.long()
 
         def get_param_at_t(param, _t):
-            if 0 < _t < param.shape[0]:
+            if 0 <= _t < param.shape[0]:
                 return param[_t].unsqueeze(0)
             else:
                 return param[-1].unsqueeze(0)
