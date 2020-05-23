@@ -111,12 +111,12 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         "gamma": [initial_params["gamma"]] * train_size,
         "delta": [initial_params["delta"]] * train_size,
         "epsilon": [initial_params["epsilon"]] * train_size,
-        "theta": [initial_params["theta"]] * train_size,
+        "theta": [initial_params["theta"]] * 1,  # train_size,
         "xi": [initial_params["xi"]] * train_size,
         "eta": [initial_params["eta"]] * train_size,
         "mu": [initial_params["mu"]] * train_size,
         "ni": [initial_params["ni"]] * train_size,
-        "tau": [initial_params["tau"]] * train_size,
+        "tau": [initial_params["tau"]] * 1,  # train_size,
         "lambda": [initial_params["lambda"]] * train_size,
         "kappa": [initial_params["kappa"]] * train_size,
         "zeta": [initial_params["zeta"]] * train_size,
@@ -126,7 +126,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
 
     model_params = {
         "der_1st_reg": der_1st_reg,
-        "population": 1,
+        "population": population,
         "integrator": integrator,
         "time_step": time_step,
         "bound_reg": bound_reg,
@@ -150,7 +150,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         """normalize values by a norm, e.g. population"""
         return {key: np.array(value) / norm for key, value in values.items()}
 
-    targets = normalize_values(targets, population)
+    # targets = normalize_values(targets, population)
 
     sidarthe, logged_info, best_epoch = \
         Sidarthe.train(targets,
@@ -171,7 +171,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         t_grid = torch.linspace(0, 100, int(100/t_inc))
 
         inferences = sidarthe.inference(t_grid)
-        inferences = {key: np.array(value) * population for key, value in inferences.items()}
+        #inferences = {key: np.array(value) * population for key, value in inferences.items()}
 
         # region data slices
         t_start = train_params["t_start"]
@@ -202,17 +202,6 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         # endregion
 
         # region losses computation
-        def extract_losses(losses):
-            keys = [
-                "rmse",
-                "d_rmse",
-                "e_rmse",
-                "h_rmse",
-                "r_rmse",
-                "t_rmse"
-            ]
-
-            return (losses[key] for key in keys)
 
         train_risks = sidarthe.losses(
             hat_train,
@@ -418,29 +407,29 @@ if __name__ == "__main__":
     }
 
     learning_rates = {
-        "alpha": 1e-2,
-        "beta": 1e-2,
-        "gamma": 1e-2,
-        "delta": 1e-2,
-        "epsilon": 1e-2,
-        "theta": 1e-2,
-        "xi": 1e-2,
-        "eta": 1e-2,
-        "mu": 1e-2,
-        "ni": 1e-2,
-        "tau": 1e-2,
-        "lambda": 1e-2,
-        "kappa": 1e-2,
-        "zeta": 1e-2,
-        "rho": 1e-2,
-        "sigma": 1e-2
+        "alpha": 1e-4,
+        "beta": 1e-4,
+        "gamma": 1e-4,
+        "delta": 1e-4,
+        "epsilon": 1e-4,
+        "theta": 1e-4,
+        "xi": 1e-4,
+        "eta": 1e-4,
+        "mu": 1e-4,
+        "ni": 1e-4,
+        "tau": 1e-4,
+        "lambda": 1e-4,
+        "kappa": 1e-4,
+        "zeta": 1e-4,
+        "rho": 1e-4,
+        "sigma": 1e-4
     }
 
     loss_weights = {
-        "d_weight": 1.,
-        "r_weight": 1.,
-        "t_weight": 1.,
-        "h_weight": 1.,
+        "d_weight": 0.,
+        "r_weight": 0.,
+        "t_weight": 0.,
+        "h_weight": 0.,
         "e_weight": 1.,
     }
 
@@ -457,8 +446,8 @@ if __name__ == "__main__":
 
     bound_reg = 1e6
 
-    integrator = Heun
-    #integrator = euler
+    #integrator = Heun
+    integrator = euler
 
     loss_type = "rmse"
     #loss_type = "mape"

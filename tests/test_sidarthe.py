@@ -148,21 +148,29 @@ t = sol[:, 5]
 h = sol[:, 6]
 e = sol[:, 7]
 
-e_simple = init_cond[7] + torch.cumsum(t, dim=0)
+
+def extend_param(value, length):
+    len_diff = length - value.shape[0]
+    if len_diff > 0:
+        return torch.cat((value, value[-1].expand(len_diff)))
+    else:
+        return value
+
+
+tau = extend_param(params["tau"], t.shape[0])
+
+e_simple = init_cond[7] + torch.cumsum(tau*t, dim=0)
 h_simple = 1 - (s + i + d + a + r + t + e)
 
 e_dist = torch.dist(e, e_simple)
 h_dist = torch.dist(h, h_simple)
-print(f"Distance between e and e_simple: {e_dist}")
-print(f"Distance between h and h_simple: {h_dist}")
 zero = torch.zeros(1, dtype=dtype)
 
 
 def test_e():
+    print(f"Distance between e and e_simple: {e_dist}")
     assert(torch.isclose(e_dist, zero))
 
 def test_h():
+    print(f"Distance between h and h_simple: {h_dist}")
     assert(torch.isclose(h_dist, zero))
-
-
-

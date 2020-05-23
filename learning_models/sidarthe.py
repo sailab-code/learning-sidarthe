@@ -52,7 +52,8 @@ class Sidarthe(AbstractModel):
 
     @property
     def delta(self) -> torch.Tensor:
-        return self._params["delta"]
+        # return self._params["delta"]
+        return self._params["beta"]
 
     @property
     def epsilon(self) -> torch.Tensor:
@@ -68,7 +69,8 @@ class Sidarthe(AbstractModel):
 
     @property
     def eta(self) -> torch.Tensor:
-        return self._params["eta"]
+        # return self._params["eta"]
+        return self._params["xi"]
 
     @property
     def mu(self) -> torch.Tensor:
@@ -92,7 +94,8 @@ class Sidarthe(AbstractModel):
 
     @property
     def zeta(self) -> torch.Tensor:
-        return self._params["zeta"]
+        # return self._params["zeta"]
+        return self._params["kappa"]
 
     @property
     def rho(self) -> torch.Tensor:
@@ -191,18 +194,18 @@ class Sidarthe(AbstractModel):
         self._params = params
 
     @staticmethod
-    def __rmse_loss(a, b):
+    def __rmse_loss(target, hat):
         return torch.sqrt(
             0.5 * torch.mean(
-                torch.pow(a - b, 2)
+                torch.pow(target - hat, 2)
             )
         )
 
     @staticmethod
-    def __mape_loss(a, b):
+    def __mape_loss(target, hat):
         return torch.mean(
             torch.abs(
-                (a - b) / b
+                (target - hat) / target
             )
         )
 
@@ -230,8 +233,8 @@ class Sidarthe(AbstractModel):
     def second_derivative_loss(self):
         loss_2nd_derivative_total = torch.zeros(1, dtype=self.dtype)
         for key, value in self._params.items():
-            first_derivative = derivatives.second_derivative(value, self.sample_time)
-            loss_2nd_derivative_total = loss_2nd_derivative_total + 0.5 * torch.pow(first_derivative, 2)
+            second_derivative = derivatives.second_derivative(value, self.sample_time)
+            loss_2nd_derivative_total = loss_2nd_derivative_total + 0.5 * torch.pow(second_derivative, 2)
 
         return torch.mean(loss_2nd_derivative_total)
 
@@ -326,7 +329,7 @@ class Sidarthe(AbstractModel):
         extended_params = {key: self.extend_param(value, time_grid.shape[0]) for key, value in self._params.items()}
 
         h_detected = self.init_cond[6] + torch.cumsum(
-            extended_params['rho'] * d + extended_params['zeta']* r + extended_params['sigma'] * t,
+            extended_params['rho'] * d + extended_params['zeta'] * r + extended_params['sigma'] * t,
             dim=0
         )
 
@@ -448,7 +451,9 @@ class Sidarthe(AbstractModel):
 
     def plot_params_over_time(self):
         param_plots = []
+        max_len = max([value.shape[0] for key, value in self._params.items()])
         for key, value in self._params.items():
+            value = self.extend_param(value, max_len)
             size = self.alpha.shape[0]
             pl_x = list(range(size))
             pl_title = f"$\\{key}$ over time"
@@ -498,6 +503,9 @@ class Sidarthe(AbstractModel):
         if self.verbose:
             print(f"Params at epoch {epoch}.")
             self.print_params()
+            for key, value in self._params.items():
+                print(f"{key}: {value.grad[0:2]}")
+
             print("\n")
 
         if summary is not None:

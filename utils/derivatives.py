@@ -15,7 +15,7 @@ def second_derivative_backward(f_x, f_x_minus_h, f_x_minus_2h, h):
 
 def second_derivative(parameter: torch.Tensor, sample_time):
     if parameter.shape[0] < 3: # must have at least 3 values to properly compute first derivative
-        return 0.
+        return torch.tensor(0., dtype=parameter.dtype)
 
     forward = second_derivative_forward(parameter[2], parameter[1], parameter[0], sample_time).unsqueeze(0)
     central = second_derivative_central(parameter[2:], parameter[1:-1], parameter[:-2], sample_time)
@@ -38,7 +38,7 @@ def first_derivative_backward(f_x, f_x_minus_h, h):
 
 def first_derivative(parameter, sample_time):
     if parameter.shape[0] < 3: # must have at least 3 values to properly compute first derivative
-        return 0.
+        return torch.tensor(0., dtype=parameter.dtype)
 
     forward = first_derivative_forward(parameter[1], parameter[0], sample_time).unsqueeze(0)
     central = first_derivative_central(parameter[2:], parameter[:-2], sample_time)
