@@ -154,8 +154,8 @@ class Sidarthe(AbstractModel):
         A = x[3]
         R = x[4]
         T = x[5]
-        # H = x[6]
-        # E = x[7]
+        E = x[6]
+        # H = x[7]
 
         # region equations
 
@@ -165,8 +165,8 @@ class Sidarthe(AbstractModel):
         A_dot = xi * I - (theta + mu + kappa) * A
         R_dot = eta * D + theta * A - (ni + zeta) * R
         T_dot = mu * A + ni * R - (sigma + tau) * T
+        E_dot = tau * T
         # H_dot = lambda_ * I + rho * D + kappa * A + zeta * R + sigma * T
-        # E_dot = tau * T
 
         # endregion equations
 
@@ -177,15 +177,15 @@ class Sidarthe(AbstractModel):
             A_dot,
             R_dot,
             T_dot,
+            E_dot
             # H_dot,
-            # E_dot
         ), dim=0)
 
     def omega(self, t):
         if t >= 0:
-            return torch.tensor([self.init_cond[:6]], dtype=self.dtype)
+            return torch.tensor([self.init_cond[:7]], dtype=self.dtype)
         else:
-            return torch.tensor([[1.] + [0.] * 5], dtype=self.dtype)
+            return torch.tensor([[1.] + [0.] * 6], dtype=self.dtype)
 
     def set_params(self, params):
         self._params = params
@@ -320,7 +320,7 @@ class Sidarthe(AbstractModel):
         a = sol[:, 3]
         r = sol[:, 4]
         t = sol[:, 5]
-        e = self.init_cond[7] + torch.cumsum(t, dim=0)
+        e = sol[:, 6]
         h = self.population - (s + i + d + a + r + t + e)
 
         extended_params = {key: self.extend_param(value, time_grid.shape[0]) for key, value in self._params.items()}
@@ -442,8 +442,8 @@ class Sidarthe(AbstractModel):
             A0,
             R0,
             T0,
-            H0,
-            E0
+            E0,
+            H0
         )
 
     def plot_params_over_time(self):
