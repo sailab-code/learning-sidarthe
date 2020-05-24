@@ -342,7 +342,7 @@ class Sidarthe(AbstractModel):
         r0 = extended_params['alpha'] + extended_params['beta'] * extended_params['epsilon'] / c2
         r0 = r0 + extended_params['gamma'] * extended_params['zeta'] / c3
         r0 = r0 + extended_params['delta'] * (extended_params['eta'] * extended_params['epsilon']) / (c2 * c4)
-        r0 = r0 + extended_params['zeta'] * extended_params['theta'] / (c3 * c4)
+        r0 = r0 + extended_params['delta'] * extended_params['zeta'] * extended_params['theta'] / (c3 * c4)
         r0 = r0 / c1
         # endregion
 
@@ -538,7 +538,7 @@ class Sidarthe(AbstractModel):
 
     def regularize_gradients(self):
         for key, value in self._params.items():
-            torch.nn.utils.clip_grad_norm_(value, 7.)
+            torch.nn.utils.clip_grad_norm_(value, 20.)
 
     @property
     def val_loss_checked(self):

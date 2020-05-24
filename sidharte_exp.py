@@ -385,23 +385,23 @@ def get_exp_description_html(description, uuid):
 
 
 if __name__ == "__main__":
-    n_epochs = 5000
+    n_epochs = 8000
     region = "Lombardia"
     params = {
         "alpha": 0.570,
-        "beta": 0.0011,
-        "gamma": 0.0011,
-        "delta": 0.456,
+        "beta": 0.011,
+        "gamma": 0.456,
+        "delta": 0.011,
         "epsilon": 0.171,
         "theta": 0.371,
-        "xi": 0.125,
+        "xi": 0.017,
         "eta": 0.125,
-        "mu": 0.012,
+        "mu": 0.017,
         "ni": 0.027,
-        "tau": 0.003,
+        "tau": 0.01,
         "lambda": 0.034,
         "kappa": 0.017,
-        "zeta": 0.017,
+        "zeta": 0.125,
         "rho": 0.034,
         "sigma": 0.017
     }
@@ -425,11 +425,14 @@ if __name__ == "__main__":
         "sigma": 1e-4
     }
 
+    for k,v in learning_rates.items():
+        learning_rates[k] = v * 1e-2
+
     loss_weights = {
-        "d_weight": 0.,
-        "r_weight": 0.,
-        "t_weight": 0.,
-        "h_weight": 0.,
+        "d_weight": 1.,
+        "r_weight": 1.,
+        "t_weight": 10.,
+        "h_weight": 1.,
         "e_weight": 1.,
     }
 
@@ -440,14 +443,14 @@ if __name__ == "__main__":
     t_inc = 1.
 
     momentum = True
-    m = 0.1
+    m = 0.2
     a = 1.0
-    b = 0.05
+    b = 0.04
 
-    bound_reg = 1e6
+    bound_reg = 1e7
 
-    #integrator = Heun
-    integrator = euler
+    integrator = Heun
+    # integrator = euler
 
     loss_type = "rmse"
     #loss_type = "mape"
