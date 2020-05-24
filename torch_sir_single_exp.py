@@ -8,7 +8,7 @@ import torch
 import numpy as np
 
 from learning_models.torch_sir import SirEq
-from torch_euler import Heun, euler
+from torch_euler import Heun, euler, RK4
 from utils.data_utils import select_data
 from utils.visualization_utils import generic_plot, Curve, format_xtick, generic_sub_plot, Plot
 from torch.utils.tensorboard import SummaryWriter
@@ -51,7 +51,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
     if not os.path.exists(base_path):
         os.mkdir(base_path)
 
-    exp_path = os.path.join(base_path, "test_heun")
+    exp_path = os.path.join(base_path, "test_euler")
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 
@@ -89,7 +89,7 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
 
     sir, mse_losses, der_1st_losses, der_2nd_losses, _ = SirEq.train(w_target=w_target, y_target=y_target, **dy_params)
     with torch.no_grad():
-        w_hat, y_hat, sol = sir.inference(torch.arange(dy_params["t_start"], 100, t_inc))
+        w_hat, y_hat, sol = sir.inference(torch.arange(dy_params["t_start"], 100, t_inc, dtype=torch.float64))
         train_slice = slice(dy_params["t_start"], int(train_size/t_inc), int(1/t_inc))
         val_slice = slice(int(train_size/t_inc), int(val_size/t_inc), int(1/t_inc))
         test_slice = slice(int(val_size/t_inc), int(dataset_size/t_inc), int(1/t_inc))
@@ -300,15 +300,16 @@ if __name__ == "__main__":
     der_2nd_reg = 0.
     use_alpha = False
     y_loss_weight = 0
-    t_inc = 1
+    t_inc = 1.0
 
     m = 0.2
     a = 1.0
     b = 0.05
 
 
-    integrator = Heun
-    # integrator = euler
+    # # integrator = RK4
+    # integrator = Heun
+    integrator = euler
 
     exp_prefix = get_exp_prefix(region, beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, train_size, der_1st_reg,
                                 der_2nd_reg, t_inc, use_alpha, y_loss_weight, val_len)
@@ -316,4 +317,4 @@ if __name__ == "__main__":
     exp(region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, n_epochs, name=region,
         train_size=train_size, val_len=val_len,
         der_1st_reg=der_1st_reg, der_2nd_reg=der_2nd_reg, use_alpha=use_alpha, y_loss_weight=y_loss_weight, t_inc=t_inc,
-        exp_prefix=f"euler_tinc0.1_sqrt_mseloss_clip7_der{der_1st_reg}_m{m}_a{a}_b{b}", integrator=integrator, m=m, a=a, b=b)
+        exp_prefix=f"{integrator.__name__}_tinc{t_inc}_sqrt_mseloss_clip7_der{der_1st_reg}_m{m}_a{a}_b{b}", integrator=integrator, m=m, a=a, b=b)

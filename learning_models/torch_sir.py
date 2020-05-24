@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 from torch.optim import SGD, Adam
 from torch.optim.optimizer import Optimizer
-from torch_euler import euler, Heun
+from torch_euler import euler, Heun, RK4
 from torchdiffeq import odeint
 
 import matplotlib.pyplot as pl
@@ -52,7 +52,7 @@ class SirOptimizer(Optimizer):
 
                 d_p = parameter.grad.data
                 if self.momentum:
-                    times = torch.arange(group["params"][0].shape[0], dtype=torch.float32)
+                    times = torch.arange(group["params"][0].shape[0], dtype=torch.float64)
                     # times = times * self.sample_time #added AB
                     mu = torch.sigmoid(self.m * times)
                     eta_mod = self.a / (self.a + self.b * times)
@@ -282,7 +282,7 @@ class SirEq:
         return mse_loss, w_mse_loss, y_mse_loss, total_loss
 
     def inference(self, time_grid):
-        time_grid = time_grid.to(dtype=torch.float32)
+        time_grid = time_grid.to(dtype=torch.float64)
         sol = self.integrator(self.diff_eqs, self.omega, time_grid)
         z_hat = self.population - sol[:, 0] - sol[:, 1]
         sol = torch.cat((sol, z_hat.unsqueeze(1)), dim=1)
@@ -380,11 +380,11 @@ class SirEq:
         val_hat_slice = slice(int(t_end / t_inc), int((t_end + val_size) / t_inc), int(1 / t_inc))
 
 
-        train_w_target = torch.tensor(w_target[train_target_slice], dtype=torch.float32)
-        train_y_target = torch.tensor(y_target[train_target_slice], dtype=torch.float32)
+        train_w_target = torch.tensor(w_target[train_target_slice], dtype=torch.float64)
+        train_y_target = torch.tensor(y_target[train_target_slice], dtype=torch.float64)
 
-        val_w_target = torch.tensor(w_target[val_target_slice], dtype=torch.float32)
-        val_y_target = torch.tensor(y_target[val_target_slice], dtype=torch.float32)
+        val_w_target = torch.tensor(w_target[val_target_slice], dtype=torch.float64)
+        val_y_target = torch.tensor(y_target[val_target_slice], dtype=torch.float64)
 
         # init parameters
         epsilon = train_y_target[t_start].item() / population
@@ -480,7 +480,10 @@ class SirEq:
                 print("delta: " + str(sir.delta))
                 time_step = time.time() - time_start
                 time_start = time.time()
-                print("Average time for epoch: {}".format(time_step / log_epoch_steps))
+                time_per_epoch = time_step / log_epoch_steps
+                summary.add_scalar("time/time_per_epoch", time_per_epoch, global_step=i)
+
+                print("Average time for epoch: {}".format(time_per_epoch))
 
             if i % validation_epoch_steps == 0:
                 with torch.no_grad():
