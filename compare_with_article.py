@@ -1,6 +1,8 @@
 import pytest
 
 import torch
+import pandas as pd
+import os
 from learning_models.sidarthe import Sidarthe
 from torch_euler import Heun, euler
 from matplotlib import pyplot as plt
@@ -66,8 +68,8 @@ with torch.no_grad():
     inference = sidarthe.inference(t_grid)
     #sol = inference["sol"]
 
+    # plot state evolution
     plots_path = "./plots"
-
     for key in "sidarthe":
             fig = plt.figure()
             plt.xlabel("number of days")
@@ -75,3 +77,18 @@ with torch.no_grad():
             plt.plot(t_grid.numpy(), inference[key], label=key)
             plt.legend()
             plt.savefig(plots_path + "/" + key + ".png")
+
+    # store parameters and state in a pandas dataframe results
+    params_df = pd.DataFrame.from_dict(params)
+    state_df = pd.DataFrame.from_dict(inference)
+    state_df = state_df.drop(columns='sol')
+    extend = state_df.shape[0]-params_df.shape[0]
+    params_df = params_df.append(params_df.iloc[[-1]*extend])
+    params_df.index = range(params_df.shape[0])
+    results = pd.concat([params_df, state_df], axis=1, sort=False)
+
+    # save results to csv
+    base_path = os.path.join(os.getcwd(), "regioni")
+    if not os.path.exists(base_path):
+        os.mkdir(base_path)
+    results.to_csv(os.path.join(base_path,'results.csv'))
