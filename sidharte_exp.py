@@ -5,6 +5,8 @@ from uuid import uuid4
 import torch
 import numpy as np
 
+import pandas as pd
+
 from learning_models.sidarthe import Sidarthe
 from torch_euler import Heun, euler
 from utils.data_utils import select_data
@@ -13,13 +15,13 @@ from torch.utils.tensorboard import SummaryWriter
 from populations import populations
 from datetime import datetime
 
-verbose = True
+verbose = False
+
 
 def exp(region, population, initial_params, learning_rates, n_epochs, region_name,
         train_size, val_len, loss_weights, der_1st_reg, bound_reg, time_step, integrator,
         momentum, m, a, loss_type,
         exp_prefix):
-
     # region directory creation
     # creating folders, if necessary
     base_path = os.path.join(os.getcwd(), "regioni")
@@ -49,7 +51,8 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
     summary = SummaryWriter(f"runs/{model_name}/{uuid}")
 
     # creates the json description file with all settings
-    description = get_description(region, initial_params, learning_rates, loss_weights, train_size, val_len, der_1st_reg, t_inc, m, a, loss_type, integrator)
+    description = get_description(region, initial_params, learning_rates, loss_weights, train_size, val_len,
+                                  der_1st_reg, t_inc, m, a, loss_type, integrator)
     json_description = json.dumps(description, indent=4)
     json_file = "settings.json"
     with open(os.path.join(exp_path, json_file), "a") as f:
@@ -102,6 +105,20 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         "h_detected": h_detected_target,
         "e": e_target
     }
+
+    # endregion
+
+    # region extract reference
+
+    # extract from csv with nature reference data
+
+    references = {}
+    ref_df = pd.read_csv(os.path.join(base_path, "sidarthe_results.csv"))
+    for key in 'sidarthe':
+        references[key] = ref_df[key].tolist()
+
+    for key in ["r0", "h_detected"]:
+        references[key] = ref_df[key].tolist()
 
     # endregion
 
@@ -160,18 +177,16 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
                        model_params,
                        **train_params)
 
-
-
     with torch.no_grad():
         dataset_size = len(x_target)
         # validation on the next val_len days (or less if we have less data)
         val_size = min(train_size + val_len,
                        len(x_target) - 5)
 
-        t_grid = torch.linspace(0, 100, int(100/t_inc))
+        t_grid = torch.linspace(0, 100, int(100 / t_inc))
 
         inferences = sidarthe.inference(t_grid)
-        #inferences = {key: np.array(value) * population for key, value in inferences.items()}
+        # inferences = {key: np.array(value) * population for key, value in inferences.items()}
 
         # region data slices
         t_start = train_params["t_start"]
@@ -184,6 +199,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         val_target_slice = slice(train_size, val_size, 1)
         test_target_slice = slice(val_size, dataset_size, 1)
         dataset_target_slice = slice(t_start, dataset_size, 1)
+
         # endregion
 
         # region slice inferences
@@ -199,6 +215,12 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         target_val = slice_values(targets, val_target_slice)
         target_test = slice_values(targets, test_hat_slice)
         target_dataset = slice_values(targets, dataset_target_slice)
+
+        references_train = slice_values(references, train_target_slice)
+        references_val = slice_values(references, val_target_slice)
+        references_test = slice_values(references, test_hat_slice)
+        reference_dataset = slice_values(references, dataset_target_slice)
+
         # endregion
 
         # region losses computation
@@ -222,6 +244,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
             hat_dataset,
             target_dataset
         )
+
         # endregion
 
         # region generate final report
@@ -281,6 +304,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         train_range = range(0, train_size)
         val_range = range(train_size, val_size)
         test_range = range(val_size, dataset_size)
+        dataset_range = range(0, dataset_size)
 
         def get_curves(x_range, hat, target, key, color=None):
             pl_x = list(x_range)
@@ -292,9 +316,23 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
                 return [hat_curve]
 
         for key in inferences.keys():
-            hat_train = norm_hat_train[key]
-            hat_val = norm_hat_val[key]
-            hat_test = norm_hat_test[key]
+
+            # skippable keys
+            if key in ["sol"]:
+                continue
+
+            # separate keys that should be normalized to 1
+            if key not in ["r0"]:
+                curr_hat_train = norm_hat_train[key]
+                curr_hat_val = norm_hat_val[key]
+                curr_hat_test = norm_hat_test[key]
+            else:
+                curr_hat_train = hat_train[key]
+                curr_hat_val = hat_val[key]
+                curr_hat_test = hat_test[key]
+
+            # get reference in range of interest
+            ref_y = references[key][dataset_target_slice]
 
             if key in targets:
                 # plot inf and target
@@ -308,19 +346,20 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
                 target_test = None
                 pass
 
-            train_curves = get_curves(train_range, hat_train, target_train, key, 'r')
-            val_curves = get_curves(val_range, hat_val, target_val, key, 'b')
-            test_curves = get_curves(test_range, hat_test, target_test, key, 'g')
+            train_curves = get_curves(train_range, curr_hat_train, target_train, key, 'r')
+            val_curves = get_curves(val_range, curr_hat_val, target_val, key, 'b')
+            test_curves = get_curves(test_range, curr_hat_test, target_test, key, 'g')
 
-            tot_curves = train_curves + val_curves + test_curves
-            pl_title = f"{key.upper()} - train/validation/test"
+            reference_curve = Curve(dataset_range, ref_y, "--", label="Reference (Nature)")
+
+            tot_curves = train_curves + val_curves + test_curves + [reference_curve]
+            pl_title = f"{key.upper()} - train/validation/test/reference"
             fig = generic_plot(tot_curves, pl_title, None, formatter=format_xtick)
             summary.add_figure(f"final/{key}_global", fig)
 
         # endregion
 
     summary.flush()
-
 
 
 def get_exp_prefix(area, initial_params, learning_rates, train_size, val_len, der_1st_reg,
@@ -338,8 +377,9 @@ def get_exp_prefix(area, initial_params, learning_rates, train_size, val_len, de
 
     return prefix
 
+
 def get_description(area, initial_params, learning_rates, target_weights, train_size, val_len, der_1st_reg,
-                             t_inc, m, a, loss_type, integrator):
+                    t_inc, m, a, loss_type, integrator):
     return {
         "region": area,
         "initial_values": initial_params,
@@ -358,25 +398,25 @@ def get_description(area, initial_params, learning_rates, target_weights, train_
 
 
 def get_tabs(tabIdx):
-        return '&emsp;' * tabIdx
+    return '&emsp;' * tabIdx
+
 
 def get_html_str_from_dict(dictionary, tabIdx=1):
-        dict_str = "{<br>"
-        for key, value in dictionary.items():
-            dict_str += f"{get_tabs(tabIdx)}{key}:"
-            if not isinstance(value, dict):
-                dict_str += f"{value},<br>"
-            else:
-                dict_str += get_html_str_from_dict(value, tabIdx + 1) + ",<br>"
-        dict_str += get_tabs(tabIdx-1)+"}"
-        return dict_str
+    dict_str = "{<br>"
+    for key, value in dictionary.items():
+        dict_str += f"{get_tabs(tabIdx)}{key}:"
+        if not isinstance(value, dict):
+            dict_str += f"{value},<br>"
+        else:
+            dict_str += get_html_str_from_dict(value, tabIdx + 1) + ",<br>"
+    dict_str += get_tabs(tabIdx - 1) + "}"
+    return dict_str
+
 
 def get_exp_description_html(description, uuid):
     """
     creates an html representation of the experiment description for tensorboard
     """
-
-
 
     description_str = f"Experiment id: {uuid}<br><br>"
     description_str += get_html_str_from_dict(description)
@@ -385,7 +425,7 @@ def get_exp_description_html(description, uuid):
 
 
 if __name__ == "__main__":
-    n_epochs = 8000
+    n_epochs = 150
     region = "Lombardia"
     params = {
         "alpha": 0.570,
@@ -425,7 +465,7 @@ if __name__ == "__main__":
         "sigma": 1e-4
     }
 
-    for k,v in learning_rates.items():
+    for k, v in learning_rates.items():
         learning_rates[k] = v * 1e-2
 
     loss_weights = {
@@ -453,7 +493,7 @@ if __name__ == "__main__":
     # integrator = euler
 
     loss_type = "rmse"
-    #loss_type = "mape"
+    # loss_type = "mape"
 
     exp_prefix = get_exp_prefix(region, params, learning_rates, train_size,
                                 val_len, der_1st_reg, t_inc, m, a, loss_type, integrator)
