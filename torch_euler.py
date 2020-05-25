@@ -100,7 +100,7 @@ def RK4(f, omega, time_grid):
     NOTE: not expected to reach fourth-order accuracy if dt is variable
     """
 
-    y0 = torch.tensor([omega(0)], dtype=torch.float64)
+    y0 = omega(0)
     time_grid = time_grid.to(y0[0])
     values = y0
 

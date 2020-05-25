@@ -6,17 +6,17 @@ from matplotlib import pyplot as plt
 
 beta = torch.tensor(1., requires_grad=True)
 
-def f(x, t):
+def f(t,x):
     return beta * x
 
-def f2(x,t):
+def f2(t,x):
     return 3. * x
 
 def omega(t):
     return torch.tensor([[1.]])
 
 n_epochs = 100000
-t_grid = torch.linspace(0, 3, 4)
+t_grid = torch.linspace(0, 3, 100)
 
 target = torch.exp(3*t_grid)
 target_2 = Heun(f2, omega, t_grid)
@@ -25,7 +25,7 @@ fig = plt.figure()
 plt.plot(t_grid, target, color="r")
 plt.plot(t_grid, target_2, color="b")
 plt.show()
-exit()
+# exit()
 
 optimizer = Adam([beta])
 for epoch in range(1, n_epochs+1):

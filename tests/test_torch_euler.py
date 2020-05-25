@@ -33,7 +33,7 @@ solution_fine = analytical_solution(t_range_fine)
  (euler, torch.tensor(0.0136036873), t_range_medium, solution_medium),
  (Heun, torch.tensor(4.6730041504e-05), t_range_medium, solution_medium),
  (RK4, torch.tensor(2.3841857910e-07), t_range_medium, solution_medium),
- (euler, torch.tensor(0.0013592243), t_range_fine, solution_fine),
+ (euler, torch.tensor(0.0013597011), t_range_fine, solution_fine),
  (Heun, torch.tensor(2.3841857910e-06), t_range_fine, solution_fine),
  (RK4, torch.tensor(2.1457672119e-06), t_range_fine, solution_fine),
 ], 
@@ -42,6 +42,8 @@ ids=["euler_coarse", "Heun_coarse", "RK4_coarse",
      "euler_fine", "Heun_fine", "RK4_fine"])
 def test_method(method, expected_error, t_range, analytical_solution):
     numerical_solution = method(f, IC, t_range)
-    numerical_solution = numerical_solution
+    numerical_solution = numerical_solution.squeeze(1)
     L_inf_err = torch.dist(numerical_solution, analytical_solution, float('inf'))
-    assert(torch.isclose(L_inf_err, expected_error))
+    torch.set_printoptions(precision=20)
+    print(L_inf_err)
+    assert(torch.isclose(L_inf_err, expected_error,))
