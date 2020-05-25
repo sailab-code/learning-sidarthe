@@ -132,12 +132,12 @@ class AbstractModel(metaclass=abc.ABCMeta):
         val_size = train_params["val_size"]
 
         train_steps = int((t_end - t_start) / time_step)
-        train_time_grid = torch.linspace(t_start, t_end, train_steps)
+        train_time_grid = torch.linspace(t_start, t_end, train_steps + 1)
         train_target_slice = slice(t_start, t_end, 1)
         train_hat_slice = slice(int(t_start / time_step), int(t_end / time_step), int(1 / time_step))
 
         val_steps = int((t_end + val_size - t_start) / time_step)
-        val_time_grid = torch.linspace(t_start, t_end + val_size, val_steps)
+        val_time_grid = torch.linspace(t_start, t_end + val_size, val_steps + 1)
         val_target_slice = slice(t_end, t_end + val_size, 1)
         val_hat_slice = slice(int(t_end / time_step), int((t_end + val_size) / time_step), int(1 / time_step))
 
