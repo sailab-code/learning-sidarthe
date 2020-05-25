@@ -9,7 +9,7 @@ def f(T, X):
 
 # initial condition
 def IC(t):
-    return [1.]
+    return torch.tensor([[1.]])
 
 # integration interval
 def integration_interval(steps, ND=1):
@@ -42,6 +42,6 @@ ids=["euler_coarse", "Heun_coarse", "RK4_coarse",
      "euler_fine", "Heun_fine", "RK4_fine"])
 def test_method(method, expected_error, t_range, analytical_solution):
     numerical_solution = method(f, IC, t_range)
-    numerical_solution = numerical_solution.squeeze(1)
+    numerical_solution = numerical_solution
     L_inf_err = torch.dist(numerical_solution, analytical_solution, float('inf'))
     assert(torch.isclose(L_inf_err, expected_error))
