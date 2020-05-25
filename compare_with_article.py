@@ -62,7 +62,7 @@ sidarthe = Sidarthe(params, 1, initial_values, euler, 1.,
                     loss_type="rmse"
                     )
 with torch.no_grad():
-    size = 45
+    size = 100
     t_grid = torch.linspace(0, size, size)
 
     inference = sidarthe.inference(t_grid)
