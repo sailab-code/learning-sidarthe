@@ -69,14 +69,22 @@ with torch.no_grad():
     #sol = inference["sol"]
 
     # plot state evolution
-    plots_path = "./plots"
-    for key in "sidarthe":
-            fig = plt.figure()
+    base_path = os.path.join(os.getcwd(), "plots")
+    if not os.path.exists(base_path):
+        os.mkdir(base_path)
+    
+    def build_plot(t_grid, keys_string, inference, base_path):
+        plt.figure()
+        for key in keys_string:
             plt.xlabel("number of days")
             plt.ylabel(key)
             plt.plot(t_grid.numpy(), inference[key], label=key)
             plt.legend()
-            plt.savefig(plots_path + "/" + key + ".png")
+        plot_filename = os.path.join(base_path, keys_string + '.png') 
+        plt.savefig(plot_filename)
+
+    build_plot(t_grid, 'idarthe', inference, base_path)
+    build_plot(t_grid, 's', inference, base_path)
 
     # store parameters and state in a pandas dataframe results
     params_df = pd.DataFrame.from_dict(params)
