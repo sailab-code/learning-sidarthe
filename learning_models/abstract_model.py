@@ -20,7 +20,7 @@ class AbstractModel(metaclass=abc.ABCMeta):
         """
         self.init_cond = init_cond
         self.integrator = integrator
-        self.sample_time = sample_time
+        self.time_step = sample_time
 
     @property
     @abc.abstractmethod

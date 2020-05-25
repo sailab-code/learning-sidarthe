@@ -78,16 +78,16 @@ class NewSir(AbstractModel):
 
     def omega(self, t):
         if t >= 0:
-            return self.init_cond
+            return torch.tensor([self.init_cond])
         else:
-            return [1, 0, 0]
+            return torch.tensor([1, 0, 0])
 
     def first_derivative_loss(self):
         if self.der_1st_reg != 0:
 
-            loss_1st_derivative_beta = derivatives.first_derivative(self.params["beta"], self.sample_time)
-            loss_1st_derivative_gamma = derivatives.first_derivative(self.params["gamma"], self.sample_time)
-            loss_1st_derivative_delta = derivatives.first_derivative(self.params["delta"], self.sample_time)
+            loss_1st_derivative_beta = derivatives.first_derivative(self.params["beta"], self.time_step)
+            loss_1st_derivative_gamma = derivatives.first_derivative(self.params["gamma"], self.time_step)
+            loss_1st_derivative_delta = derivatives.first_derivative(self.params["delta"], self.time_step)
             loss_1st_derivative_total = (
                     loss_1st_derivative_beta + loss_1st_derivative_gamma + loss_1st_derivative_delta
             )
@@ -99,9 +99,9 @@ class NewSir(AbstractModel):
 
     def second_derivative_loss(self):
         if self.der_1st_reg != 0:
-            loss_2nd_derivative_beta = derivatives.second_derivative(self.params["beta"], self.sample_time)
-            loss_2nd_derivative_gamma = derivatives.second_derivative(self.params["gamma"], self.sample_time)
-            loss_2nd_derivative_delta = derivatives.second_derivative(self.params["delta"], self.sample_time)
+            loss_2nd_derivative_beta = derivatives.second_derivative(self.params["beta"], self.time_step)
+            loss_2nd_derivative_gamma = derivatives.second_derivative(self.params["gamma"], self.time_step)
+            loss_2nd_derivative_delta = derivatives.second_derivative(self.params["delta"], self.time_step)
             loss_2nd_derivative_total = (
                     loss_2nd_derivative_beta + loss_2nd_derivative_gamma + loss_2nd_derivative_delta
             )
@@ -209,6 +209,9 @@ class NewSir(AbstractModel):
                       der_1st_reg=der_1st_reg, der_2nd_reg=der_2nd_reg,
                       sample_time=t_inc, y_loss_weight=y_loss_weight,
                       integrator=integrator)
+
+    def set_params(self, params):
+        self._params = params
 
     @classmethod
     def init_optimizers(cls, model: AbstractModel, learning_rates: dict, optimizer_params: dict) -> List[Optimizer]:

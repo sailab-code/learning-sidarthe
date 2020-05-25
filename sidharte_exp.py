@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from learning_models.sidarthe import Sidarthe
-from torch_euler import Heun, euler
+from torch_euler import Heun, euler, RK4
 from utils.data_utils import select_data
 from utils.visualization_utils import generic_plot, Curve, format_xtick, generic_sub_plot, Plot
 from torch.utils.tensorboard import SummaryWriter
@@ -16,7 +16,7 @@ from populations import populations
 from datetime import datetime
 
 verbose = False
-normalize = True
+normalize = False
 
 
 def exp(region, population, initial_params, learning_rates, n_epochs, region_name,
@@ -131,22 +131,22 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
     # endregion
 
     params = {
-        "alpha": [initial_params["alpha"]] * train_size,
-        "beta": [initial_params["beta"]] * train_size,
-        "gamma": [initial_params["gamma"]] * train_size,
-        "delta": [initial_params["delta"]] * train_size,
-        "epsilon": [initial_params["epsilon"]] * train_size,
+        "alpha": [initial_params["alpha"]] * train_size * int(1/time_step),
+        "beta": [initial_params["beta"]] * train_size * int(1/time_step),
+        "gamma": [initial_params["gamma"]] * train_size * int(1/time_step),
+        "delta": [initial_params["delta"]] * train_size * int(1/time_step),
+        "epsilon": [initial_params["epsilon"]] * train_size * int(1/time_step),
         "theta": [initial_params["theta"]] * 1,  # train_size,
-        "xi": [initial_params["xi"]] * train_size,
-        "eta": [initial_params["eta"]] * train_size,
-        "mu": [initial_params["mu"]] * train_size,
-        "ni": [initial_params["ni"]] * train_size,
+        "xi": [initial_params["xi"]] * train_size * int(1/time_step),
+        "eta": [initial_params["eta"]] * train_size * int(1/time_step),
+        "mu": [initial_params["mu"]] * train_size * int(1/time_step),
+        "ni": [initial_params["ni"]] * train_size * int(1/time_step),
         "tau": [initial_params["tau"]] * 1,  # train_size,
-        "lambda": [initial_params["lambda"]] * train_size,
-        "kappa": [initial_params["kappa"]] * train_size,
-        "zeta": [initial_params["zeta"]] * train_size,
-        "rho": [initial_params["rho"]] * train_size,
-        "sigma": [initial_params["sigma"]] * train_size
+        "lambda": [initial_params["lambda"]] * train_size * int(1/time_step),
+        "kappa": [initial_params["kappa"]] * train_size * int(1/time_step),
+        "zeta": [initial_params["zeta"]] * train_size * int(1/time_step),
+        "rho": [initial_params["rho"]] * train_size * int(1/time_step),
+        "sigma": [initial_params["sigma"]] * train_size * int(1/time_step)
     }
 
     model_params = {
@@ -487,13 +487,13 @@ if __name__ == "__main__":
         "e_weight": 1.,
     }
 
-    train_size = 50
-    val_len = 1
-    der_1st_reg = 0.
+    train_size = 45
+    val_len = 20
+    der_1st_reg = 1e8
     der_2nd_reg = 0.
-    t_inc = 1.
+    t_inc = 0.1
 
-    momentum = False
+    momentum = True
     m = 0.2
     a = 1.0
     b = 0.04
@@ -501,7 +501,8 @@ if __name__ == "__main__":
     bound_reg = 1e7
 
     integrator = Heun
-    # integrator = euler
+    #integrator = euler
+    #integrator = RK4
 
     loss_type = "rmse"
     # loss_type = "mape"

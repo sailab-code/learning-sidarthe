@@ -8,7 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from learning_models.abstract_model import AbstractModel
 from learning_models.new_sir_optimizer import NewSirOptimizer
-from learning_models.sir_optimizer import SirOptimizer
+from torch.optim import Adam
 from utils import derivatives
 from utils.visualization_utils import Curve, generic_plot, format_xtick
 
@@ -69,8 +69,8 @@ class Sidarthe(AbstractModel):
 
     @property
     def delta(self) -> torch.Tensor:
-        # return self._params["delta"]
-        return self._params["beta"]
+        return self._params["delta"]
+        #return self._params["beta"]
 
     @property
     def epsilon(self) -> torch.Tensor:
@@ -86,8 +86,8 @@ class Sidarthe(AbstractModel):
 
     @property
     def eta(self) -> torch.Tensor:
-        # return self._params["eta"]
-        return self._params["xi"]
+        return self._params["eta"]
+        #return self._params["xi"]
 
     @property
     def mu(self) -> torch.Tensor:
@@ -111,8 +111,8 @@ class Sidarthe(AbstractModel):
 
     @property
     def zeta(self) -> torch.Tensor:
-        # return self._params["zeta"]
-        return self._params["kappa"]
+        return self._params["zeta"]
+        #return self._params["kappa"]
 
     @property
     def rho(self) -> torch.Tensor:
@@ -140,9 +140,8 @@ class Sidarthe(AbstractModel):
         :return: right-hand side of SIDARTHE model, i.e. f(t,x(t))
         """
 
-        t = t.long()
-
         def get_param_at_t(param, _t):
+            _t = (_t / self.time_step).round().long()
             if 0 <= _t < param.shape[0]:
                 return param[_t].unsqueeze(0)
             else:
@@ -242,7 +241,7 @@ class Sidarthe(AbstractModel):
         loss_1st_derivative_total = torch.zeros(1, dtype=self.dtype)
         if self.der_1st_reg != 0:
             for key, value in self.params.items():
-                first_derivative = derivatives.first_derivative(value, self.sample_time)
+                first_derivative = derivatives.first_derivative(value, self.time_step)
                 loss_1st_derivative_total = loss_1st_derivative_total + 0.5 * torch.pow(first_derivative, 2)
 
         return self.der_1st_reg * torch.mean(loss_1st_derivative_total)
@@ -250,7 +249,7 @@ class Sidarthe(AbstractModel):
     def second_derivative_loss(self):
         loss_2nd_derivative_total = torch.zeros(1, dtype=self.dtype)
         for key, value in self.params.items():
-            second_derivative = derivatives.second_derivative(value, self.sample_time)
+            second_derivative = derivatives.second_derivative(value, self.time_step)
             loss_2nd_derivative_total = loss_2nd_derivative_total + 0.5 * torch.pow(second_derivative, 2)
 
         return torch.mean(loss_2nd_derivative_total)
@@ -446,12 +445,12 @@ class Sidarthe(AbstractModel):
 
         # for now we assume that the number of undetected is equal to the number of detected
         # meaning that half of the infectious were not detected
-        I0 = D0  # isolamento domiciliare
-        A0 = R0  # ricoverati con sintomi
+        #I0 = D0  # isolamento domiciliare
+        #A0 = R0  # ricoverati con sintomi
 
         # we could consider them to be 0, alternatively
-        # I0 = 0.  # isolamento domiciliare
-        # A0 = 0.  # ricoverati con sintomi
+        I0 = 0.  # isolamento domiciliare
+        A0 = 0.  # ricoverati con sintomi
         # TODO: maybe there are better options?
 
         S0 = population - (I0 + D0 + A0 + R0 + T0 + H0 + E0)
