@@ -91,4 +91,4 @@ with torch.no_grad():
     base_path = os.path.join(os.getcwd(), "regioni")
     if not os.path.exists(base_path):
         os.mkdir(base_path)
-    results.to_csv(os.path.join(base_path,'results.csv'))
+    results.to_csv(os.path.join(base_path,'sidarthe_results.csv'))
