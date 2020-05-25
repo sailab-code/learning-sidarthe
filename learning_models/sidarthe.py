@@ -34,7 +34,24 @@ class Sidarthe(AbstractModel):
 
     @property
     def params(self) -> Dict:
-        return self._params
+        return {
+            "alpha": self.alpha,
+            "beta": self.beta,
+            "gamma": self.gamma,
+            "delta": self.delta,
+            "epsilon": self.epsilon,
+            "theta": self.theta,
+            "xi": self.xi,
+            "eta": self.eta,
+            "mu": self.mu,
+            "ni": self.ni,
+            "tau": self.tau,
+            "lambda": self.lambda_,
+            "kappa": self.kappa,
+            "zeta": self.zeta,
+            "rho": self.rho,
+            "sigma": self.sigma
+        }
 
     # region ModelParams
 
@@ -224,7 +241,7 @@ class Sidarthe(AbstractModel):
     def first_derivative_loss(self):
         loss_1st_derivative_total = torch.zeros(1, dtype=self.dtype)
         if self.der_1st_reg != 0:
-            for key, value in self._params.items():
+            for key, value in self.params.items():
                 first_derivative = derivatives.first_derivative(value, self.sample_time)
                 loss_1st_derivative_total = loss_1st_derivative_total + 0.5 * torch.pow(first_derivative, 2)
 
@@ -232,7 +249,7 @@ class Sidarthe(AbstractModel):
 
     def second_derivative_loss(self):
         loss_2nd_derivative_total = torch.zeros(1, dtype=self.dtype)
-        for key, value in self._params.items():
+        for key, value in self.params.items():
             second_derivative = derivatives.second_derivative(value, self.sample_time)
             loss_2nd_derivative_total = loss_2nd_derivative_total + 0.5 * torch.pow(second_derivative, 2)
 
@@ -240,7 +257,7 @@ class Sidarthe(AbstractModel):
 
     def bound_parameter_regularization(self):
         bound_reg_total = torch.zeros(1, dtype=self.dtype)
-        for key, value in self._params.items():
+        for key, value in self.params.items():
             bound_reg = self.__loss_gte_one(value) + self.__loss_lte_zero(value)
             bound_reg_total = bound_reg_total + bound_reg
 
@@ -326,7 +343,7 @@ class Sidarthe(AbstractModel):
         e = sol[:, 6]
         h = self.population - (s + i + d + a + r + t + e)
 
-        extended_params = {key: self.extend_param(value, time_grid.shape[0]) for key, value in self._params.items()}
+        extended_params = {key: self.extend_param(value, time_grid.shape[0]) for key, value in self.params.items()}
 
         h_detected = self.init_cond[6] + torch.cumsum(
             extended_params['rho'] * d + extended_params['zeta'] * r + extended_params['sigma'] * t,
@@ -393,12 +410,13 @@ class Sidarthe(AbstractModel):
                         )
 
     @classmethod
-    def init_optimizers(cls, model: AbstractModel, learning_rates: dict, optimizers_params: dict) -> List[Optimizer]:
+    def init_optimizers(cls, model: 'Sidarthe', learning_rates: dict, optimizers_params: dict) -> List[Optimizer]:
         m = optimizers_params.get("m", 1/9)
         a = optimizers_params.get("a", 0.05)
         momentum = optimizers_params.get("momentum", True)
+        summary = optimizers_params.get("tensorboard_summary", None)
 
-        optimizer = NewSirOptimizer(model.params, learning_rates, m=m, a=a, momentum=momentum)
+        optimizer = NewSirOptimizer(model._params, learning_rates, m=m, a=a, momentum=momentum, summary=summary)
         return [optimizer]
 
     @classmethod
@@ -451,8 +469,8 @@ class Sidarthe(AbstractModel):
 
     def plot_params_over_time(self):
         param_plots = []
-        max_len = max([value.shape[0] for key, value in self._params.items()])
-        for key, value in self._params.items():
+        max_len = max([value.shape[0] for key, value in self.params.items()])
+        for key, value in self.params.items():
             value = self.extend_param(value, max_len)
             size = self.alpha.shape[0]
             pl_x = list(range(size))
@@ -485,7 +503,7 @@ class Sidarthe(AbstractModel):
         return (plot, pl_title)
 
     def print_params(self):
-        for key, value in self._params.items():
+        for key, value in self.params.items():
             print(f"{key}: {value.detach().numpy()}")
 
     def log_initial_info(self, summary: SummaryWriter):
@@ -503,7 +521,7 @@ class Sidarthe(AbstractModel):
         if self.verbose:
             print(f"Params at epoch {epoch}.")
             self.print_params()
-            for key, value in self._params.items():
+            for key, value in self.params.items():
                 print(f"{key}: {value.grad[0:2]}")
 
             print("\n")
@@ -521,9 +539,9 @@ class Sidarthe(AbstractModel):
             for key, value in losses.items():
                 summary.add_scalar(f"losses/{key}", value.detach().numpy(), global_step=epoch)
 
-            for key, value in self._params.items():
+            """for key, value in self.params.items():
                 if value.grad is not None:
-                    summary.add_scalar(f"grads/{key}", value.grad.detach().norm(), global_step=epoch)
+                    summary.add_scalar(f"grads/{key}", value.grad.detach().norm(), global_step=epoch)"""
 
         detached_losses = {key: value.detach().numpy() for key, value in losses.items()}
 
@@ -537,7 +555,7 @@ class Sidarthe(AbstractModel):
             summary.add_scalar("losses/validation_loss", val_losses[self.val_loss_checked], global_step=epoch)
 
     def regularize_gradients(self):
-        for key, value in self._params.items():
+        for key, value in self.params.items():
             torch.nn.utils.clip_grad_norm_(value, 20.)
 
     @property

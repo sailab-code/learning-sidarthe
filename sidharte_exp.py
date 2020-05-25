@@ -16,6 +16,7 @@ from populations import populations
 from datetime import datetime
 
 verbose = False
+normalize = True
 
 
 def exp(region, population, initial_params, learning_rates, n_epochs, region_name,
@@ -64,9 +65,16 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
     # region target extraction
 
     # extract targets from csv
-    df_file = os.path.join(os.getcwd(), "COVID-19", "dati-regioni", "dpc-covid19-ita-regioni.csv")
-    area = [region]
-    area_col_name = "denominazione_regione"  # "Country/Region"
+
+    # if we specify Italy as region, we use national data
+    if region is not "Italy":
+        df_file = os.path.join(os.getcwd(), "COVID-19", "dati-regioni", "dpc-covid19-ita-regioni.csv")
+        area = [region]
+        area_col_name = "denominazione_regione"  # "Country/Region"
+    else:
+        df_file = os.path.join(os.getcwd(), "COVID-19", "dati-andamento-nazionale", "dpc-covid19-ita-andamento-nazionale.csv")
+        area = ["ITA"]
+        area_col_name = "stato"  # "Country/Region"
 
     groupby_cols = ["data"]  # ["Date"]
 
@@ -167,7 +175,9 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         """normalize values by a norm, e.g. population"""
         return {key: np.array(value) / norm for key, value in values.items()}
 
-    # targets = normalize_values(targets, population)
+    if normalize:
+        maxes = {key: max(value) for key, value in targets.items()}
+        targets = {key: np.array(value) / maxes[key] for key, value in targets.items()}
 
     sidarthe, logged_info, best_epoch = \
         Sidarthe.train(targets,
@@ -186,7 +196,8 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         t_grid = torch.linspace(0, 100, int(100 / t_inc))
 
         inferences = sidarthe.inference(t_grid)
-        # inferences = {key: np.array(value) * population for key, value in inferences.items()}
+        if normalize:
+            inferences = {key: np.array(value) * maxes[key] for key, value in inferences.items()}
 
         # region data slices
         t_start = train_params["t_start"]
@@ -425,8 +436,8 @@ def get_exp_description_html(description, uuid):
 
 
 if __name__ == "__main__":
-    n_epochs = 150
-    region = "Lombardia"
+    n_epochs = 8000
+    region = "Italy"
     params = {
         "alpha": 0.570,
         "beta": 0.011,
@@ -476,13 +487,13 @@ if __name__ == "__main__":
         "e_weight": 1.,
     }
 
-    train_size = 45
-    val_len = 20
+    train_size = 50
+    val_len = 1
     der_1st_reg = 0.
     der_2nd_reg = 0.
     t_inc = 1.
 
-    momentum = True
+    momentum = False
     m = 0.2
     a = 1.0
     b = 0.04
