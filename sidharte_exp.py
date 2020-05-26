@@ -489,7 +489,7 @@ if __name__ == "__main__":
 
     train_size = 45
     val_len = 20
-    der_1st_reg = 1e8
+    der_1st_reg = 1e10 #default era 1e8
     der_2nd_reg = 0.
     t_inc = 0.1
 
@@ -500,8 +500,8 @@ if __name__ == "__main__":
 
     bound_reg = 1e7
 
-    integrator = Heun
-    #integrator = euler
+    #integrator = Heun
+    integrator = euler
     #integrator = RK4
 
     loss_type = "rmse"

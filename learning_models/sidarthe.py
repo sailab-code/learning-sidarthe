@@ -69,8 +69,8 @@ class Sidarthe(AbstractModel):
 
     @property
     def delta(self) -> torch.Tensor:
-        return self._params["delta"]
-        #return self._params["beta"]
+        #return self._params["delta"]
+        return self._params["beta"]
 
     @property
     def epsilon(self) -> torch.Tensor:
@@ -86,8 +86,8 @@ class Sidarthe(AbstractModel):
 
     @property
     def eta(self) -> torch.Tensor:
-        return self._params["eta"]
-        #return self._params["xi"]
+        #return self._params["eta"]
+        return self._params["xi"]
 
     @property
     def mu(self) -> torch.Tensor:
@@ -111,8 +111,8 @@ class Sidarthe(AbstractModel):
 
     @property
     def zeta(self) -> torch.Tensor:
-        return self._params["zeta"]
-        #return self._params["kappa"]
+        #return self._params["zeta"]
+        return self._params["kappa"]
 
     @property
     def rho(self) -> torch.Tensor:
