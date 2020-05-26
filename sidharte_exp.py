@@ -176,8 +176,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         return {key: np.array(value) / norm for key, value in values.items()}
 
     if normalize:
-        maxes = {key: max(value) for key, value in targets.items()}
-        targets = {key: np.array(value) / maxes[key] for key, value in targets.items()}
+        targets = {key: np.array(value) / population for key, value in targets.items()}
 
     sidarthe, logged_info, best_epoch = \
         Sidarthe.train(targets,
@@ -197,7 +196,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
 
         inferences = sidarthe.inference(t_grid)
         if normalize:
-            inferences = {key: np.array(value) * maxes[key] for key, value in inferences.items()}
+            inferences = {key: np.array(value) * population for key, value in inferences.items()}
 
         # region data slices
         t_start = train_params["t_start"]
