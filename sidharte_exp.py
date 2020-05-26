@@ -382,7 +382,7 @@ def get_exp_prefix(area, initial_params, learning_rates, train_size, val_len, de
     for key, value in learning_rates.items():
         prefix += f"_{key[0]}{value}"
 
-    prefix += f"_ts{train_size}_vs{val_len}_der1st{der_1st_reg}_tinc{t_inc}_m{m}_a{a}_b{b}_loss{loss_type}"
+    prefix += f"_ts{train_size}_vs{val_len}_der1st{der_1st_reg}_tinc{t_inc}_m{m}_a{a}_loss{loss_type}"
 
     prefix += f"{datetime.now().strftime('%B_%d_%Y_%H_%M_%S')}"
 
@@ -476,27 +476,26 @@ if __name__ == "__main__":
         "sigma": 1e-4
     }
 
-    for k, v in learning_rates.items():
-        learning_rates[k] = v * 1e-2
+    # for k, v in learning_rates.items():
+    #    learning_rates[k] = v * 1e-2
 
     loss_weights = {
         "d_weight": 1.,
         "r_weight": 1.,
         "t_weight": 10.,
         "h_weight": 1.,
-        "e_weight": 1.,
+        "e_weight": 0.,
     }
 
     train_size = 45
     val_len = 20
-    der_1st_reg = 1e10 #default era 1e8
+    der_1st_reg = 0. #default era 1e8
     der_2nd_reg = 0.
-    t_inc = 0.1
+    t_inc = 1
 
     momentum = True
-    m = 0.2
-    a = 1.0
-    b = 0.04
+    m = 0.5
+    a = 0.2
 
     bound_reg = 1e7
 
