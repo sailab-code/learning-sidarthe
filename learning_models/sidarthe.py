@@ -86,8 +86,7 @@ class Sidarthe(AbstractModel):
 
     @property
     def eta(self) -> torch.Tensor:
-        #return self._params["eta"]
-        return self._params["xi"]
+        return self._params["eta"]
 
     @property
     def mu(self) -> torch.Tensor:
@@ -107,12 +106,13 @@ class Sidarthe(AbstractModel):
 
     @property
     def kappa(self) -> torch.Tensor:
-        return self._params["kappa"]
+        return self._params["xi"]
+        #return self._params["kappa"]
 
     @property
     def zeta(self) -> torch.Tensor:
         #return self._params["zeta"]
-        return self._params["kappa"]
+        return self._params["eta"]
 
     @property
     def rho(self) -> torch.Tensor:
@@ -179,10 +179,10 @@ class Sidarthe(AbstractModel):
         # region equations
 
         S_dot = -S * (alpha * I + beta * D + gamma * A + delta * R)
-        I_dot = -S_dot - (epsilon + xi + lambda_) * I
+        I_dot = -S_dot - (epsilon + zeta + lambda_) * I
         D_dot = epsilon * I - (eta + rho) * D
-        A_dot = xi * I - (theta + mu + kappa) * A
-        R_dot = eta * D + theta * A - (ni + zeta) * R
+        A_dot = zeta * I - (theta + mu + kappa) * A
+        R_dot = eta * D + theta * A - (ni + xi) * R
         T_dot = mu * A + ni * R - (sigma + tau) * T
         E_dot = tau * T
         # H_dot = lambda_ * I + rho * D + kappa * A + zeta * R + sigma * T
@@ -345,7 +345,7 @@ class Sidarthe(AbstractModel):
         extended_params = {key: self.extend_param(value, time_grid.shape[0]) for key, value in self.params.items()}
 
         h_detected = self.init_cond[6] + torch.cumsum(
-            extended_params['rho'] * d + extended_params['zeta'] * r + extended_params['sigma'] * t,
+            extended_params['rho'] * d + extended_params['xi'] * r + extended_params['sigma'] * t,
             dim=0
         )
 
