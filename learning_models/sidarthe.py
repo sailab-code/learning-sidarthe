@@ -445,12 +445,12 @@ class Sidarthe(AbstractModel):
 
         # for now we assume that the number of undetected is equal to the number of detected
         # meaning that half of the infectious were not detected
-        #I0 = D0  # isolamento domiciliare
-        #A0 = R0  # ricoverati con sintomi
+        I0 = D0  # isolamento domiciliare
+        A0 = R0  # ricoverati con sintomi
 
         # we could consider them to be 0, alternatively
-        I0 = 0.  # isolamento domiciliare
-        A0 = 0.  # ricoverati con sintomi
+        #I0 = 0.  # isolamento domiciliare
+        #A0 = 0.  # ricoverati con sintomi
         # TODO: maybe there are better options?
 
         S0 = population - (I0 + D0 + A0 + R0 + T0 + H0 + E0)
