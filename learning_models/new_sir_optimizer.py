@@ -45,7 +45,7 @@ class NewSirOptimizer(Optimizer):
                     eta = lr / (1 + self.a * times)
                     update = [-eta[0] * d_p[0]]
                     for t in range(1, d_p.size(0)):
-#                        momentum_term = -eta[t] * d_p[t] + 0.2 * update[t - 1]
+                        #momentum_term = -eta[t] * d_p[t] + 0.2 * update[t - 1]
                         momentum_term = -eta[t] * d_p[t] + mu[t] * update[t - 1]
                         update.append(momentum_term)
                     update = torch.tensor(update)
