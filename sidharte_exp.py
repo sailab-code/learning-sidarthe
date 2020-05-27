@@ -223,12 +223,12 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
 
         target_train = slice_values(targets, train_target_slice)
         target_val = slice_values(targets, val_target_slice)
-        target_test = slice_values(targets, test_hat_slice)
+        target_test = slice_values(targets, test_target_slice)
         target_dataset = slice_values(targets, dataset_target_slice)
 
         references_train = slice_values(references, train_target_slice)
         references_val = slice_values(references, val_target_slice)
-        references_test = slice_values(references, test_hat_slice)
+        references_test = slice_values(references, test_target_slice)
         reference_dataset = slice_values(references, dataset_target_slice)
 
         # endregion
