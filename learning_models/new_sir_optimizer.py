@@ -54,9 +54,10 @@ class NewSirOptimizer(Optimizer):
 
                 if self.summary is not None and self.epoch % 50 == 0:
                     pl_x = range(0, update.shape[0])
-                    grad_curve = Curve(pl_x, update.detach().numpy(), '.', label=f"{param_name}", color=None)
-                    fig = generic_plot([grad_curve], f"{param_name} update over time", None)
-                    self.summary.add_figure(f"grads/{param_name}", fig, global_step=self.epoch)
+                    before_m_curve = Curve(pl_x, (- lr * d_p).detach().numpy(), '.', label=f"{param_name} before momentum", color=None)
+                    after_m_curve = Curve(pl_x, update.detach().numpy(), '.', label=f"{param_name} after momentum", color=None)
+                    fig = generic_plot([before_m_curve, after_m_curve], f"{param_name} update over time", None)
+                    self.summary.add_figure(f"updates/{param_name}", fig, global_step=self.epoch)
                 parameter.data.add_(update)
 
         self.epoch += 1
