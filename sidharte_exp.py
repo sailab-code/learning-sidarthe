@@ -466,8 +466,8 @@ if __name__ == "__main__":
         "xi": 1e-4,
         "eta": 1e-4,
         "mu": 1e-4,
-        "tau": 1e-4,
         "nu": 1e-4,
+        "tau": 1e-8,
         "lambda": 1e-4,
         "kappa": 1e-4,
         "zeta": 1e-4,
@@ -475,8 +475,8 @@ if __name__ == "__main__":
         "sigma": 1e-4
     }
 
-    # for k, v in learning_rates.items():
-    #    learning_rates[k] = v * 1e-2
+    #for k, v in learning_rates.items():
+    #    learning_rates[k] = v * 5e+2
 
     loss_weights = {
         "d_weight": 1.,
@@ -488,18 +488,18 @@ if __name__ == "__main__":
 
     train_size = 45
     val_len = 20
-    der_1st_reg = 0. #default era 1e8
+    der_1st_reg = 1e5 #default era 1e8
     der_2nd_reg = 0.
-    t_inc = 1
+    t_inc = 1.
 
     momentum = True
-    m = 0.5
-    a = 0.2
+    m = 0.01
+    a = 0.7
 
     bound_reg = 1e7
 
     #integrator = Heun
-    integrator = euler
+    integrator = Heun
     #integrator = RK4
 
     loss_type = "rmse"
