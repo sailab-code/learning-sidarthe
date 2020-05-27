@@ -44,7 +44,7 @@ class Sidarthe(AbstractModel):
             "xi": self.xi,
             "eta": self.eta,
             "mu": self.mu,
-            "ni": self.ni,
+            "nu": self.nu,
             "tau": self.tau,
             "lambda": self.lambda_,
             "kappa": self.kappa,
@@ -93,8 +93,8 @@ class Sidarthe(AbstractModel):
         return self._params["mu"]
 
     @property
-    def ni(self) -> torch.Tensor:
-        return self._params["ni"]
+    def nu(self) -> torch.Tensor:
+        return self._params["nu"]
 
     @property
     def tau(self) -> torch.Tensor:
@@ -158,7 +158,7 @@ class Sidarthe(AbstractModel):
         xi = get_param_at_t(self.xi, t)
         eta = get_param_at_t(self.eta, t)
         mu = get_param_at_t(self.mu, t)
-        ni = get_param_at_t(self.ni, t)
+        nu = get_param_at_t(self.nu, t)
         tau = get_param_at_t(self.tau, t)
         lambda_ = get_param_at_t(self.lambda_, t)
         kappa = get_param_at_t(self.kappa, t)
@@ -182,8 +182,8 @@ class Sidarthe(AbstractModel):
         I_dot = -S_dot - (epsilon + zeta + lambda_) * I
         D_dot = epsilon * I - (eta + rho) * D
         A_dot = zeta * I - (theta + mu + kappa) * A
-        R_dot = eta * D + theta * A - (ni + xi) * R
-        T_dot = mu * A + ni * R - (sigma + tau) * T
+        R_dot = eta * D + theta * A - (nu + xi) * R
+        T_dot = mu * A + nu * R - (sigma + tau) * T
         E_dot = tau * T
         # H_dot = lambda_ * I + rho * D + kappa * A + zeta * R + sigma * T
 
@@ -353,7 +353,7 @@ class Sidarthe(AbstractModel):
         c1 = extended_params['epsilon'] + extended_params['zeta'] + extended_params['lambda']
         c2 = extended_params['eta'] + extended_params['rho']
         c3 = extended_params['theta'] + extended_params['mu'] + extended_params['kappa']
-        c4 = extended_params['ni'] + extended_params['xi']
+        c4 = extended_params['nu'] + extended_params['xi']
 
         r0 = extended_params['alpha'] + extended_params['beta'] * extended_params['epsilon'] / c2
         r0 = r0 + extended_params['gamma'] * extended_params['zeta'] / c3
