@@ -50,7 +50,8 @@ class Sidarthe(AbstractModel):
             "kappa": self.kappa,
             "zeta": self.zeta,
             "rho": self.rho,
-            "sigma": self.sigma
+            "sigma": self.sigma,
+            "phi": self.phi
         }
 
     # region ModelParams
@@ -122,6 +123,10 @@ class Sidarthe(AbstractModel):
     def sigma(self) -> torch.Tensor:
         return self._params["sigma"]
 
+    @property
+    def phi(self) -> torch.Tensor:
+        return self._params["phi"]
+
     # endregion CodeParams
 
     def differential_equations(self, t, x):
@@ -165,6 +170,7 @@ class Sidarthe(AbstractModel):
         zeta = get_param_at_t(self.zeta, t)
         rho = get_param_at_t(self.rho, t)
         sigma = get_param_at_t(self.sigma, t)
+        phi = get_param_at_t(self.phi, t)
         # endregion parameters
 
         S = x[0]
@@ -182,10 +188,10 @@ class Sidarthe(AbstractModel):
         S_dot = -S * (alpha * I + beta * D + gamma * A + delta * R)
         I_dot = -S_dot - (epsilon + zeta + lambda_) * I
         D_dot = epsilon * I - (eta + rho) * D
-        A_dot = zeta * I - (theta + mu + kappa) * A
+        A_dot = zeta * I - (theta + mu + kappa + phi) * A
         R_dot = eta * D + theta * A - (nu + xi) * R
         T_dot = mu * A + nu * R - (sigma + tau) * T
-        E_dot = tau * T
+        E_dot = tau * T + phi * A
         H_detected = rho * D + xi * R + sigma * T
         # H_dot = lambda_ * I + rho * D + kappa * A + zeta * R + sigma * T
 

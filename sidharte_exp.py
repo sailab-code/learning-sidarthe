@@ -146,7 +146,8 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         "kappa": [initial_params["kappa"]] * train_size * int(1/time_step),
         "zeta": [initial_params["zeta"]] * train_size * int(1/time_step),
         "rho": [initial_params["rho"]] * train_size * int(1/time_step),
-        "sigma": [initial_params["sigma"]] * train_size * int(1/time_step)
+        "sigma": [initial_params["sigma"]] * train_size * int(1/time_step),
+        "phi": [initial_params["phi"]] * train_size * int(1/time_step)
     }
 
     model_params = {
@@ -453,7 +454,8 @@ if __name__ == "__main__":
         "kappa": 0.017,
         "zeta": 0.125,
         "rho": 0.034,
-        "sigma": 0.017
+        "sigma": 0.017,
+        "phi": 0.01
     }
 
     learning_rates = {
@@ -472,7 +474,8 @@ if __name__ == "__main__":
         "kappa": 1e-4,
         "zeta": 1e-4,
         "rho": 1e-4,
-        "sigma": 1e-4
+        "sigma": 1e-4,
+        "phi": 1e-4        
     }
 
     #for k, v in learning_rates.items():
@@ -483,7 +486,7 @@ if __name__ == "__main__":
         "r_weight": 1.,
         "t_weight": 10.,
         "h_weight": 1.,
-        "e_weight": 0.,
+        "e_weight": 1.,
     }
 
     train_size = 45
