@@ -174,6 +174,7 @@ class Sidarthe(AbstractModel):
         R = x[4]
         T = x[5]
         E = x[6]
+        H_detected = x[7]
         # H = x[7]
 
         # region equations
@@ -185,6 +186,7 @@ class Sidarthe(AbstractModel):
         R_dot = eta * D + theta * A - (nu + xi) * R
         T_dot = mu * A + nu * R - (sigma + tau) * T
         E_dot = tau * T
+        H_detected = rho * D + xi * R + sigma * T
         # H_dot = lambda_ * I + rho * D + kappa * A + zeta * R + sigma * T
 
         # endregion equations
@@ -196,15 +198,16 @@ class Sidarthe(AbstractModel):
             A_dot,
             R_dot,
             T_dot,
-            E_dot
+            E_dot,
+            H_detected
             # H_dot,
         ), dim=0)
 
     def omega(self, t):
         if t >= 0:
-            return torch.tensor([self.init_cond[:7]], dtype=self.dtype)
+            return torch.tensor([self.init_cond[:8]], dtype=self.dtype)
         else:
-            return torch.tensor([[1.] + [0.] * 6], dtype=self.dtype)
+            return torch.tensor([[1.] + [0.] * 7], dtype=self.dtype)
 
     def set_params(self, params):
         self._params = params
@@ -340,14 +343,10 @@ class Sidarthe(AbstractModel):
         r = sol[:, 4]
         t = sol[:, 5]
         e = sol[:, 6]
+        h_detected = sol[:, 7]
         h = self.population - (s + i + d + a + r + t + e)
 
         extended_params = {key: self.extend_param(value, time_grid.shape[0]) for key, value in self.params.items()}
-
-        h_detected = self.init_cond[6] + torch.cumsum(
-            extended_params['rho'] * d + extended_params['xi'] * r + extended_params['sigma'] * t,
-            dim=0
-        )
 
         # region compute R0
         c1 = extended_params['epsilon'] + extended_params['zeta'] + extended_params['lambda']
@@ -440,7 +439,7 @@ class Sidarthe(AbstractModel):
         D0 = targets["d"][0].item()  # isolamento
         R0 = targets["r"][0].item()  # ricoverati con sintomi
         T0 = targets["t"][0].item()  # terapia intensiva
-        H0 = targets["h_detected"][0].item()  # dimessi guariti
+        H0_detected = targets["h_detected"][0].item()  # dimessi guariti
         E0 = targets["e"][0].item()  # deceduti
 
         # for now we assume that the number of undetected is equal to the number of detected
@@ -453,7 +452,7 @@ class Sidarthe(AbstractModel):
         #A0 = 0.  # ricoverati con sintomi
         # TODO: maybe there are better options?
 
-        S0 = population - (I0 + D0 + A0 + R0 + T0 + H0 + E0)
+        S0 = population - (I0 + D0 + A0 + R0 + T0 + H0_detected + E0)
 
         return (
             S0,
@@ -463,7 +462,7 @@ class Sidarthe(AbstractModel):
             R0,
             T0,
             E0,
-            H0
+            H0_detected
         )
 
     def plot_params_over_time(self):
