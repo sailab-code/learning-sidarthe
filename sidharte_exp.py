@@ -128,6 +128,9 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
     for key in ["r0", "h_detected"]:
         references[key] = ref_df[key].tolist()
 
+    for key in initial_params.keys():
+        references[key] = ref_df[key].tolist()
+
     # endregion
 
     params = {
@@ -157,6 +160,10 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         "bound_reg": bound_reg,
         "loss_type": loss_type,
         "verbose": verbose,
+        "val_size": val_len,
+        "train_size": train_size,
+        "targets": targets,
+        "references": references,
         **loss_weights
     }
 
