@@ -1,7 +1,7 @@
 from collections import namedtuple
 from typing import List, Dict
 
-import numpy
+import numpy as np
 import torch
 from torch.optim.optimizer import Optimizer
 from torch.utils.tensorboard import SummaryWriter
@@ -31,6 +31,11 @@ class Sidarthe(AbstractModel):
         self.bound_reg = kwargs["bound_reg"]
         self.verbose = kwargs["verbose"]
         self.loss_type = kwargs["loss_type"]
+
+        self.references = kwargs.get("references", None)
+        self.targets = kwargs.get("targets", None)
+        self.train_size = kwargs.get("train_size", None)
+        self.val_size = kwargs.get("val_size", None)
 
     @property
     def params(self) -> Dict:
@@ -271,7 +276,7 @@ class Sidarthe(AbstractModel):
 
         # this function converts target values to torch.tensor with specified dtype
         def to_torch_float(target):
-            if isinstance(target, numpy.ndarray) or isinstance(target, list):
+            if isinstance(target, np.ndarray) or isinstance(target, list):
                 return torch.tensor(target, dtype=self.dtype)
             return target.to(dtype=self.dtype)
 
@@ -397,6 +402,11 @@ class Sidarthe(AbstractModel):
 
         loss_type = model_params.get("loss_type", "rmse")
 
+        references = model_params.get("references", None)
+        targets = model_params.get("targets", None)
+        train_size = model_params.get("train_size", None)
+        val_size = model_params.get("val_size", None)
+
         return Sidarthe(initial_params, population, initial_conditions, integrator, time_step,
                         d_weight=d_weight,
                         r_weight=r_weight,
@@ -406,7 +416,11 @@ class Sidarthe(AbstractModel):
                         der_1st_reg=der_1st_reg,
                         bound_reg=bound_reg,
                         verbose=verbose,
-                        loss_type=loss_type
+                        loss_type=loss_type,
+                        references=references,
+                        targets=targets,
+                        train_size=train_size,
+                        val_size=val_size
                         )
 
     @classmethod
@@ -469,38 +483,132 @@ class Sidarthe(AbstractModel):
 
     def plot_params_over_time(self):
         param_plots = []
-        max_len = 66 # max([value.shape[0] for key, value in self.params.items()])
+        max_len = 100
+
         for key, value in self.params.items():
             value = self.extend_param(value, max_len)
-            # size = self.alpha.shape[0]
-            # pl_x = list(range(size))
             pl_x = list(range(max_len))
             pl_title = f"$\\{key}$ over time"
             param_curve = Curve(pl_x, value.detach().numpy(), '-', f"$\\{key}$", color=None)
-            plot = generic_plot([param_curve], pl_title, None, formatter=format_xtick)
-            param_plots.append((plot, pl_title))
+            curves = [param_curve]
 
+            if self.references is not None:
+                ref_curve = Curve(pl_x, self.references[key], "--", f"$\\{key}$ reference", color=None)
+                curves.append(ref_curve)
+            plot = generic_plot(curves, pl_title, None, formatter=format_xtick)
+            param_plots.append((plot, pl_title))
         return param_plots
 
-    def plot_fits(self, inferences, targets):
+    @staticmethod
+    def get_curves(x_range, hat, target, key, color=None):
+        pl_x = list(x_range)
+        hat_curve = Curve(pl_x, hat, '-', label=f"Estimated {key.upper()}", color=color)
+        if target is not None:
+            target_curve = Curve(pl_x, target, '.', label=f"Actual {key.upper()}", color=color)
+            return [hat_curve, target_curve]
+        else:
+            return [hat_curve]
+
+    @staticmethod
+    def normalize_values(values, norm):
+        """normalize values by a norm, e.g. population"""
+        return {key: np.array(value) / norm for key, value in values.items()}
+
+    @staticmethod
+    def slice_values(values, slice_):
+        return {key: value[slice_] for key, value in values.items()}
+
+    def plot_fits(self):
         fit_plots = []
-        for key, target in targets.items():
-            inference = inferences[key]
-            pl_x = list(range(0, target.shape[0]))
-            hat_curve = Curve(pl_x, inference.detach().numpy(), '-', label=f"Estimated {key.upper()}", color=None)
-            target_curve = Curve(pl_x, target, '.', label=f"Actual {key.upper()}", color=None)
-            curves = [hat_curve, target_curve]
-            pl_title = f"Estimated {key.upper()} on fit"
-            plot = generic_plot(curves, pl_title, None, formatter=format_xtick)
-            fit_plots.append((plot, pl_title))
+        with torch.no_grad():
+            t_grid = torch.linspace(0, 100, 101)
+            inferences = self.inference(t_grid)
+            norm_inferences = self.normalize_values(inferences, self.population)
+            targets = self.targets
+            dataset_size = len(self.targets["d"])
+
+            t_inc = self.time_step
+            train_size = self.train_size
+            val_size = self.val_size + train_size
+            train_range = range(0, train_size)
+            val_range = range(train_size, val_size)
+            test_range = range(val_size, dataset_size)
+            dataset_range = range(0, dataset_size)
+
+            t_start = 0
+            train_hat_slice = slice(t_start, int(train_size / t_inc), int(1 / t_inc))
+            val_hat_slice = slice(int(train_size / t_inc), int(val_size / t_inc), int(1 / t_inc))
+            test_hat_slice = slice(int(val_size / t_inc), int(dataset_size / t_inc), int(1 / t_inc))
+
+            train_target_slice = slice(t_start, train_size, 1)
+            val_target_slice = slice(train_size, val_size, 1)
+            test_target_slice = slice(val_size, dataset_size, 1)
+            dataset_target_slice = slice(t_start, dataset_size, 1)
+
+            hat_train = self.slice_values(inferences, train_hat_slice)
+            hat_val = self.slice_values(inferences, val_hat_slice)
+            hat_test = self.slice_values(inferences, test_hat_slice)
+
+            target_train = self.slice_values(targets, train_target_slice)
+            target_val = self.slice_values(targets, val_target_slice)
+            target_test = self.slice_values(targets, test_target_slice)
+
+            norm_hat_train = self.normalize_values(hat_train, self.population)
+            norm_hat_val = self.normalize_values(hat_val, self.population)
+            norm_hat_test = self.normalize_values(hat_test, self.population)
+
+            norm_target_train = self.normalize_values(target_train, self.population)
+            norm_target_val = self.normalize_values(target_val, self.population)
+            norm_target_test = self.normalize_values(target_test, self.population)
+
+            for key, target in targets.items():
+                pl_x = list(range(0, len(target)))
+
+                if key in ["sol"]:
+                    continue
+
+                if key not in ["r0"]:
+                    curr_hat_train = norm_hat_train[key]
+                    curr_hat_val = norm_hat_val[key]
+                    curr_hat_test = norm_hat_test[key]
+                else:
+                    curr_hat_train = hat_train[key]
+                    curr_hat_val = hat_val[key]
+                    curr_hat_test = hat_test[key]
+
+                target_train = norm_target_train[key]
+                target_val = norm_target_val[key]
+                target_test = norm_target_test[key]
+
+                train_curves = self.get_curves(train_range, curr_hat_train, target_train, key, 'r')
+                val_curves = self.get_curves(val_range, curr_hat_val, target_val, key, 'b')
+                test_curves = self.get_curves(test_range, curr_hat_test, target_test, key, 'g')
+
+                tot_curves = train_curves + val_curves + test_curves
+
+                if self.references is not None:
+                    reference_curve = Curve(list(dataset_range), self.references[key][dataset_target_slice], "--", label="Reference (Nature)")
+                    tot_curves = tot_curves + [reference_curve]
+
+                pl_title = f"{key.upper()} - train/validation/test/reference"
+                fig = generic_plot(tot_curves, pl_title, None, formatter=format_xtick)
+                pl_title = f"Estimated {key.upper()} on fit"
+                fit_plots.append((fig, pl_title))
 
         return fit_plots
 
     def plot_r0(self, r0):
         pl_x = list(range(0, r0.shape[0]))
         hat_curve = Curve(pl_x, r0.detach().numpy(), '-', label=f"Estimated R0", color=None)
+        curves = [hat_curve]
+
+        if self.references is not None:
+            r0_slice = slice(0, r0.shape[0], 1)
+            ref_curve = Curve(pl_x, self.references["r0"][r0_slice], "--", label=f"Reference R0", color=None)
+            curves.append(ref_curve)
+
         pl_title = f"Estimated R0"
-        plot = generic_plot([hat_curve], pl_title, None, formatter=format_xtick)
+        plot = generic_plot(curves, pl_title, None, formatter=format_xtick)
         return (plot, pl_title)
 
     def print_params(self):
@@ -531,7 +639,7 @@ class Sidarthe(AbstractModel):
             for fig, fig_title in self.plot_params_over_time():
                 summary.add_figure(f"params_over_time/{fig_title}", fig, close=True, global_step=epoch)
 
-            for fig, fig_title in self.plot_fits(inferences, targets):
+            for fig, fig_title in self.plot_fits():
                 summary.add_figure(f"fits/{fig_title}", fig, close=True, global_step=epoch)
 
             r0_plot, r0_pl_title = self.plot_r0(inferences["r0"])
