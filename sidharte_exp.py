@@ -467,7 +467,7 @@ def get_exp_description_html(description, uuid):
 
 
 if __name__ == "__main__":
-    n_epochs = 100
+    n_epochs = 8000
     region = "Italy"
     params = {
         "alpha": 0.6, # 0.21,  # 0.6,  # 0.570,
