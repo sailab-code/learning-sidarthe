@@ -16,6 +16,9 @@ from torch.utils.tensorboard import SummaryWriter
 from populations import populations
 from datetime import datetime
 
+
+import multiprocessing as mp
+
 verbose = False
 normalize = False
 
@@ -54,7 +57,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
 
     # creates the json description file with all settings
     description = get_description(region, initial_params, learning_rates, loss_weights, train_size, val_len,
-                                  der_1st_reg, t_inc, m, a, loss_type, integrator)
+                                  der_1st_reg, time_step, m, a, loss_type, integrator)
     json_description = json.dumps(description, indent=4)
     json_file = "settings.json"
     with open(os.path.join(exp_path, json_file), "a") as f:
@@ -68,12 +71,12 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
     # extract targets from csv
 
     # if we specify Italy as region, we use national data
-    if region is not "Italy":
-        df_file = os.path.join(os.getcwd(), "dati-regioni", "dpc-covid19-ita-regioni.csv")
+    if region != "Italy":
+        df_file = os.path.join(os.getcwd(), "COVID-19", "dati-regioni", "dpc-covid19-ita-regioni.csv")
         area = [region]
         area_col_name = "denominazione_regione"  # "Country/Region"
     else:
-        df_file = os.path.join(os.getcwd(), "dati-andamento-nazionale", "dpc-covid19-ita-andamento-nazionale.csv")
+        df_file = os.path.join(os.getcwd(), "COVID-19", "dati-andamento-nazionale", "dpc-covid19-ita-andamento-nazionale.csv")
         area = ["ITA"]
         area_col_name = "stato"  # "Country/Region"
 
@@ -221,7 +224,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         val_size = min(train_size + val_len,
                        len(x_target) - 5)
 
-        t_grid = torch.linspace(0, 100, int(100 / t_inc) + 1)
+        t_grid = torch.linspace(0, 100, int(100 / time_step) + 1)
 
         inferences = sidarthe.inference(t_grid)
         if normalize:
@@ -229,10 +232,10 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
 
         # region data slices
         t_start = train_params["t_start"]
-        train_hat_slice = slice(t_start, int(train_size / t_inc), int(1 / t_inc))
-        val_hat_slice = slice(int(train_size / t_inc), int(val_size / t_inc), int(1 / t_inc))
-        test_hat_slice = slice(int(val_size / t_inc), int(dataset_size / t_inc), int(1 / t_inc))
-        dataset_hat_slice = slice(t_start, int(dataset_size / t_inc), int(1 / t_inc))
+        train_hat_slice = slice(t_start, int(train_size / time_step), int(1 / time_step))
+        val_hat_slice = slice(int(train_size / time_step), int(val_size / time_step), int(1 / time_step))
+        test_hat_slice = slice(int(val_size / time_step), int(dataset_size / time_step), int(1 / time_step))
+        dataset_hat_slice = slice(t_start, int(dataset_size / time_step), int(1 / time_step))
 
         train_target_slice = slice(t_start, train_size, 1)
         val_target_slice = slice(train_size, val_size, 1)
@@ -464,7 +467,7 @@ def get_exp_description_html(description, uuid):
 
 
 if __name__ == "__main__":
-    n_epochs = 8000
+    n_epochs = 100
     region = "Italy"
     params = {
         "alpha": 0.6, # 0.21,  # 0.6,  # 0.570,
@@ -534,12 +537,28 @@ if __name__ == "__main__":
     loss_type = "rmse"
     # loss_type = "mape"
 
+    procs = []
     for hyper_params in itertools.product(ms, ass, der_1st_regs):
         m, a, der_1st_reg = hyper_params
         exp_prefix = get_exp_prefix(region, params, learning_rates, train_size,
                                     val_len, der_1st_reg, t_inc, m, a, loss_type, integrator)
         print(region)
-        exp(region, populations[region], params,
-            learning_rates, n_epochs, region, train_size, val_len,
-            loss_weights, der_1st_reg, bound_reg, t_inc, integrator,
-            momentum, m, a, loss_type, exp_prefix)
+
+        proc = mp.Process(target=exp,
+                          args=(region, populations[region], params,
+                            learning_rates, n_epochs, region, train_size, val_len,
+                            loss_weights, der_1st_reg, bound_reg, t_inc, integrator,
+                            momentum, m, a, loss_type, exp_prefix)
+                          )
+
+        proc.start()
+        procs.append(proc)
+
+        # run 6 exps at a time
+        if len(procs) == 6:
+            for proc in procs:
+                proc.join()
+            procs.clear()
+
+    for proc in procs:
+        proc.join()
