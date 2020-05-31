@@ -245,6 +245,7 @@ class Sidarthe(AbstractModel):
         if self.der_1st_reg != 0:
             for key, value in self.params.items():
                 first_derivative = derivatives.first_derivative(value, self.time_step)
+                # loss_1st_derivative_total = loss_1st_derivative_total + 0.5 * torch.abs(first_derivative, 2)
                 loss_1st_derivative_total = loss_1st_derivative_total + 0.5 * torch.pow(first_derivative, 2)
 
         return self.der_1st_reg * torch.mean(loss_1st_derivative_total)
@@ -260,7 +261,8 @@ class Sidarthe(AbstractModel):
     def bound_parameter_regularization(self):
         bound_reg_total = torch.zeros(1, dtype=self.dtype)
         for key, value in self.params.items():
-            bound_reg = self.__loss_gte_one(value) + self.__loss_lte_zero(value)
+            # bound_reg = self.__loss_gte_one(value) + self.__loss_lte_zero(value)
+            bound_reg = self.__loss_lte_zero(value)
             bound_reg_total = bound_reg_total + bound_reg
 
         return self.bound_reg * torch.mean(bound_reg_total)
@@ -300,7 +302,7 @@ class Sidarthe(AbstractModel):
         bound_reg = self.bound_parameter_regularization()
 
         if self.loss_type is "rmse":
-            loss = total_rmse
+            loss = torch.tensor([1e-4], dtype=torch.float64) * total_rmse
         elif self.loss_type is "mape":
             loss = total_mape
         else:
@@ -467,11 +469,12 @@ class Sidarthe(AbstractModel):
 
     def plot_params_over_time(self):
         param_plots = []
-        max_len = max([value.shape[0] for key, value in self.params.items()])
+        max_len = 66 # max([value.shape[0] for key, value in self.params.items()])
         for key, value in self.params.items():
             value = self.extend_param(value, max_len)
-            size = self.alpha.shape[0]
-            pl_x = list(range(size))
+            # size = self.alpha.shape[0]
+            # pl_x = list(range(size))
+            pl_x = list(range(max_len))
             pl_title = f"$\\{key}$ over time"
             param_curve = Curve(pl_x, value.detach().numpy(), '-', f"$\\{key}$", color=None)
             plot = generic_plot([param_curve], pl_title, None, formatter=format_xtick)

@@ -172,6 +172,8 @@ class AbstractModel(metaclass=abc.ABCMeta):
 
         logged_info: List[Dict] = []
 
+        inferences = model.inference(train_time_grid)
+        print(f'Initial R0: {inferences["r0"]}')
         time_start = time.time()
         for epoch in range(1, n_epochs + 1):
             for optimizer in optimizers:
