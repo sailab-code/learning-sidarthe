@@ -315,8 +315,10 @@ class Sidarthe(AbstractModel):
 
         total_loss = loss + der_1st_loss + bound_reg
 
+        val_loss = d_rmse_loss + r_rmse_loss + t_rmse_loss + h_rmse_loss + e_rmse_loss
+
         return {
-            self.val_loss_checked: loss,
+            self.val_loss_checked: val_loss,
             "d_rmse": d_rmse_loss,
             "r_rmse": r_rmse_loss,
             "t_rmse": t_rmse_loss,
