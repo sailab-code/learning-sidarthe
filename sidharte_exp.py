@@ -538,6 +538,7 @@ if __name__ == "__main__":
     # loss_type = "mape"
 
     procs = []
+    mp.set_start_method('spawn')
     for hyper_params in itertools.product(ms, ass, der_1st_regs):
         m, a, der_1st_reg = hyper_params
         exp_prefix = get_exp_prefix(region, params, learning_rates, train_size,
