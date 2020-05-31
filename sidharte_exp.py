@@ -221,7 +221,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         val_size = min(train_size + val_len,
                        len(x_target) - 5)
 
-        t_grid = torch.linspace(0, 100, int(100 / t_inc))
+        t_grid = torch.linspace(0, 100, int(100 / t_inc) + 1)
 
         inferences = sidarthe.inference(t_grid)
         if normalize:
