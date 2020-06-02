@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 plt.rcParams.update({'font.size': 12})
+from matplotlib.ticker import (AutoMinorLocator, MultipleLocator)
 
 from collections import namedtuple
 import datetime
@@ -94,7 +95,7 @@ def plot_sir_dynamic(s, i, r, region, save_path):
     plt.close('all')
 
 
-def generic_plot(xy_curves, title, save_path, x_label=None, y_label=None, formatter=None, use_legend=True, use_grid=True, close=True):
+def generic_plot(xy_curves, title, save_path, x_label=None, y_label=None, formatter=None, use_legend=True, use_grid=True, close=True, grid_spacing=20):
     """
 
     :param xy_curves:
@@ -118,6 +119,8 @@ def generic_plot(xy_curves, title, save_path, x_label=None, y_label=None, format
             ax.plot(curve.x, curve.y, curve.style, label=curve.label)
     if formatter is not None:
         ax.xaxis.set_major_formatter(plt.FuncFormatter(format_xtick))
+
+    ax.xaxis.set_major_locator(MultipleLocator(grid_spacing))
 
     if x_label is not None:
         plt.xlabel(x_label)
