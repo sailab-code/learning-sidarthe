@@ -72,11 +72,11 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
 
     # if we specify Italy as region, we use national data
     if region != "Italy":
-        df_file = os.path.join(os.getcwd(), "COVID-19", "dati-regioni", "dpc-covid19-ita-regioni.csv")
+        df_file = os.path.join(os.getcwd(), "dati-regioni", "dpc-covid19-ita-regioni.csv")
         area = [region]
         area_col_name = "denominazione_regione"  # "Country/Region"
     else:
-        df_file = os.path.join(os.getcwd(), "COVID-19", "dati-andamento-nazionale", "dpc-covid19-ita-andamento-nazionale.csv")
+        df_file = os.path.join(os.getcwd(), "dati-andamento-nazionale", "dpc-covid19-ita-andamento-nazionale.csv")
         area = ["ITA"]
         area_col_name = "stato"  # "Country/Region"
 
@@ -157,24 +157,24 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         "sigma": [initial_params["sigma"]] * (train_size - flat_size) * int(1/time_step)
     }
 
-    # params = {
-    #     "alpha": [0.570] * 4 + [0.422] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210] * 8,
-    #     "beta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 24,
-    #     "gamma": [0.456] * 4 + [0.285] * 18 + [0.2] * 6 + [0.11] * 10  + [0.11] * 8,
-    #     "delta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 24,
-    #     "epsilon": [0.171] * 12 + [0.143] * 26 + [0.2]*8,
-    #     "theta": [0.371],
-    #     "zeta": [0.125] * 22 + [0.034] * 16 + [0.025]*8,
-    #     "eta": [0.125] * 22 + [0.034] * 16 + [0.025]*8,
-    #     "mu": [0.017] * 22 + [0.008] * 24,
-    #     "nu": [0.027] * 22 + [0.015] * 24,
-    #     "tau": [0.01],
-    #     "lambda": [0.034] * 22 + [0.08] * 24,
-    #     "kappa": [0.017] * 22 + [0.017] * 16 + [0.02]*8,
-    #     "xi": [0.017] * 22 + [0.017] * 16 + [0.02]*8,
-    #     "rho": [0.034] * 22 + [0.017] * 16 + [0.02]*8,
-    #     "sigma": [0.017] * 22 + [0.017] * 16 + [0.01]*8
-    # }
+    params = {
+        "alpha": [0.570] * 4 + [0.422] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210],
+        "beta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 17,
+        "gamma": [0.456] * 4 + [0.285] * 18 + [0.2] * 6 + [0.11] * 10  + [0.11],
+        "delta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 17,
+        "epsilon": [0.171] * 12 + [0.143] * 26 + [0.2],
+        "theta": [0.371],
+        "zeta": [0.125] * 22 + [0.034] * 16 + [0.025],
+        "eta": [0.125] * 22 + [0.034] * 16 + [0.025],
+        "mu": [0.017] * 22 + [0.008] * 17,
+        "nu": [0.027] * 22 + [0.015] * 17,
+        "tau": [0.01],
+        "lambda": [0.034] * 22 + [0.08] * 17,
+        "kappa": [0.017] * 22 + [0.017] * 16 + [0.02],
+        "xi": [0.017] * 22 + [0.017] * 16 + [0.02],
+        "rho": [0.034] * 22 + [0.017] * 16 + [0.02],
+        "sigma": [0.017] * 22 + [0.017] * 16 + [0.01]
+    }
 
 
     model_params = {
@@ -510,23 +510,16 @@ if __name__ == "__main__":
     for k, v in learning_rates.items():
        learning_rates[k] = v * 1e-1
 
-    loss_weights = {
-        "d_weight": 1.,
-        "r_weight": 10.,
-        "t_weight": 5.,
-        "h_weight": 1.,
-        "e_weight": 0.,
-    }
 
     train_size = 46
     val_len = 20
-    der_1st_regs = [1e3, 1e4, 3e4] #default era 1e8
+    der_1st_regs = [3e4, 3.1e4, 2.9e4] #default era 1e8
     der_2nd_reg = 0.
     t_inc = 1.
 
-    momentum = True
-    ms = [1/8, 1/9, 1/10, 1/7, 1/5]
-    ass = [0.05, 0.07, 0.03]
+    momentums = [True, False]
+    ms = [1/8]
+    ass = [0.04, 0.05]
 
     bound_reg = 1e4
 
@@ -536,14 +529,22 @@ if __name__ == "__main__":
 
     loss_type = "rmse"
     # loss_type = "mape"
-
+    d_ws, r_ws, t_ws, h_ws = [1.0], [12.5, 10.0, 15.0], [4.0, 5.0, 6.0], [1.0]
     procs = []
     mp.set_start_method('spawn')
-    for hyper_params in itertools.product(ms, ass, der_1st_regs):
-        m, a, der_1st_reg = hyper_params
+    for hyper_params in itertools.product(ms, ass, der_1st_regs, d_ws, r_ws, t_ws, h_ws, momentums):
+        m, a, der_1st_reg, d_w, r_w, t_w, h_w, momentum = hyper_params
         exp_prefix = get_exp_prefix(region, params, learning_rates, train_size,
                                     val_len, der_1st_reg, t_inc, m, a, loss_type, integrator)
         print(region)
+
+        loss_weights = {
+            "d_weight": d_w,
+            "r_weight": r_w,
+            "t_weight": t_w,
+            "h_weight": h_w,
+            "e_weight": 0.,
+        }
 
         proc = mp.Process(target=exp,
                           args=(region, populations[region], params,
@@ -556,7 +557,7 @@ if __name__ == "__main__":
         procs.append(proc)
 
         # run 6 exps at a time
-        if len(procs) == 6:
+        if len(procs) == 10:
             for proc in procs:
                 proc.join()
             procs.clear()
