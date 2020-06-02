@@ -57,9 +57,9 @@ class SirEq:
 
     def omega(self, t):
         if t >= 0:
-            return self.init_cond
+            return torch.tensor([self.init_cond])
         else:
-            return [1, 0, 0]
+            return torch.tensor([[1, 0, 0]])
 
     def dynamic_diff_eqs(self, T, X):
         X_t = X
