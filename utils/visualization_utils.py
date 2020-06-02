@@ -95,7 +95,7 @@ def plot_sir_dynamic(s, i, r, region, save_path):
     plt.close('all')
 
 
-def generic_plot(xy_curves, title, save_path, x_label=None, y_label=None, formatter=None, use_legend=True, use_grid=True, close=True, grid_spacing=20):
+def generic_plot(xy_curves, title, save_path, x_label=None, y_label=None, formatter=None, use_legend=True, use_grid=True, close=True, grid_spacing=20, yaxis_sci=False):
     """
 
     :param xy_curves:
@@ -132,13 +132,15 @@ def generic_plot(xy_curves, title, save_path, x_label=None, y_label=None, format
     if use_legend:
         ax.legend()
 
+    if yaxis_sci:
+        ax.ticklabel_format(axis='y', style='sci', scilimits=(0,0), useOffset=None)
+
     if save_path is not None:
         plt.savefig(save_path, bbox_inches='tight', transparent=True)
 
     if close:
         plt.close('all')
     return fig
-
 
 def generic_sub_plot(subplots, title, save_path):
     """
