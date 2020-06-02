@@ -154,7 +154,8 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         "kappa": [initial_params["kappa"]] * (train_size - flat_size) * int(1/time_step),
         "zeta": [initial_params["zeta"]] * (train_size - flat_size) * int(1/time_step),
         "rho": [initial_params["rho"]] * (train_size - flat_size) * int(1/time_step),
-        "sigma": [initial_params["sigma"]] * (train_size - flat_size) * int(1/time_step)
+        "sigma": [initial_params["sigma"]] * (train_size - flat_size) * int(1/time_step),
+        "phi": [initial_params["phi"]] * (train_size - flat_size) * int(1/time_step)
     }
 
     # params = {
@@ -490,31 +491,31 @@ if __name__ == "__main__":
     }
 
     learning_rates = {
-        "alpha": 1e-4,
-        "beta": 1e-4,
-        "gamma": 1e-4,
-        "delta": 1e-4,
-        "epsilon": 1e-4,
-        "theta": 1e-6,
-        "xi": 1e-4,
-        "eta": 1e-4,
-        "mu": 1e-4,
-        "nu": 1e-4,
-        "tau": 1e-6,
-        "lambda": 1e-4,
-        "kappa": 1e-4,
-        "zeta": 1e-4,
-        "rho": 1e-4,
-        "sigma": 1e-4,
-        "phi": 1e-4        
+        "alpha": 1e-5,
+        "beta": 1e-5,
+        "gamma": 1e-5,
+        "delta": 1e-5,
+        "epsilon": 1e-5,
+        "theta": 1e-7,
+        "xi": 1e-5,
+        "eta": 1e-5,
+        "mu": 1e-5,
+        "nu": 1e-5,
+        "tau": 1e-7,
+        "lambda": 1e-5,
+        "kappa": 1e-5,
+        "zeta": 1e-5,
+        "rho": 1e-5,
+        "sigma": 1e-5,
+        "phi": 1e-7        
     }
 
-    for k, v in learning_rates.items():
-       learning_rates[k] = v * 1e-1
+    # for k, v in learning_rates.items():
+    #    learning_rates[k] = v * 1e-1
 
     loss_weights = {
         "d_weight": 1.,
-        "r_weight": 10.,
+        "r_weight": 12.5,
         "t_weight": 5.,
         "h_weight": 1.,
         "e_weight": 1.,
@@ -522,13 +523,13 @@ if __name__ == "__main__":
 
     train_size = 46
     val_len = 20
-    der_1st_regs = [1e3, 1e4, 3e4] #default era 1e8
+    der_1st_regs = [31000] 
     der_2nd_reg = 0.
     t_inc = 1.
 
     momentum = True
-    ms = [1/8, 1/9, 1/10, 1/7, 1/5]
-    ass = [0.05, 0.07, 0.03]
+    ms = [0.125]
+    ass = [0.05]
 
     bound_reg = 1e4
 
