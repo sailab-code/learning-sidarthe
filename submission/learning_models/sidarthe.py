@@ -337,7 +337,6 @@ class Sidarthe(AbstractModel):
 
     def extend_param(self, value, length):
         len_diff = length - value.shape[0]
-        #print(len_diff)
         t_inc = self.time_step
         ext_tensor = torch.tensor([], dtype=self.dtype)
         if len_diff > 0:
@@ -345,7 +344,6 @@ class Sidarthe(AbstractModel):
                 ext_tensor = torch.cat((ext_tensor, value[t].expand(int(1/t_inc))))
             
             remaining = length - ext_tensor.shape[0]
-            #print(remaining)
             if remaining > 0:
                 ext_tensor = torch.cat((ext_tensor, ext_tensor[-1].expand(remaining)))
             return ext_tensor
@@ -489,19 +487,18 @@ class Sidarthe(AbstractModel):
             H0_detected
         )
 
-    def plot_params_over_time(self):
+    def plot_params_over_time(self, n_days=100):
         param_plots = []
-        max_len = 100
 
         for key, value in self.params.items():
-            value = self.extend_param(value, max_len)
-            pl_x = list(range(max_len))
+            value = self.extend_param(value, n_days)
+            pl_x = list(range(n_days))
             pl_title = f"$\\{key}$ over time"
             param_curve = Curve(pl_x, value.detach().numpy(), '-', f"$\\{key}$", color=None)
             curves = [param_curve]
 
             if self.references is not None:
-                ref_curve = Curve(pl_x, self.references[key], "--", f"$\\{key}$ reference", color=None)
+                ref_curve = Curve(pl_x, self.references[key][:n_days], "--", f"$\\{key}$ reference", color=None)
                 curves.append(ref_curve)
             plot = generic_plot(curves, pl_title, None, formatter=format_xtick)
             param_plots.append((plot, pl_title))
