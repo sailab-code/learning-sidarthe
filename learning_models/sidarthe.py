@@ -146,7 +146,7 @@ class Sidarthe(AbstractModel):
         """
 
         def get_param_at_t(param, _t):
-            _t = (_t / self.time_step).round().long()
+            _t = _t.floor().long()
             if 0 <= _t < param.shape[0]:
                 return param[_t].unsqueeze(0)
             else:
@@ -335,13 +335,22 @@ class Sidarthe(AbstractModel):
             self.backward_loss_key: total_loss.squeeze(0)
         }
 
-    @staticmethod
-    def extend_param(value, length):
+    def extend_param(self, value, length):
         len_diff = length - value.shape[0]
+        t_inc = self.time_step
+        ext_tensor = torch.tensor([], dtype=self.dtype)
         if len_diff > 0:
-            return torch.cat((value, value[-1].expand(len_diff)))
+            for t in range(0, value.shape[0]):
+                ext_tensor = torch.cat((ext_tensor, value[t].expand(int(1/t_inc))))
+            
+            remaining = length - ext_tensor.shape[0]
+            if remaining > 0:
+                ext_tensor = torch.cat((ext_tensor, ext_tensor[-1].expand(remaining)))
+            return ext_tensor
         else:
             return value
+
+
 
     def inference(self, time_grid) -> Dict:
         sol = self.integrate(time_grid)
@@ -465,11 +474,6 @@ class Sidarthe(AbstractModel):
         I0 = D0  # isolamento domiciliare
         A0 = R0  # ricoverati con sintomi
 
-        # we could consider them to be 0, alternatively
-        #I0 = 0.  # isolamento domiciliare
-        #A0 = 0.  # ricoverati con sintomi
-        # TODO: maybe there are better options?
-
         S0 = population - (I0 + D0 + A0 + R0 + T0 + H0_detected + E0)
 
         return (
@@ -483,19 +487,18 @@ class Sidarthe(AbstractModel):
             H0_detected
         )
 
-    def plot_params_over_time(self):
+    def plot_params_over_time(self, n_days=100):
         param_plots = []
-        max_len = 100
 
         for key, value in self.params.items():
-            value = self.extend_param(value, max_len)
-            pl_x = list(range(max_len))
+            value = self.extend_param(value, n_days)
+            pl_x = list(range(n_days))
             pl_title = f"$\\{key}$ over time"
             param_curve = Curve(pl_x, value.detach().numpy(), '-', f"$\\{key}$", color=None)
             curves = [param_curve]
 
             if self.references is not None:
-                ref_curve = Curve(pl_x, self.references[key], "--", f"$\\{key}$ reference", color=None)
+                ref_curve = Curve(pl_x, self.references[key][:n_days], "--", f"$\\{key}$ reference", color=None)
                 curves.append(ref_curve)
             plot = generic_plot(curves, pl_title, None, formatter=format_xtick)
             param_plots.append((plot, pl_title))
@@ -504,9 +507,9 @@ class Sidarthe(AbstractModel):
     @staticmethod
     def get_curves(x_range, hat, target, key, color=None):
         pl_x = list(x_range)
-        hat_curve = Curve(pl_x, hat, '-', label=f"Estimated {key.upper()}", color=color)
+        hat_curve = Curve(pl_x, hat, '-', label=f"GF ({key})", color=color)
         if target is not None:
-            target_curve = Curve(pl_x, target, '.', label=f"Actual {key.upper()}", color=color)
+            target_curve = Curve(pl_x, target, '.', label=f"Data ({key})", color=color)
             return [hat_curve, target_curve]
         else:
             return [hat_curve]
