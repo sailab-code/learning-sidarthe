@@ -533,13 +533,6 @@ if __name__ == "__main__":
             "e_weight": 0.,
         }
 
-        exp(region, populations[region], params,
-                            learning_rates, n_epochs, region, train_size, val_len,
-                            loss_weights, der_1st_reg, bound_reg, t_inc, integrator,
-                            momentum, m, a, loss_type, exp_prefix)
-
-        """
->>>>>>> 3ae7579b52e4825f527bbc88cc0a0a8b095f1a04
         proc = mp.Process(target=exp,
                           args=(region, populations[region], params,
                             learning_rates, n_epochs, region, train_size, val_len,
@@ -554,7 +547,7 @@ if __name__ == "__main__":
         if len(procs) == 10:
             for proc in procs:
                 proc.join()
-            procs.clear()"""
+            procs.clear()
 
     for proc in procs:
         proc.join()
