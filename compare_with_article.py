@@ -63,7 +63,9 @@ sidarthe = Sidarthe(params, 1, initial_values, euler, 1.,
                     )
 with torch.no_grad():
     size = 100
-    t_grid = torch.linspace(0, size, size)
+    t_grid = torch.linspace(0, size, int(size/t_inc))
+    print(t_grid)
+    exit()
 
     inference = sidarthe.inference(t_grid)
     #sol = inference["sol"]

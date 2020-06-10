@@ -125,7 +125,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
     # extract from csv with nature reference data
 
     references = {}
-    ref_df = pd.read_csv(os.path.join(base_path, "sidarthe_results.csv"))
+    ref_df = pd.read_csv(os.path.join(os.getcwd(), "nature_results.csv"))
     for key in 'sidarthe':
         references[key] = ref_df[key].tolist()
 
@@ -138,44 +138,43 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
     # endregion
 
     flat_size = 7
-    params = {
-        "alpha": [initial_params["alpha"]] * (train_size - flat_size) * int(1/time_step),
-        "beta": [initial_params["beta"]] * (train_size - flat_size) * int(1/time_step),
-        "gamma": [initial_params["gamma"]] * (train_size - flat_size) * int(1/time_step),
-        "delta": [initial_params["delta"]] * (train_size - flat_size) * int(1/time_step),
-        "epsilon": [initial_params["epsilon"]] * (train_size - flat_size) * int(1/time_step),
-        "theta": [initial_params["theta"]] * 1,  # train_size,
-        "xi": [initial_params["xi"]] * (train_size - flat_size) * int(1/time_step),
-        "eta": [initial_params["eta"]] * (train_size - flat_size) * int(1/time_step),
-        "mu": [initial_params["mu"]] * (train_size - flat_size) * int(1/time_step),
-        "nu": [initial_params["nu"]] * (train_size - flat_size) * int(1/time_step),
-        "tau": [initial_params["tau"]] * 1,  # train_size,
-        "lambda": [initial_params["lambda"]] * (train_size - flat_size) * int(1/time_step),
-        "kappa": [initial_params["kappa"]] * (train_size - flat_size) * int(1/time_step),
-        "zeta": [initial_params["zeta"]] * (train_size - flat_size) * int(1/time_step),
-        "rho": [initial_params["rho"]] * (train_size - flat_size) * int(1/time_step),
-        "sigma": [initial_params["sigma"]] * (train_size - flat_size) * int(1/time_step)
-    }
+    # params = {
+    #     "alpha": [initial_params["alpha"]] * (train_size - flat_size) * int(1/time_step),
+    #     "beta": [initial_params["beta"]] * (train_size - flat_size) * int(1/time_step),
+    #     "gamma": [initial_params["gamma"]] * (train_size - flat_size) * int(1/time_step),
+    #     "delta": [initial_params["delta"]] * (train_size - flat_size) * int(1/time_step),
+    #     "epsilon": [initial_params["epsilon"]] * (train_size - flat_size) * int(1/time_step),
+    #     "theta": [initial_params["theta"]] * 1,  # train_size,
+    #     "xi": [initial_params["xi"]] * (train_size - flat_size) * int(1/time_step),
+    #     "eta": [initial_params["eta"]] * (train_size - flat_size) * int(1/time_step),
+    #     "mu": [initial_params["mu"]] * (train_size - flat_size) * int(1/time_step),
+    #     "nu": [initial_params["nu"]] * (train_size - flat_size) * int(1/time_step),
+    #     "tau": [initial_params["tau"]] * 1,  # train_size,
+    #     "lambda": [initial_params["lambda"]] * (train_size - flat_size) * int(1/time_step),
+    #     "kappa": [initial_params["kappa"]] * (train_size - flat_size) * int(1/time_step),
+    #     "zeta": [initial_params["zeta"]] * (train_size - flat_size) * int(1/time_step),
+    #     "rho": [initial_params["rho"]] * (train_size - flat_size) * int(1/time_step),
+    #     "sigma": [initial_params["sigma"]] * (train_size - flat_size) * int(1/time_step)
+    # }
 
-    params = {
-        "alpha": [0.570] * 4 + [0.422] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210],
-        "beta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 17,
-        "gamma": [0.456] * 4 + [0.285] * 18 + [0.2] * 6 + [0.11] * 10  + [0.11],
-        "delta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 17,
-        "epsilon": [0.171] * 12 + [0.143] * 26 + [0.2],
-        "theta": [0.371],
-        "zeta": [0.125] * 22 + [0.034] * 16 + [0.025],
-        "eta": [0.125] * 22 + [0.034] * 16 + [0.025],
-        "mu": [0.017] * 22 + [0.008] * 17,
-        "nu": [0.027] * 22 + [0.015] * 17,
-        "tau": [0.01],
-        "lambda": [0.034] * 22 + [0.08] * 17,
-        "kappa": [0.017] * 22 + [0.017] * 16 + [0.02],
-        "xi": [0.017] * 22 + [0.017] * 16 + [0.02],
-        "rho": [0.034] * 22 + [0.017] * 16 + [0.02],
-        "sigma": [0.017] * 22 + [0.017] * 16 + [0.01]
-    }
-
+    # params = {
+    #     "alpha": [0.570] * 4 + [0.422] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210],
+    #     "beta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 17,
+    #     "gamma": [0.456] * 4 + [0.285] * 18 + [0.2] * 6 + [0.11] * 10  + [0.11],
+    #     "delta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 17,
+    #     "epsilon": [0.171] * 12 + [0.143] * 26 + [0.2],
+    #     "theta": [0.371],
+    #     "zeta": [0.125] * 22 + [0.034] * 16 + [0.025],
+    #     "eta": [0.125] * 22 + [0.034] * 16 + [0.025],
+    #     "mu": [0.017] * 22 + [0.008] * 17,
+    #     "nu": [0.027] * 22 + [0.015] * 17,
+    #     "tau": [0.01],
+    #     "lambda": [0.034] * 22 + [0.08] * 17,
+    #     "kappa": [0.017] * 22 + [0.017] * 16 + [0.02],
+    #     "xi": [0.017] * 22 + [0.017] * 16 + [0.02],
+    #     "rho": [0.034] * 22 + [0.017] * 16 + [0.02],
+    #     "sigma": [0.017] * 22 + [0.017] * 16 + [0.01]
+    # }
 
     model_params = {
         "der_1st_reg": der_1st_reg,
@@ -258,11 +257,6 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         target_test = slice_values(targets, test_target_slice)
         target_dataset = slice_values(targets, dataset_target_slice)
 
-        references_train = slice_values(references, train_target_slice)
-        references_val = slice_values(references, val_target_slice)
-        references_test = slice_values(references, test_target_slice)
-        reference_dataset = slice_values(references, dataset_target_slice)
-
         # endregion
 
         # region losses computation
@@ -325,12 +319,6 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         params_plots = sidarthe.plot_params_over_time()
         for (plot, plot_title) in params_plots:
             summary.add_figure(f"final/{plot_title}", plot, close=True, global_step=-1)
-
-        """
-        # plot r0
-        r0_plot, r0_pl_title = sidarthe.plot_r0(inferences["r0"])
-        summary.add_figure(f"fits/{r0_pl_title}", r0_plot, close=True, global_step=epoch)
-        """
 
         # plot inferences
 
@@ -467,25 +455,25 @@ def get_exp_description_html(description, uuid):
 
 
 if __name__ == "__main__":
-    n_epochs = 8000
+    n_epochs = 150
     region = "Italy"
     params = {
-        "alpha": 0.6, # 0.21,  # 0.6,  # 0.570,
-        "beta": 0.11, # 0.005,  # 0.11, # 0.011,
-        "gamma": 0.7, # 0.11,  # 0.7,# 0.456,
-        "delta": 0.11, # 0.005,  # 0.11, # 0.011,
-        "epsilon": 0.171, # 0.2, # 0.171,
-        "theta": 0.371,
-        "xi": 0.017, #0.02,  # 0.017,
-        "eta": 0.125, # 0.025, # 0.125,
-        "mu": 0.017, #0.008,  # 0.017,
-        "nu": 0.027, #0.0015, # 0.027,
-        "tau": 0.01,
-        "lambda": 0.034, # 0.08,  # 0.034,
-        "kappa": 0.017, # 0.02,  # 0.017,
-        "zeta": 0.125, # 0.025, # 0.125,
-        "rho": 0.034, # 0.02, # 0.034,
-        "sigma": 0.017, # 0.01,  # 0.017
+        "alpha": [0.570] * 4 + [0.422] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210],
+        "beta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 17,
+        "gamma": [0.456] * 4 + [0.285] * 18 + [0.2] * 6 + [0.11] * 10 + [0.11],
+        "delta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 17,
+        "epsilon": [0.171] * 12 + [0.143] * 26 + [0.2],
+        "theta": [0.371],
+        "zeta": [0.125] * 22 + [0.034] * 16 + [0.025],
+        "eta": [0.125] * 22 + [0.034] * 16 + [0.025],
+        "mu": [0.017] * 22 + [0.008] * 17,
+        "nu": [0.027] * 22 + [0.015] * 17,
+        "tau": [0.01],
+        "lambda": [0.034] * 22 + [0.08] * 17,
+        "kappa": [0.017] * 22 + [0.017] * 16 + [0.02],
+        "xi": [0.017] * 22 + [0.017] * 16 + [0.02],
+        "rho": [0.034] * 22 + [0.017] * 16 + [0.02],
+        "sigma": [0.017] * 22 + [0.017] * 16 + [0.01]
     }
 
     learning_rates = {
@@ -523,13 +511,12 @@ if __name__ == "__main__":
 
     bound_reg = 1e4
 
-    #integrator = Heun
     integrator = Heun
-    #integrator = RK4
 
     loss_type = "rmse"
     # loss_type = "mape"
     d_ws, r_ws, t_ws, h_ws = [1.0], [12.5, 10.0, 15.0], [4.0, 5.0, 6.0], [1.0]
+
     procs = []
     mp.set_start_method('spawn')
     for hyper_params in itertools.product(ms, ass, der_1st_regs, d_ws, r_ws, t_ws, h_ws, momentums):
@@ -546,6 +533,13 @@ if __name__ == "__main__":
             "e_weight": 0.,
         }
 
+        exp(region, populations[region], params,
+                            learning_rates, n_epochs, region, train_size, val_len,
+                            loss_weights, der_1st_reg, bound_reg, t_inc, integrator,
+                            momentum, m, a, loss_type, exp_prefix)
+
+        """
+>>>>>>> 3ae7579b52e4825f527bbc88cc0a0a8b095f1a04
         proc = mp.Process(target=exp,
                           args=(region, populations[region], params,
                             learning_rates, n_epochs, region, train_size, val_len,
@@ -560,7 +554,7 @@ if __name__ == "__main__":
         if len(procs) == 10:
             for proc in procs:
                 proc.join()
-            procs.clear()
+            procs.clear()"""
 
     for proc in procs:
         proc.join()
