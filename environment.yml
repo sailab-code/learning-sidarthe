@@ -3,51 +3,51 @@ channels:
   - pytorch
   - defaults
 dependencies:
-  - absl-py=0.9.0=py37_0
-  - blas=1.0=mkl
-  - ca-certificates=2020.1.1=0
-  - certifi=2020.4.5.1=py37_0
+  - absl-py=0.9.0
+  - blas=1.0
+  - ca-certificates=2020.1.1
+  - certifi=2020.4.5.1
   - cffi=1.14.0
-  - cudatoolkit=10.0.130=0
-  - entrypoints=0.3=py37_0
-  - flake8=3.7.9=py37_0
-  - future=0.18.2=py37_0
+  - cudatoolkit=10.0.130
+  - entrypoints=0.3
+  - flake8=3.7.9
+  - future=0.18.2
   - grpcio=1.27.2
-  - intel-openmp=2020.0=166
+  - intel-openmp=2020.0
   - jpeg=9b
   - libprotobuf=3.11.4
   - libtiff=4.1.0
-  - markdown=3.1.1=py37_0
-  - mccabe=0.6.1=py37_1
-  - mkl=2020.0=166
+  - markdown=3.1.1
+  - mccabe=0.6.1
+  - mkl=2020.0
   - mkl-service=2.3.0
   - mkl_fft=1.0.15
   - mkl_random=1.1.0
   - ninja=1.9.0
   - numpy=1.18.1
   - numpy-base=1.18.1
-  - olefile=0.46=py37_0
+  - olefile=0.46
   - openssl=1.1.1g
   - pandas=1.0.3
   - pillow=7.0.0
-  - pip=20.0.2=py37_1
+  - pip=20.0.2
   - protobuf=3.11.4
-  - pycodestyle=2.5.0=py37_0
-  - pycparser=2.20=py_0
-  - pyflakes=2.1.1=py37_0
+  - pycodestyle=2.5.0
+  - pycparser=2.20
+  - pyflakes=2.1.1
   - python=3.7.6
-  - python-dateutil=2.8.1=py_0
+  - python-dateutil=2.8.1
   - pytorch=1.2.0
-  - pytz=2019.3=py_0
-  - setuptools=46.1.1=py37_0
-  - six=1.14.0=py37_0
+  - pytz=2019.3
+  - setuptools=46.1.1
+  - six=1.14.0
   - sqlite=3.31.1
-  - tensorboard=1.15.0=pyhb230dea_0
+  - tensorboard=1.15.0
   - tk=8.6.8
-  - torchvision=0.4.0=py37_cu100
-  - webencodings=0.5.1=py37_1
-  - werkzeug=1.0.1=py_0
-  - wheel=0.34.2=py37_0
+  - torchvision=0.4.0
+  - webencodings=0.5.1
+  - werkzeug=1.0.1
+  - wheel=0.34.2
   - xz=5.2.4
   - zlib=1.2.11
   - freetype=2.9.1
