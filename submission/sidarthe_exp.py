@@ -416,7 +416,7 @@ def get_exp_description_html(description, uuid):
 
 
 if __name__ == "__main__":
-    n_epochs = 150
+    n_epochs = 8000
     region = "Italy"
     params = {
         "alpha": [0.570] * 4 + [0.422] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210] * 8,
@@ -438,30 +438,27 @@ if __name__ == "__main__":
     }
 
     learning_rates = {
-        "alpha": 1e-4,
-        "beta": 1e-4,
-        "gamma": 1e-4,
-        "delta": 1e-4,
-        "epsilon": 1e-4,
-        "theta": 1e-6,
-        "xi": 1e-4,
-        "eta": 1e-4,
-        "mu": 1e-4,
-        "nu": 1e-4,
-        "tau": 1e-6,
-        "lambda": 1e-4,
-        "kappa": 1e-4,
-        "zeta": 1e-4,
-        "rho": 1e-4,
-        "sigma": 1e-4
+        "alpha": 1e-5,
+        "beta": 1e-5,
+        "gamma": 1e-5,
+        "delta": 1e-5,
+        "epsilon": 1e-5,
+        "theta": 1e-7,
+        "xi": 1e-5,
+        "eta": 1e-5,
+        "mu": 1e-5,
+        "nu": 1e-5,
+        "tau": 1e-7,
+        "lambda": 1e-5,
+        "kappa": 1e-5,
+        "zeta": 1e-5,
+        "rho": 1e-5,
+        "sigma": 1e-5
     }
-
-    for k, v in learning_rates.items():
-       learning_rates[k] = v * 1e-1
 
     loss_weights = {
         "d_weight": 1.,
-        "r_weight": 10.,
+        "r_weight": 12.5,
         "t_weight": 5.,
         "h_weight": 1.,
         "e_weight": 0.,
@@ -469,49 +466,21 @@ if __name__ == "__main__":
 
     train_size = 46
     val_len = 20
-    der_1st_regs = [1e3, 1e4, 3e4]
+    der_1st_reg = 31000.0
     der_2nd_reg = 0.
     t_inc = 1.
 
     momentum = True
-    ms = [1/8, 1/9, 1/10, 1/7, 1/5]
-    ass = [0.05, 0.07, 0.03]
-
+    m = 0.125
+    a = 0.05
     bound_reg = 1e4
-
     integrator = Heun
-
     loss_type = "rmse"
+    exp_prefix = get_exp_prefix(region, params, learning_rates, train_size,
+                                val_len, der_1st_reg, t_inc, m, a, loss_type, integrator)
+    print(region)
 
-    procs = []
-    mp.set_start_method('spawn')
-    for hyper_params in itertools.product(ms, ass, der_1st_regs):
-        m, a, der_1st_reg = hyper_params
-        exp_prefix = get_exp_prefix(region, params, learning_rates, train_size,
-                                    val_len, der_1st_reg, t_inc, m, a, loss_type, integrator)
-        print(region)
-
-        exp(region, populations[region], params,
-                            learning_rates, n_epochs, region, train_size, val_len,
-                            loss_weights, der_1st_reg, bound_reg, t_inc, integrator,
-                            momentum, m, a, loss_type, exp_prefix)
-
-        """
-        proc = mp.Process(target=exp,
-                          args=(region, populations[region], params,
-                            learning_rates, n_epochs, region, train_size, val_len,
-                            loss_weights, der_1st_reg, bound_reg, t_inc, integrator,
-                            momentum, m, a, loss_type, exp_prefix)
-                          )
-
-        proc.start()
-        procs.append(proc)
-
-        # run 6 exps at a time
-        if len(procs) == 6:
-            for proc in procs:
-                proc.join()
-            procs.clear()"""
-
-    for proc in procs:
-        proc.join()
+    exp(region, populations[region], params,
+                        learning_rates, n_epochs, region, train_size, val_len,
+                        loss_weights, der_1st_reg, bound_reg, t_inc, integrator,
+                        momentum, m, a, loss_type, exp_prefix)
