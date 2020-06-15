@@ -146,7 +146,7 @@ class Sidarthe(AbstractModel):
         """
 
         def get_param_at_t(param, _t):
-            _t = (_t / self.time_step).round().long()
+            _t = _t.long()
             if 0 <= _t < param.shape[0]:
                 return param[_t].unsqueeze(0)
             else:

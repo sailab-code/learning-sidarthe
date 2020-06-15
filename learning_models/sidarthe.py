@@ -146,7 +146,7 @@ class Sidarthe(AbstractModel):
         """
 
         def get_param_at_t(param, _t):
-            _t = _t.floor().long()
+            _t = _t.long()
             if 0 <= _t < param.shape[0]:
                 return param[_t].unsqueeze(0)
             else:
@@ -315,7 +315,7 @@ class Sidarthe(AbstractModel):
 
         total_loss = loss + der_1st_loss + bound_reg
 
-        val_loss = d_rmse_loss + r_rmse_loss + t_rmse_loss + h_rmse_loss + e_rmse_loss
+        val_loss = d_rmse_loss + r_rmse_loss + t_rmse_loss + h_rmse_loss + e_rmse_loss 
 
         return {
             self.val_loss_checked: val_loss.squeeze(0),
