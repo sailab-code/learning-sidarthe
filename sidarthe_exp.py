@@ -16,6 +16,8 @@ from torch.utils.tensorboard import SummaryWriter
 from populations import populations
 from datetime import datetime
 
+from utils.report_utils import get_exp_prefix, get_description, get_exp_description_html, get_markdown_description
+
 
 import multiprocessing as mp
 
@@ -25,8 +27,7 @@ normalize = False
 
 def exp(region, population, initial_params, learning_rates, n_epochs, region_name,
         train_size, val_len, loss_weights, der_1st_reg, bound_reg, time_step, integrator,
-        momentum, m, a, loss_type,
-        exp_prefix):
+        momentum, m, a, loss_type):
     # region directory creation
     # creating folders, if necessary
     base_path = os.path.join(os.getcwd(), "regioni")
@@ -54,17 +55,20 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
 
     # tensorboard summary
     summary = SummaryWriter(f"runs/{model_name}/{uuid}")
+    exp_prefix = get_exp_prefix(region, initial_params, learning_rates, train_size,
+                                val_len, der_1st_reg, time_step, momentum, m, a, loss_type, integrator)
 
     # creates the json description file with all settings
     description = get_description(region, initial_params, learning_rates, loss_weights, train_size, val_len,
-                                  der_1st_reg, time_step, m, a, loss_type, integrator)
+                                  der_1st_reg, time_step, momentum, m, a, loss_type, integrator)
     json_description = json.dumps(description, indent=4)
+
     json_file = "settings.json"
     with open(os.path.join(exp_path, json_file), "a") as f:
         f.write(json_description)
 
     # pushes the html version of the summary on tensorboard
-    summary.add_text("settings/summary", get_exp_description_html(description, uuid))
+    summary.add_text("settings/summary", get_markdown_description(json_description, uuid))
 
     # region target extraction
 
@@ -172,7 +176,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
 
     sidarthe, logged_info, best_epoch = \
         Sidarthe.train(targets,
-                       params,
+                       initial_params,
                        learning_rates,
                        n_epochs,
                        model_params,
@@ -258,12 +262,12 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
             return valid_dict
 
         final_dict = {
-            "params": sidarthe.params,
             "best_epoch": best_epoch,
             "train_risks": train_risks,
             "val_risks": val_risks,
             "test_risks": test_risks,
-            "dataset_risks": dataset_risks
+            "dataset_risks": dataset_risks,
+            "params": sidarthe.params
         }
 
         json_final = json.dumps(valid_json_dict(final_dict), indent=4)
@@ -271,7 +275,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         with open(os.path.join(exp_path, json_file), "a") as f:
             f.write(json_final)
 
-        summary.add_text("settings/final", "Final reporting: " + get_html_str_from_dict(final_dict))
+        summary.add_text("settings/final", get_markdown_description(json_final, uuid))
         # endregion
 
         # region generate plots for final model
@@ -352,71 +356,8 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
 
     summary.flush()
 
-
-def get_exp_prefix(area, initial_params, learning_rates, train_size, val_len, der_1st_reg,
-                   t_inc, m, a, loss_type, integrator):
-    prefix = f"{area[0]}_{integrator.__name__}"
-    for key, value in initial_params.items():
-        prefix += f"_{key[0]}{value}"
-
-    for key, value in learning_rates.items():
-        prefix += f"_{key[0]}{value}"
-
-    prefix += f"_ts{train_size}_vs{val_len}_der1st{der_1st_reg}_tinc{t_inc}_m{m}_a{a}_loss{loss_type}"
-
-    prefix += f"{datetime.now().strftime('%B_%d_%Y_%H_%M_%S')}"
-
-    return prefix
-
-
-def get_description(area, initial_params, learning_rates, target_weights, train_size, val_len, der_1st_reg,
-                    t_inc, m, a, loss_type, integrator):
-    return {
-        "region": area,
-        "initial_values": initial_params,
-        "learning_rates": learning_rates,
-        "target_weights": target_weights,
-        "train_size": train_size,
-        "val_len": val_len,
-        "der_1st_reg": der_1st_reg,
-        "t_inc": t_inc,
-        "m": m,
-        "a": a,
-        "integrator": integrator.__name__,
-        "loss_type": loss_type,
-        "started": datetime.now().strftime('%d/%B/%Y %H:%M:%S')
-    }
-
-
-def get_tabs(tabIdx):
-    return '&emsp;' * tabIdx
-
-
-def get_html_str_from_dict(dictionary, tabIdx=1):
-    dict_str = "{<br>"
-    for key, value in dictionary.items():
-        dict_str += f"{get_tabs(tabIdx)}{key}:"
-        if not isinstance(value, dict):
-            dict_str += f"{value},<br>"
-        else:
-            dict_str += get_html_str_from_dict(value, tabIdx + 1) + ",<br>"
-    dict_str += get_tabs(tabIdx - 1) + "}"
-    return dict_str
-
-
-def get_exp_description_html(description, uuid):
-    """
-    creates an html representation of the experiment description for tensorboard
-    """
-
-    description_str = f"Experiment id: {uuid}<br><br>"
-    description_str += get_html_str_from_dict(description)
-
-    return description_str
-
-
 if __name__ == "__main__":
-    n_epochs = 8000
+    n_epochs = 100
     region = "Italy"
     params = {
         "alpha": [0.570] * 4 + [0.422] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210],
@@ -476,11 +417,9 @@ if __name__ == "__main__":
     bound_reg = 1e4
     integrator = Heun
     loss_type = "rmse"
-    exp_prefix = get_exp_prefix(region, params, learning_rates, train_size,
-                                val_len, der_1st_reg, t_inc, m, a, loss_type, integrator)
     print(region)
 
     exp(region, populations[region], params,
                         learning_rates, n_epochs, region, train_size, val_len,
                         loss_weights, der_1st_reg, bound_reg, t_inc, integrator,
-                        momentum, m, a, loss_type, exp_prefix)
+                        momentum, m, a, loss_type)
