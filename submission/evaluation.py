@@ -87,7 +87,7 @@ for key in param_keys:
 # load experiment values
 exp_paths = os.path.join(os.getcwd(), "trained_models")
 #exp_id = "52260e50-c7e4-45cb-b3b6-e11b1b51335a"
-exp_id = "7f36fecb-b1c9-4828-aced-d0f687a083c0"
+exp_id = "66de8dfe-6a66-4662-97a5-69150a2cfe5a"
 exp_path = os.path.join(exp_paths, exp_id)
 exp_settings_path = os.path.join(exp_path, "settings.json")
 exp_report_path = os.path.join(exp_path, "final.json")

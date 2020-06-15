@@ -470,9 +470,9 @@ if __name__ == "__main__":
     der_2nd_reg = 0.
     t_inc = 1.
 
-    momentum = True
-    m = 0.125
-    a = 0.05
+    momentum = False
+    m = None
+    a = None
     bound_reg = 1e4
     integrator = Heun
     loss_type = "rmse"

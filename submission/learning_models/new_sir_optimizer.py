@@ -40,6 +40,7 @@ class NewSirOptimizer(Optimizer):
 
                 d_p = parameter.grad
                 if self.momentum:
+                    print("momentum")
                     times = torch.arange(parameter.shape[0], dtype=parameter.dtype)
                     mu = torch.sigmoid(self.m * times)
                     eta = lr / (1 + self.a * times)
