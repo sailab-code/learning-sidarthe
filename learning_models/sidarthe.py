@@ -307,7 +307,7 @@ class Sidarthe(AbstractModel):
         bound_reg = self.bound_parameter_regularization()
 
         if self.loss_type == "rmse":
-            loss = torch.tensor([1e-4], dtype=torch.float64) * total_rmse
+            loss = torch.tensor([1e-4], dtype=self.dtype) * total_rmse
         elif self.loss_type == "mape":
             loss = total_mape
         else:
