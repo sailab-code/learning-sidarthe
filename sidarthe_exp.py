@@ -355,6 +355,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         # endregion
 
     summary.flush()
+    return sidarthe, uuid, val_risks[sidarthe.val_loss_checked]
 
 if __name__ == "__main__":
     n_epochs = 100
