@@ -90,8 +90,8 @@ if __name__ == '__main__':
         )
 
         results_dict[exp_result[1]] = exp_result
-        return exp_result[2]
+        return exp_result[2].item()
 
-    res_gp = skopt.gp_minimize(objective, SPACE, n_calls=50, n_jobs=-1)
+    res_gp = skopt.gp_minimize(objective, SPACE, n_calls=100, n_jobs=-1)
 
 
