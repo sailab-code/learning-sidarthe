@@ -7,7 +7,11 @@ COVID-19/
 runs*/
 runs.old*/
 regioni.old*/
+regioni_sir/
+regioni_sidarthe/
 dati-regioni/
 .ipynb_checkpoints/
 .vscode/
 runs.1/
+SIDARTHE_Code/
+*.zip

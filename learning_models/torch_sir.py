@@ -12,60 +12,7 @@ import matplotlib.pyplot as pl
 
 from utils.visualization_utils import generic_plot, format_xtick, Curve
 
-
-class SirOptimizer(Optimizer):
-    def __init__(self, params, etas, m, a, b, momentum=True):
-        """
-
-        :param params: iterable containing parameters to be optimized
-        :param etas: iterable containing learning rates in the same order as the parameter
-        :param kwargs: keyword argument required:
-            * eta_b, eta_g, eta_d : learning rates for beta, gamma,delta
-            * a, b : parameters for learning rate decay
-            * alpha: parameter for momentum term
-        """
-
-        self.etas = etas
-        self.a = a
-        self.b = b
-        self.m = m
-        self.momentum = momentum
-        defaults = dict()
-
-        super(SirOptimizer, self).__init__(params, defaults)
-
-    def step(self, closure=None):
-        loss = None,
-        if closure is not None:
-            loss = closure()
-
-        for group in self.param_groups:  # modded learning rates
-            for idx, parameter in enumerate(group["params"]):
-                if parameter.grad is None:
-                    continue
-
-                # # print(p.grad)
-                # d_p = parameter.grad.data
-                # lr_t = -etas[idx] * d_p
-                # mu_t = torch.cumprod(torch.flip(torch.cat((torch.ones(1), mu[:-1])), dims=[0]), dim=0)  # 1, mu[0], mu[0]*mu[1], ...
-                # update = torch.cumsum(lr_t * mu_t, dim=0)
-
-                d_p = parameter.grad.data
-                if self.momentum:
-                    times = torch.arange(group["params"][0].shape[0], dtype=torch.float32)
-                    # times = times * self.sample_time #added AB
-                    mu = torch.sigmoid(self.m * times)
-                    eta_mod = self.a / (self.a + self.b * times)
-                    etas = torch.tensor(self.etas)
-                    etas = etas.unsqueeze(1) * eta_mod.unsqueeze(0)
-                    update = [-etas[idx][0] * d_p[0]]
-                    for t in range(1, d_p.size(0)):
-                        momentum_term = -etas[idx][t] * d_p[t] + mu[t] * update[t - 1]
-                        update.append(momentum_term)
-                    parameter.data.add_(torch.tensor(update))
-                else:
-                    parameter.data.add_(-self.etas[idx] * d_p)
-
+from learning_models.sir_optimizer import SirOptimizer
 
 class SirEq:
     def __init__(self, beta, gamma, delta, population, init_cond, mode="dynamic", **kwargs):
@@ -110,9 +57,9 @@ class SirEq:
 
     def omega(self, t):
         if t >= 0:
-            return self.init_cond
+            return torch.tensor([self.init_cond])
         else:
-            return [1, 0, 0]
+            return torch.tensor([[1, 0, 0]])
 
     def dynamic_diff_eqs(self, T, X):
         X_t = X
@@ -186,9 +133,10 @@ class SirEq:
         return torch.tensor(1.0)
 
     def mape(self, w_hat, w_target):
+        #actually this is wape
         if isinstance(w_target, numpy.ndarray) or isinstance(w_target, list):
             w_target = torch.tensor(w_target, dtype=w_hat.dtype)
-        return torch.mean(torch.abs((w_hat - w_target) / w_target))
+        return torch.sum(torch.abs((w_hat - w_target) / torch.mean(w_target)))
 
     def __first_derivative_loss(self, parameter):
         if parameter.shape[0] < 3: # must have at least 3 values to properly compute first derivative
@@ -417,8 +365,6 @@ class SirEq:
 
         time_start = time.time()
         mse_losses, der_1st_losses, der_2nd_losses = [], [], []
-
-
 
         log_epoch_steps = 50
         validation_epoch_steps = 10

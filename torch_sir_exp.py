@@ -1,6 +1,6 @@
 import os
 import pylab as pl
-# import matplotlib.pyplot as pl
+import matplotlib.pyplot as pl
 import torch
 import datetime
 import numpy as np
@@ -11,7 +11,7 @@ from torch_euler import Heun, euler, RK4
 from utils.data_utils import select_data
 from utils.visualization_utils import generic_plot, Curve, format_xtick, generic_sub_plot, Plot
 from torch.utils.tensorboard import SummaryWriter
-from populations import population
+from populations import populations
 
 
 def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a, n_epochs, name, train_size, val_len, der_1st_reg, der_2nd_reg, use_alpha, y_loss_weight, t_inc, exp_prefix, integrator, m, a, b):
@@ -99,17 +99,17 @@ def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a,
         y_hat_train, y_hat_val, y_hat_test = y_hat[train_slice], y_hat[val_slice], y_hat[test_slice]
         y_hat_dataset = y_hat[dataset_slice]
 
-        train_risk, train_w_risk, train_y_risk, _ = sir.loss(w_hat_train, w_target[dy_params["t_start"]:train_size],
-                                                             y_hat_train, y_target[dy_params["t_start"]:train_size])
+        train_risk, train_w_risk, train_y_risk, _ = sir.losses(w_hat_train, w_target[dy_params["t_start"]:train_size],
+                                                               y_hat_train, y_target[dy_params["t_start"]:train_size])
 
-        validation_risk, validation_w_risk, validation_y_risk, _ = sir.loss(w_hat_val, w_target[dy_params["t_end"]:val_size],
-                                                                            y_hat_val, y_target[dy_params["t_end"]:val_size])
+        validation_risk, validation_w_risk, validation_y_risk, _ = sir.losses(w_hat_val, w_target[dy_params["t_end"]:val_size],
+                                                                              y_hat_val, y_target[dy_params["t_end"]:val_size])
 
-        test_risk, test_w_risk, test_y_risk, _ = sir.loss(w_hat_test, w_target[val_size:dataset_size],
-                                                          y_hat_test, y_target[val_size:dataset_size])
+        test_risk, test_w_risk, test_y_risk, _ = sir.losses(w_hat_test, w_target[val_size:dataset_size],
+                                                            y_hat_test, y_target[val_size:dataset_size])
 
-        dataset_risk, _, _, _ = sir.loss(w_hat_dataset, w_target[dy_params["t_start"]:dataset_size],
-                                         y_hat_dataset, y_target[dy_params["t_start"]:dataset_size])
+        dataset_risk, _, _, _ = sir.losses(w_hat_dataset, w_target[dy_params["t_start"]:dataset_size],
+                                           y_hat_dataset, y_target[dy_params["t_start"]:dataset_size])
 
         log_file = os.path.join(exp_path, exp_prefix + "sir_" + area[0] + "_results.txt")
         with open(log_file, "w") as f:
@@ -338,9 +338,9 @@ if __name__ == "__main__":
 
         proc = mp.Process(target=exp,
                        args=(
-                       region, population[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, n_epochs, region,
-                       train_size, val_len, derivative_reg, der_2nd_reg, use_alpha, y_loss_w, t_inc, exp_prefix,
-                       integrator, m, a, b))
+                           region, populations[region], beta_t, gamma_t, delta_t, lr_b, lr_g, lr_d, lr_a, n_epochs, region,
+                           train_size, val_len, derivative_reg, der_2nd_reg, use_alpha, y_loss_w, t_inc, exp_prefix,
+                           integrator, m, a, b))
 
         proc.start()
         procs.append(proc)
