@@ -1,5 +1,5 @@
 from typing import List
-
+import os
 import skopt
 
 from populations import populations
@@ -7,25 +7,44 @@ from sidarthe_exp import exp
 from torch_euler import Heun
 
 if __name__ == '__main__':
-    n_epochs = 8000
+    n_epochs = 4000
     region = "Italy"
+    # params = {
+    #     "alpha": [0.570] * 4 + [0.422] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210],
+    #     "beta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 17,
+    #     "gamma": [0.456] * 4 + [0.285] * 18 + [0.2] * 6 + [0.11] * 10 + [0.11],
+    #     "delta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 17,
+    #     "epsilon": [0.171] * 12 + [0.143] * 26 + [0.2],
+    #     "theta": [0.371],
+    #     "zeta": [0.125] * 22 + [0.034] * 16 + [0.025],
+    #     "eta": [0.125] * 22 + [0.034] * 16 + [0.025],
+    #     "mu": [0.017] * 22 + [0.008] * 17,
+    #     "nu": [0.027] * 22 + [0.015] * 17,
+    #     "tau": [0.01],
+    #     "lambda": [0.034] * 22 + [0.08] * 17,
+    #     "kappa": [0.017] * 22 + [0.017] * 16 + [0.02],
+    #     "xi": [0.017] * 22 + [0.017] * 16 + [0.02],
+    #     "rho": [0.034] * 22 + [0.017] * 16 + [0.02],
+    #     "sigma": [0.017] * 22 + [0.017] * 16 + [0.01]
+    # }
+
     params = {
-        "alpha": [0.570] * 4 + [0.422] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210],
-        "beta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 17,
-        "gamma": [0.456] * 4 + [0.285] * 18 + [0.2] * 6 + [0.11] * 10 + [0.11],
-        "delta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 17,
-        "epsilon": [0.171] * 12 + [0.143] * 26 + [0.2],
+        "alpha": [0.570] * 39,
+        "beta": [0.011] * 39,
+        "gamma": [0.456] * 39,
+        "delta": [0.011] * 39,
+        "epsilon": [0.171] * 39,
         "theta": [0.371],
-        "zeta": [0.125] * 22 + [0.034] * 16 + [0.025],
-        "eta": [0.125] * 22 + [0.034] * 16 + [0.025],
-        "mu": [0.017] * 22 + [0.008] * 17,
-        "nu": [0.027] * 22 + [0.015] * 17,
+        "zeta": [0.125] * 39,
+        "eta": [0.125] * 39,
+        "mu": [0.017] * 39,
+        "nu": [0.027] * 39,
         "tau": [0.01],
-        "lambda": [0.034] * 22 + [0.08] * 17,
-        "kappa": [0.017] * 22 + [0.017] * 16 + [0.02],
-        "xi": [0.017] * 22 + [0.017] * 16 + [0.02],
-        "rho": [0.034] * 22 + [0.017] * 16 + [0.02],
-        "sigma": [0.017] * 22 + [0.017] * 16 + [0.01]
+        "lambda": [0.034] * 39,
+        "kappa": [0.017] * 39,
+        "xi": [0.017] * 39,
+        "rho": [0.034] * 39,
+        "sigma": [0.017] * 39
     }
 
     learning_rates = {
@@ -56,13 +75,13 @@ if __name__ == '__main__':
     loss_type = "rmse"
 
     SPACE = [
-        skopt.space.Real(1e-1, 1e5, name="der_1st_reg", prior="log-uniform"),
+        skopt.space.Real(1e-1, 1e4, name="der_1st_reg", prior="log-uniform"),
         skopt.space.Real(0.05, 0.8, name="m", prior="uniform"),
         skopt.space.Real(0.01, 0.2, name="a", prior="uniform"),
-        skopt.space.Real(1., 15., name="d_w", prior="uniform"),
-        skopt.space.Real(1., 15., name="r_w", prior="uniform"),
-        skopt.space.Real(1., 15., name="t_w", prior="uniform"),
-        skopt.space.Real(1., 15., name="h_w", prior="uniform"),
+        skopt.space.Real(1e-1, 1e1, name="d_w", prior="uniform"),
+        skopt.space.Real(1e-1, 1e1, name="r_w", prior="uniform"),
+        skopt.space.Real(1e-1, 1e1, name="t_w", prior="uniform"),
+        skopt.space.Real(1e-1, 1e1, name="h_w", prior="uniform"),
         skopt.space.Categorical([True, False], name="momentum")
     ]
 
@@ -92,6 +111,19 @@ if __name__ == '__main__':
         results_dict[exp_result[1]] = exp_result
         return exp_result[2].item()
 
-    res_gp = skopt.gp_minimize(objective, SPACE, n_calls=100, n_jobs=-1)
+    x0, y0 = None, None
+    ckpt_folder = os.path.join(os.getcwd(), "bayesian_search_results")
+    if not os.path.exists(ckpt_folder):
+        os.mkdir(ckpt_folder)
+
+    ckpt_path = os.path.join(ckpt_folder, "results.pkl")
+    if os.path.exists(ckpt_path):
+        res_gp = skopt.load(ckpt_path)
+        x0 = res_gp["x_iters"]
+        y0 = res_gp["func_vals"]
+
+    res_gp = skopt.gp_minimize(objective, SPACE, n_calls=10, n_jobs=-1, x0=x0, y0=y0)
+    print(res_gp)
+    skopt.dump(res_gp, ckpt_path)
 
 
