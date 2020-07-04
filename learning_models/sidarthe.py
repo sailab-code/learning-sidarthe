@@ -219,18 +219,22 @@ class Sidarthe(AbstractModel):
 
     @staticmethod
     def __rmse_loss(target, hat):
+        mask = torch.ge(target, 0)
+
         return torch.sqrt(
             0.5 * torch.mean(
-                torch.pow(target - hat, 2)
+                torch.pow(target - hat, 2) * mask
             )
         )
 
     @staticmethod
     def __mape_loss(target, hat):
+        mask = torch.ge(target, 0)
+
         return torch.mean(
             torch.abs(
                 (target - hat) / target
-            )
+            ) * mask
         )
 
     @classmethod
@@ -272,7 +276,7 @@ class Sidarthe(AbstractModel):
 
         return self.bound_reg * torch.mean(bound_reg_total)
 
-    def losses(self, inferences, targets) -> Dict:
+    def losses(self, inferences, targets, mask=None) -> Dict:
 
         # this function converts target values to torch.tensor with specified dtype
         def to_torch_float(target):
