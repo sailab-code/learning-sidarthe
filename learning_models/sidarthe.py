@@ -276,7 +276,7 @@ class Sidarthe(AbstractModel):
 
         return self.bound_reg * torch.mean(bound_reg_total)
 
-    def losses(self, inferences, targets, mask=None) -> Dict:
+    def losses(self, inferences, targets) -> Dict:
 
         # this function converts target values to torch.tensor with specified dtype
         def to_torch_float(target):
