@@ -26,8 +26,8 @@ verbose = False
 normalize = False
 
 if __name__ == "__main__":
-    n_epochs = 8000
-    region = "Italy"
+    n_epochs = 4000
+    region = "UK"
     params = {
         "alpha": [0.570] * 4 + [0.422] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210],
         "beta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 17,

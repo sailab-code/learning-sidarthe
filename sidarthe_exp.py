@@ -75,14 +75,19 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
     # extract targets from csv
 
     # if we specify Italy as region, we use national data
-    if region != "Italy":
-        df_file = os.path.join(os.getcwd(), "COVID-19", "dati-regioni", "dpc-covid19-ita-regioni.csv")
-        area = [region]
-        area_col_name = "denominazione_regione"  # "Country/Region"
-    else:
+    if region == "Italy":
         df_file = os.path.join(os.getcwd(), "COVID-19", "dati-andamento-nazionale", "dpc-covid19-ita-andamento-nazionale.csv")
         area = ["ITA"]
         area_col_name = "stato"  # "Country/Region"
+    elif region == "UK":
+        df_file = os.path.join(os.getcwd(),"dati-uk", "dpc-covid19-ita-andamento-nazionale.csv")
+        area = ["UK"]
+        area_col_name = "stato"  # "Country/Region"
+    else:
+        df_file = os.path.join(os.getcwd(), "COVID-19", "dati-regioni", "uk_data_filled.csv")
+        area = [region]
+        area_col_name = "denominazione_regione"  # "Country/Region"
+
 
     groupby_cols = ["data"]  # ["Date"]
 
@@ -358,8 +363,8 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
     return sidarthe, uuid, val_risks[sidarthe.val_loss_checked]
 
 if __name__ == "__main__":
-    n_epochs = 100
-    region = "Italy"
+    n_epochs = 4000
+    region = "UK"
     params = {
         "alpha": [0.570] * 4 + [0.422] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210],
         "beta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 17,
