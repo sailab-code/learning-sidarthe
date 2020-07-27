@@ -79,6 +79,14 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         df_file = os.path.join(os.getcwd(), "COVID-19", "dati-regioni", "dpc-covid19-ita-regioni.csv")
         area = [region]
         area_col_name = "denominazione_regione"  # "Country/Region"
+    elif region == "UK":
+        df_file = os.path.join(os.getcwd(),"dati-uk", "uk_data_filled.csv")
+        area = ["UK"]
+        area_col_name = "stato"  # "Country/Region"
+    elif region == "FR":
+        df_file = os.path.join(os.getcwd(),"dati-fr", "fr_data.csv")
+        area = ["FR"]
+        area_col_name = "stato"  # "Country/Region"
     else:
         df_file = os.path.join(os.getcwd(), "COVID-19", "dati-andamento-nazionale", "dpc-covid19-ita-andamento-nazionale.csv")
         area = ["ITA"]
