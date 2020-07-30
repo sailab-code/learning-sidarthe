@@ -44,6 +44,14 @@ def format_xtick(n, v):
     return (START_DATE + datetime.timedelta(int(n))).strftime("%d %b")  # e.g. "24 Feb", "25 Feb", ...
 
 
+def generate_format_xtick(start_date):
+    start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+    def custom_xtick(n,v):
+        return (start_date + datetime.timedelta(int(n))).strftime("%d %b")
+
+    return custom_xtick
+
+
 def plot_sir_dynamic(s, i, r, region, save_path):
     """
     Plot SIR Dynamic
@@ -118,6 +126,8 @@ def generic_plot(xy_curves, title, save_path, x_label=None, y_label=None, format
         else:
             ax.plot(curve.x, curve.y, curve.style, label=curve.label)
     if formatter is not None:
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(formatter))
+    else:
         ax.xaxis.set_major_formatter(plt.FuncFormatter(format_xtick))
 
     ax.xaxis.set_major_locator(MultipleLocator(grid_spacing))

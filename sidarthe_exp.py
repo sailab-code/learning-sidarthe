@@ -27,7 +27,7 @@ normalize = False
 
 def exp(region, population, initial_params, learning_rates, n_epochs, region_name,
         train_size, val_len, loss_weights, der_1st_reg, bound_reg, time_step, integrator,
-        momentum, m, a, loss_type):
+        momentum, m, a, loss_type, references):
     # region directory creation
     # creating folders, if necessary
     base_path = os.path.join(os.getcwd(), "regioni")
@@ -54,7 +54,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
     # endregion
 
     # tensorboard summary
-    summary = SummaryWriter(f"runs/{model_name}/{uuid}")
+    summary = SummaryWriter(f"runs_test/{region}/{model_name}/{uuid}")
     exp_prefix = get_exp_prefix(region, initial_params, learning_rates, train_size,
                                 val_len, der_1st_reg, time_step, momentum, m, a, loss_type, integrator)
 
@@ -80,14 +80,17 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         area = ["ITA"]
         area_col_name = "stato"  # "Country/Region"
     elif region == "UK":
-        df_file = os.path.join(os.getcwd(),"dati-uk", "dpc-covid19-ita-andamento-nazionale.csv")
+        df_file = os.path.join(os.getcwd(),"dati-uk", "uk_data_filled.csv")
         area = ["UK"]
         area_col_name = "stato"  # "Country/Region"
+    elif region == "FR":
+        df_file = os.path.join(os.getcwd(),"dati-fr", "fr_data_processed.csv")
+        area = ["FR"]
+        area_col_name = "stato"  # "Country/Region"
     else:
-        df_file = os.path.join(os.getcwd(), "COVID-19", "dati-regioni", "uk_data_filled.csv")
+        df_file = os.path.join(os.getcwd(), "COVID-19", "dati-regioni", "dpc-covid19-ita-regioni.csv")
         area = [region]
         area_col_name = "denominazione_regione"  # "Country/Region"
-
 
     groupby_cols = ["data"]  # ["Date"]
 
@@ -97,27 +100,32 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
     h_detected_col_name = "dimessi_guariti"
     e_col_name = "deceduti"  # "Fatalities"
 
-    x_target, d_target = select_data(df_file, area, area_col_name, d_col_name, groupby_cols, file_sep=",")
-    _, y_target = select_data(df_file, area, area_col_name, "totale_positivi", groupby_cols, file_sep=",")
-    _, r_target = select_data(df_file, area, area_col_name, r_col_name, groupby_cols, file_sep=",")
-    _, t_target = select_data(df_file, area, area_col_name, t_col_name, groupby_cols, file_sep=",")
-    _, h_detected_target = select_data(df_file, area, area_col_name, h_detected_col_name, groupby_cols, file_sep=",")
-    _, e_target = select_data(df_file, area, area_col_name, e_col_name, groupby_cols, file_sep=",")
+    x_target, d_target, dates = select_data(df_file, area, area_col_name, d_col_name, groupby_cols, file_sep=",")
+    _, y_target, _ = select_data(df_file, area, area_col_name, "totale_positivi", groupby_cols, file_sep=",")
+    _, r_target, _ = select_data(df_file, area, area_col_name, r_col_name, groupby_cols, file_sep=",")
+    _, t_target, _ = select_data(df_file, area, area_col_name, t_col_name, groupby_cols, file_sep=",")
+    _, h_detected_target, _ = select_data(df_file, area, area_col_name, h_detected_col_name, groupby_cols, file_sep=",")
+    _, e_target, _ = select_data(df_file, area, area_col_name, e_col_name, groupby_cols, file_sep=",")
 
     initial_len = len(y_target)
     tmp_d, tmp_r, tmp_t, tmp_h, tmp_e = [], [], [], [], []
+    first_date = None
     for i in range(initial_len):
         if y_target[i] > 0:
-            tmp_d.append(d_target[i])
-            tmp_r.append(r_target[i])
-            tmp_t.append(t_target[i])
-            tmp_h.append(h_detected_target[i])
-            tmp_e.append(e_target[i])
+            tmp_d = d_target[i:]
+            tmp_r = r_target[i:]
+            tmp_t = t_target[i:]
+            tmp_h = h_detected_target[i:]
+            tmp_e = e_target[i:]
+            first_date = dates[i]
+            break
+
     d_target = tmp_d
     r_target = tmp_r
     t_target = tmp_t
     h_detected_target = tmp_h
     e_target = tmp_e
+
 
     targets = {
         "d": d_target,
@@ -129,22 +137,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
 
     # endregion
 
-    # region extract reference
 
-    # extract from csv with nature reference data
-
-    references = {}
-    ref_df = pd.read_csv(os.path.join(os.getcwd(), "nature_results.csv"))
-    for key in 'sidarthe':
-        references[key] = ref_df[key].tolist()
-
-    for key in ["r0", "h_detected"]:
-        references[key] = ref_df[key].tolist()
-
-    for key in initial_params.keys():
-        references[key] = ref_df[key].tolist()
-
-    # endregion
 
     model_params = {
         "der_1st_reg": der_1st_reg,
@@ -158,6 +151,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         "train_size": train_size,
         "targets": targets,
         "references": references,
+        "first_date": first_date,
         **loss_weights
     }
 
@@ -354,7 +348,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
 
             tot_curves = train_curves + val_curves + test_curves + [reference_curve]
             pl_title = f"{key.upper()} - train/validation/test/reference"
-            fig = generic_plot(tot_curves, pl_title, None, formatter=format_xtick)
+            fig = generic_plot(tot_curves, pl_title, None, formatter=sidarthe.format_xtick)
             summary.add_figure(f"final/{key}_global", fig)
 
         # endregion
@@ -362,26 +356,27 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
     summary.flush()
     return sidarthe, uuid, val_risks[sidarthe.val_loss_checked]
 
+
 if __name__ == "__main__":
-    n_epochs = 4000
-    region = "UK"
+    n_epochs = 8000
+    region = "FR"
     params = {
-        "alpha": [0.570] * 4 + [0.422] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210],
-        "beta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 17,
-        "gamma": [0.456] * 4 + [0.285] * 18 + [0.2] * 6 + [0.11] * 10 + [0.11],
-        "delta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 17,
-        "epsilon": [0.171] * 12 + [0.143] * 26 + [0.2],
+        "alpha": [0.570] * 40,
+        "beta": [0.011] * 40,
+        "gamma": [0.456] * 40,
+        "delta": [0.011] * 40,
+        "epsilon": [0.171] * 40,
         "theta": [0.371],
-        "zeta": [0.125] * 22 + [0.034] * 16 + [0.025],
-        "eta": [0.125] * 22 + [0.034] * 16 + [0.025],
-        "mu": [0.017] * 22 + [0.008] * 17,
-        "nu": [0.027] * 22 + [0.015] * 17,
+        "zeta": [0.125] * 40,
+        "eta": [0.125] * 40,
+        "mu": [0.017] * 40,
+        "nu": [0.027] * 40,
         "tau": [0.01],
-        "lambda": [0.034] * 22 + [0.08] * 17,
-        "kappa": [0.017] * 22 + [0.017] * 16 + [0.02],
-        "xi": [0.017] * 22 + [0.017] * 16 + [0.02],
-        "rho": [0.034] * 22 + [0.017] * 16 + [0.02],
-        "sigma": [0.017] * 22 + [0.017] * 16 + [0.01]
+        "lambda": [0.034] * 40,
+        "kappa": [0.017] * 40,
+        "xi": [0.017] * 40,
+        "rho": [0.034] * 40,
+        "sigma": [0.017] * 40
     }
 
     learning_rates = {
@@ -404,14 +399,14 @@ if __name__ == "__main__":
     }
 
     loss_weights = {
-        "d_weight": 1.,
+        "d_weight": 0.,
         "r_weight": 12.5,
         "t_weight": 5.,
         "h_weight": 1.,
         "e_weight": 0.,
     }
 
-    train_size = 46
+    train_size = 70
     val_len = 20
     der_1st_reg = 31000.0
     der_2nd_reg = 0.
@@ -426,6 +421,6 @@ if __name__ == "__main__":
     print(region)
 
     exp(region, populations[region], params,
-                        learning_rates, n_epochs, region, train_size, val_len,
-                        loss_weights, der_1st_reg, bound_reg, t_inc, integrator,
-                        momentum, m, a, loss_type)
+                            learning_rates, n_epochs, region, train_size, val_len,
+                            loss_weights, der_1st_reg, bound_reg, t_inc, integrator,
+                            momentum, m, a, loss_type, None)

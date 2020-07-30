@@ -66,6 +66,22 @@ if __name__ == "__main__":
         "sigma": 1e-5
     }
 
+    # region extract reference
+
+    # extract from csv with nature reference data
+
+    references = {}
+    ref_df = pd.read_csv(os.path.join(os.getcwd(), "nature_results.csv"))
+    for key in 'sidarthe':
+        references[key] = ref_df[key].tolist()
+
+    for key in ["r0", "h_detected"]:
+        references[key] = ref_df[key].tolist()
+
+    for key in params.keys():
+        references[key] = ref_df[key].tolist()
+
+    # endregion
 
     train_size = 46
     val_len = 20
@@ -101,7 +117,7 @@ if __name__ == "__main__":
                           args=(region, populations[region], params,
                             learning_rates, n_epochs, region, train_size, val_len,
                             loss_weights, der_1st_reg, bound_reg, t_inc, integrator,
-                            momentum, m, a, loss_type)
+                            momentum, m, a, loss_type, references)
                           )
 
         proc.start()
