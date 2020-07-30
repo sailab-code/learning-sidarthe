@@ -10,7 +10,7 @@ from learning_models.abstract_model import AbstractModel
 from learning_models.new_sir_optimizer import NewSirOptimizer
 from torch.optim import Adam
 from utils import derivatives
-from utils.visualization_utils import Curve, generic_plot, format_xtick
+from utils.visualization_utils import Curve, generic_plot, format_xtick, generate_format_xtick
 
 
 class Sidarthe(AbstractModel):
@@ -36,6 +36,12 @@ class Sidarthe(AbstractModel):
         self.targets = kwargs.get("targets", None)
         self.train_size = kwargs.get("train_size", None)
         self.val_size = kwargs.get("val_size", None)
+        self.first_date = kwargs.get("first_date", None)
+
+        if self.first_date is None:
+            self.format_xtick = format_xtick
+        else:
+            self.format_xtick = generate_format_xtick(self.first_date)
 
     @property
     def params(self) -> Dict:
@@ -223,7 +229,7 @@ class Sidarthe(AbstractModel):
 
         return torch.sqrt(
             0.5 * torch.mean(
-                torch.pow(target - hat, 2) * mask
+                torch.pow(target[mask] - hat[mask], 2)
             )
         )
 
@@ -233,8 +239,8 @@ class Sidarthe(AbstractModel):
 
         return torch.mean(
             torch.abs(
-                (target - hat) / target
-            ) * mask
+                (target[mask] - hat[mask]) / target
+            )
         )
 
     @classmethod
@@ -421,6 +427,7 @@ class Sidarthe(AbstractModel):
         targets = model_params.get("targets", None)
         train_size = model_params.get("train_size", None)
         val_size = model_params.get("val_size", None)
+        first_date = model_params.get("first_date", None)
 
         return Sidarthe(initial_params, population, initial_conditions, integrator, time_step,
                         d_weight=d_weight,
@@ -435,7 +442,8 @@ class Sidarthe(AbstractModel):
                         references=references,
                         targets=targets,
                         train_size=train_size,
-                        val_size=val_size
+                        val_size=val_size,
+                        first_date=first_date
                         )
 
     @classmethod
@@ -504,7 +512,7 @@ class Sidarthe(AbstractModel):
             if self.references is not None:
                 ref_curve = Curve(pl_x, self.references[key][:n_days], "--", f"$\\{key}$ reference", color=None)
                 curves.append(ref_curve)
-            plot = generic_plot(curves, pl_title, None, formatter=format_xtick)
+            plot = generic_plot(curves, pl_title, None, formatter=self.format_xtick)
             param_plots.append((plot, pl_title))
         return param_plots
 
@@ -530,11 +538,12 @@ class Sidarthe(AbstractModel):
     def plot_fits(self):
         fit_plots = []
         with torch.no_grad():
-            t_grid = torch.linspace(0, 100, 101)
-            inferences = self.inference(t_grid)
-            norm_inferences = self.normalize_values(inferences, self.population)
+
             targets = self.targets
             dataset_size = len(self.targets["d"])
+            t_grid = torch.linspace(0, dataset_size, dataset_size+1)
+            inferences = self.inference(t_grid)
+            norm_inferences = self.normalize_values(inferences, self.population)
 
             t_inc = self.time_step
             train_size = self.train_size
@@ -600,7 +609,7 @@ class Sidarthe(AbstractModel):
                     tot_curves = tot_curves + [reference_curve]
 
                 pl_title = f"{key.upper()} - train/validation/test/reference"
-                fig = generic_plot(tot_curves, pl_title, None, formatter=format_xtick)
+                fig = generic_plot(tot_curves, pl_title, None, formatter=self.format_xtick)
                 pl_title = f"Estimated {key.upper()} on fit"
                 fit_plots.append((fig, pl_title))
 
@@ -617,7 +626,7 @@ class Sidarthe(AbstractModel):
             curves.append(ref_curve)
 
         pl_title = f"Estimated R0"
-        plot = generic_plot(curves, pl_title, None, formatter=format_xtick)
+        plot = generic_plot(curves, pl_title, None, formatter=self.format_xtick)
         return (plot, pl_title)
 
     def print_params(self):

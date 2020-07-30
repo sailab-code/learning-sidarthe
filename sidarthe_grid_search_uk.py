@@ -27,24 +27,24 @@ normalize = False
 
 if __name__ == "__main__":
     n_epochs = 8000
-    region = "Italy"
+    region = "UK"
     params = {
-        "alpha": [0.570] * 4 + [0.422] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210],
-        "beta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 17,
-        "gamma": [0.456] * 4 + [0.285] * 18 + [0.2] * 6 + [0.11] * 10 + [0.11],
-        "delta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 17,
-        "epsilon": [0.171] * 12 + [0.143] * 26 + [0.2],
+        "alpha": [0.570] * 40,
+        "beta": [0.011] * 40,
+        "gamma": [0.456] * 40,
+        "delta": [0.011] * 40,
+        "epsilon": [0.171] * 40,
         "theta": [0.371],
-        "zeta": [0.125] * 22 + [0.034] * 16 + [0.025],
-        "eta": [0.125] * 22 + [0.034] * 16 + [0.025],
-        "mu": [0.017] * 22 + [0.008] * 17,
-        "nu": [0.027] * 22 + [0.015] * 17,
+        "zeta": [0.125] * 40,
+        "eta": [0.125] * 40,
+        "mu": [0.017] * 40,
+        "nu": [0.027] * 40,
         "tau": [0.01],
-        "lambda": [0.034] * 22 + [0.08] * 17,
-        "kappa": [0.017] * 22 + [0.017] * 16 + [0.02],
-        "xi": [0.017] * 22 + [0.017] * 16 + [0.02],
-        "rho": [0.034] * 22 + [0.017] * 16 + [0.02],
-        "sigma": [0.017] * 22 + [0.017] * 16 + [0.01]
+        "lambda": [0.034] * 40,
+        "kappa": [0.017] * 40,
+        "xi": [0.017] * 40,
+        "rho": [0.034] * 40,
+        "sigma": [0.017] * 40
     }
 
     learning_rates = {
@@ -66,22 +66,6 @@ if __name__ == "__main__":
         "sigma": 1e-5
     }
 
-    # region extract reference
-
-    # extract from csv with nature reference data
-
-    references = {}
-    ref_df = pd.read_csv(os.path.join(os.getcwd(), "nature_results.csv"))
-    for key in 'sidarthe':
-        references[key] = ref_df[key].tolist()
-
-    for key in ["r0", "h_detected"]:
-        references[key] = ref_df[key].tolist()
-
-    for key in params.keys():
-        references[key] = ref_df[key].tolist()
-
-    # endregion
 
     train_size = 46
     val_len = 20
@@ -117,7 +101,7 @@ if __name__ == "__main__":
                           args=(region, populations[region], params,
                             learning_rates, n_epochs, region, train_size, val_len,
                             loss_weights, der_1st_reg, bound_reg, t_inc, integrator,
-                            momentum, m, a, loss_type, references)
+                            momentum, m, a, loss_type, None)
                           )
 
         proc.start()
