@@ -187,7 +187,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         val_size = min(train_size + val_len,
                        len(x_target) - 5)
 
-        t_grid = torch.linspace(0, 100, int(100 / time_step) + 1)
+        t_grid = torch.linspace(0, dataset_size, int(dataset_size / time_step) + 1)
 
         inferences = sidarthe.inference(t_grid)
         if normalize:
@@ -325,8 +325,6 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
                 curr_hat_val = hat_val[key]
                 curr_hat_test = hat_test[key]
 
-            # get reference in range of interest
-            ref_y = references[key][dataset_target_slice]
 
             if key in targets:
                 # plot inf and target
@@ -344,9 +342,14 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
             val_curves = get_curves(val_range, curr_hat_val, target_val, key, 'b')
             test_curves = get_curves(test_range, curr_hat_test, target_test, key, 'g')
 
-            reference_curve = Curve(dataset_range, ref_y, "--", label="Reference (Nature)")
+            tot_curves = train_curves + val_curves + test_curves
 
-            tot_curves = train_curves + val_curves + test_curves + [reference_curve]
+            # get reference in range of interest
+            if references is not None:
+                ref_y = references[key][dataset_target_slice]
+                reference_curve = Curve(dataset_range, ref_y, "--", label="Reference (Nature)")
+                tot_curves = tot_curves + [reference_curve]
+
             pl_title = f"{key.upper()} - train/validation/test/reference"
             fig = generic_plot(tot_curves, pl_title, None, formatter=sidarthe.format_xtick)
             summary.add_figure(f"final/{key}_global", fig)
