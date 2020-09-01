@@ -519,8 +519,9 @@ class Sidarthe(AbstractModel):
             curves = [param_curve]
 
             if self.references is not None:
-                ref_curve = Curve(pl_x, self.references[key][:n_days], "--", f"$\\{key}$ reference", color=None)
-                curves.append(ref_curve)
+                if key in self.references:
+                    ref_curve = Curve(pl_x, self.references[key][:n_days], "--", f"$\\{key}$ reference", color=None)
+                    curves.append(ref_curve)
             plot = generic_plot(curves, pl_title, None, formatter=self.format_xtick)
             param_plots.append((plot, pl_title))
         return param_plots
