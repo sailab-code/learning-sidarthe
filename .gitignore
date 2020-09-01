@@ -3,6 +3,7 @@ __pycache__/
 material-dashboard-react-master
 regioni/
 COVID-19/
+COVID-19-raw/
 .DS_Store
 runs*/
 runs.old*/
@@ -13,3 +14,10 @@ dati-regioni/
 .ipynb_checkpoints/
 .vscode/
 runs.1/
+SIDARTHE_Code/
+*.zip
+
+regioni_sidarthe.2/
+sidarthe_constant_75/
+uk_runs/
+

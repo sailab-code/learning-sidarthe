@@ -16,7 +16,7 @@ from populations import populations
 
 def exp(region, population, beta_t0, gamma_t0, delta_t0, lr_b, lr_g, lr_d, lr_a, n_epochs, name, train_size, val_len, der_1st_reg, der_2nd_reg, use_alpha, y_loss_weight, t_inc, exp_prefix, integrator, m, a, b):
 
-    df_file = os.path.join(os.getcwd(), "COVID-19", "dati-regioni", "dpc-covid19-ita-regioni.csv")
+    df_file = os.path.join(os.getcwd(), "dati-regioni", "dpc-covid19-ita-regioni.csv")
     # df_file = os.path.join(os.getcwd(), "train.csv")
     area = [region]  # list(df["denominazione_regione"].unique())
     area_col_name = "denominazione_regione"  # "Country/Region"
@@ -285,14 +285,20 @@ if __name__ == "__main__":
     # Veneto b0.8_g0.35_d0.015_lrb0.05_lrg0.01_lrd0.0005_ts40_st_der1000.0_nd_der0.0
     # Lombardia b0.81_g0.2_d0.02_lrb0.05_lrg0.01_lrd1e-05_ts40_st_der1000.0_nd_der10000.0
     # Emilia-Romagna b0.8_g0.35_d0.015_lrb0.05_lrg0.01_lrd5e-05_ts40_st_der1000.0_nd_der0.0
-    regions = [
-        "P.A. Bolzano",
-        "P.A. Trento",
-        "Valle d'Aosta",
-        "Sicilia",
-        "Sardegna",
-        "Abruzzo"
-    ]  # ["Lombardia", "Emilia-Romagna", "Veneto", "Piemonte",  "Toscana", "Umbria", "Lazio", "Marche", "Campania","Puglia", "Liguria"]
+    # regions = [
+    #     "P.A. Bolzano",
+    #     "P.A. Trento",
+    #     "Valle d'Aosta",
+    #     "Sicilia",
+    #     "Sardegna",
+    #     "Abruzzo",
+    #     "Lazio",
+    #     "Marche",
+    #     "Campania",
+    #     "Puglia",
+    #     "Liguria"
+    # ]
+    regions = ["Lombardia", "Emilia-Romagna", "Veneto", "Piemonte",  "Toscana", "Umbria", "Calabria", "Molise", "Friuli Venezia Giulia", "Basilicata"]
 
     """beta_ts, gamma_ts, delta_ts = [0.8, 0.75, 0.6], [0.3, 0.25], [0.01, 0.008, 0.0125, 0.02]
     lr_bs, lr_gs, lr_ds, lr_as = [1e-4], [1e-5], [3e-6], [1e-3]
@@ -339,8 +345,9 @@ if __name__ == "__main__":
         proc.start()
         procs.append(proc)
 
-        # run 6 exps at a time
-        if len(procs) == 6:
+        # run 16 exps at a time
+        if len(procs) == 8:
+
             for proc in procs:
                 proc.join()
             procs.clear()

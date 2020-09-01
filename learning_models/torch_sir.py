@@ -133,9 +133,10 @@ class SirEq:
         return torch.tensor(1.0)
 
     def mape(self, w_hat, w_target):
+        #actually this is wape
         if isinstance(w_target, numpy.ndarray) or isinstance(w_target, list):
             w_target = torch.tensor(w_target, dtype=w_hat.dtype)
-        return torch.mean(torch.abs((w_hat - w_target) / w_target))
+        return torch.sum(torch.abs((w_hat - w_target) / torch.mean(w_target)))
 
     def __first_derivative_loss(self, parameter):
         if parameter.shape[0] < 3: # must have at least 3 values to properly compute first derivative

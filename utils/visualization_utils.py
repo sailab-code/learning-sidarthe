@@ -44,6 +44,31 @@ def format_xtick(n, v):
     return (START_DATE + datetime.timedelta(int(n))).strftime("%d %b")  # e.g. "24 Feb", "25 Feb", ...
 
 
+date_formats = [
+    "%Y-%m-%d",
+    "%Y-%m-%dT%H:%M:%S"
+]
+
+
+def parse_date(date):
+    for date_format in date_formats:
+        try:
+            return datetime.datetime.strptime(date, date_format)
+        except ValueError:
+            continue
+
+    raise ValueError("No date formats were able to parse date")
+
+
+def generate_format_xtick(start_date):
+    start_date = parse_date(start_date)
+
+    def custom_xtick(n,v):
+        return (start_date + datetime.timedelta(int(n))).strftime("%d %b")
+
+    return custom_xtick
+
+
 def plot_sir_dynamic(s, i, r, region, save_path):
     """
     Plot SIR Dynamic
@@ -95,7 +120,7 @@ def plot_sir_dynamic(s, i, r, region, save_path):
     plt.close('all')
 
 
-def generic_plot(xy_curves, title, save_path, x_label=None, y_label=None, formatter=None, use_legend=True, use_grid=True, close=True, grid_spacing=20):
+def generic_plot(xy_curves, title, save_path, x_label=None, y_label=None, formatter=None, use_legend=True, use_grid=True, close=True, grid_spacing=20, yaxis_sci=False):
     """
 
     :param xy_curves:
@@ -118,6 +143,8 @@ def generic_plot(xy_curves, title, save_path, x_label=None, y_label=None, format
         else:
             ax.plot(curve.x, curve.y, curve.style, label=curve.label)
     if formatter is not None:
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(formatter))
+    else:
         ax.xaxis.set_major_formatter(plt.FuncFormatter(format_xtick))
 
     ax.xaxis.set_major_locator(MultipleLocator(grid_spacing))
@@ -132,13 +159,15 @@ def generic_plot(xy_curves, title, save_path, x_label=None, y_label=None, format
     if use_legend:
         ax.legend()
 
+    if yaxis_sci:
+        ax.ticklabel_format(axis='y', style='sci', scilimits=(0,0), useOffset=None)
+
     if save_path is not None:
         plt.savefig(save_path, bbox_inches='tight', transparent=True)
 
     if close:
         plt.close('all')
     return fig
-
 
 def generic_sub_plot(subplots, title, save_path):
     """
