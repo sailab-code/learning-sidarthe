@@ -29,29 +29,35 @@ if __name__ == "__main__":
     n_epochs = 8000
     region = "Italy"
     params = {
-        "alpha": [0.570] * 4 + [0.422] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210],
-        "beta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 17,
-        "gamma": [0.456] * 4 + [0.285] * 18 + [0.2] * 6 + [0.11] * 10 + [0.11],
-        "delta": [0.011] * 4 + [0.0057] * 18 + [0.005] * 17,
-        "epsilon": [0.171] * 12 + [0.143] * 26 + [0.2],
+        "alpha": [0.570] * 4 + [0.422] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210] * 44,
+        "beta": [0.011] * 4 + [0.0057] * 18 + [0.005] * (17 + 43),
+        "gamma": [0.456] * 4 + [0.285] * 18 + [0.2] * 6 + [0.11] * 10 + [0.11] * 44,
+        "delta": [0.011] * 4 + [0.0057] * 18 + [0.005] * (17 + 43),
+        "epsilon": [0.171] * 12 + [0.143] * 26 + [0.2] * 44,
         "theta": [0.371],
-        "zeta": [0.125] * 22 + [0.034] * 16 + [0.025],
-        "eta": [0.125] * 22 + [0.034] * 16 + [0.025],
-        "mu": [0.017] * 22 + [0.008] * 17,
-        "nu": [0.027] * 22 + [0.015] * 17,
+        "zeta": [0.125] * 22 + [0.034] * 16 + [0.025] * 44,
+        "eta": [0.125] * 22 + [0.034] * 16 + [0.025] * 44,
+        "mu": [0.017] * 22 + [0.008] * (17+43),
+        "nu": [0.027] * 22 + [0.015] * (17+43),
         "tau": [0.01],
-        "lambda": [0.034] * 22 + [0.08] * 17,
-        "kappa": [0.017] * 22 + [0.017] * 16 + [0.02],
-        "xi": [0.017] * 22 + [0.017] * 16 + [0.02],
-        "rho": [0.034] * 22 + [0.017] * 16 + [0.02],
-        "sigma": [0.017] * 22 + [0.017] * 16 + [0.01]
+        "lambda": [0.034] * 22 + [0.08] * (17+43),
+        "kappa": [0.017] * 22 + [0.017] * 16 + [0.02] * 44,
+        "xi": [0.017] * 22 + [0.017] * 16 + [0.02] * 44,
+        "rho": [0.034] * 22 + [0.017] * 16 + [0.02] * 44,
+        "sigma": [0.017] * 22 + [0.017] * 16 + [0.01] * 44
     }
+
+    sizes = {
+        key: len(value) for key, value in params.items()
+    }
+
+    print(sizes)
 
     learning_rates = {
         "alpha": 1e-5,
-        "beta": 1e-5,
+        "beta": 1e-6,
         "gamma": 1e-5,
-        "delta": 1e-5,
+        "delta": 1e-6,
         "epsilon": 1e-5,
         "theta": 1e-7,
         "xi": 1e-5,
@@ -71,7 +77,7 @@ if __name__ == "__main__":
     # extract from csv with nature reference data
 
     references = {}
-    ref_df = pd.read_csv(os.path.join(os.getcwd(), "nature_results.csv"))
+    ref_df = pd.read_csv(os.path.join(os.getcwd(), "regioni/sidarthe_results_new.csv"))
     for key in 'sidarthe':
         references[key] = ref_df[key].tolist()
 
@@ -83,41 +89,58 @@ if __name__ == "__main__":
 
     # endregion
 
-    train_size = 46
-    val_len = 20
-    der_1st_regs = [3e4, 3.1e4, 2.9e4] 
+    runs_directory = "runs_110_fit_e_2"
+    train_size = 110
+    val_len = 40
+    der_1st_regs = [4.1e4]
     der_2nd_reg = 0.
     t_inc = 1.
 
-    momentums = [True, False]
-    ms = [1/8]
-    ass = [0.04, 0.05]
+    momentums = [False, True]
+    ms = [1/8, 1/5, 1/2]
+    ass = [0.04, 0.05, 0.1]
 
     bound_reg = 1e4
 
     integrator = Heun
 
     loss_type = "rmse"
-    d_ws, r_ws, t_ws, h_ws = [1.0], [12.5, 10.0, 15.0], [4.0, 5.0, 6.0], [1.0]
-
+    d_ws, r_ws, t_ws, h_ws = [0.1], [0.1], [1.0], [0.1]
+    e_w = 5.0
+    no_momentum_done = False
     procs = []
     mp.set_start_method('spawn')
     for hyper_params in itertools.product(ms, ass, der_1st_regs, d_ws, r_ws, t_ws, h_ws, momentums):
         m, a, der_1st_reg, d_w, r_w, t_w, h_w, momentum = hyper_params
-        
+
+        #do momentum=False only once (TODO: remove this when doing grid on other params)
+        if momentum is False and no_momentum_done is True:
+            continue
+
+        if momentum is True:
+            no_momentum_done = True
+
         loss_weights = {
             "d_weight": d_w,
             "r_weight": r_w,
             "t_weight": t_w,
             "h_weight": h_w,
-            "e_weight": 0.,
+            "e_weight": e_w,
         }
+
+        """
+        exp(region, populations[region], params,
+                            learning_rates, n_epochs, region, train_size, val_len,
+                            loss_weights, der_1st_reg, bound_reg, t_inc, integrator,
+                            momentum, m, a, loss_type, references, runs_directory
+            )
+        """
 
         proc = mp.Process(target=exp,
                           args=(region, populations[region], params,
                             learning_rates, n_epochs, region, train_size, val_len,
                             loss_weights, der_1st_reg, bound_reg, t_inc, integrator,
-                            momentum, m, a, loss_type, references)
+                            momentum, m, a, loss_type, references, runs_directory)
                           )
 
         proc.start()
