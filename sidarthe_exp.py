@@ -364,7 +364,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
 if __name__ == "__main__":
     n_epochs = 8000
     region = "Italy"
-    runs_directory = "runs_110_test_chi"
+    runs_directory = "runs_110_test_nrmse"
     params = {
         "alpha": [0.570] * 4 + [0.422] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210] * 64,
         "beta": [0.011] * 4 + [0.0057] * 18 + [0.005] * (17 + 63),
@@ -432,7 +432,7 @@ if __name__ == "__main__":
     a = 0.1
     bound_reg = 1e5
     integrator = Heun
-    loss_type = "rmse"
+    loss_type = "nrmse"
     print(region)
 
     references = {}

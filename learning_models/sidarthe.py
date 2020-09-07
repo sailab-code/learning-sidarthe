@@ -246,6 +246,28 @@ class Sidarthe(AbstractModel):
         )
 
     @staticmethod
+    def __norm_rmse_loss(target, hat):
+        mask = torch.ge(target, 0)
+
+        # normalize values using z-score
+        # mean = torch.mean(target)
+        # std = torch.std(target)
+        # norm_target = (target - mean) / std
+        # norm_hat = (hat - mean) / std
+
+        # normalize values using minmax
+        min = torch.min(target)
+        max = torch.max(target)
+        norm_target = (target - min) / (max - min)
+        norm_hat = (hat - min) / (max - min)
+
+        return torch.sqrt(
+            0.5 * torch.mean(
+                torch.pow(norm_target[mask] - norm_hat[mask], 2)
+            )
+        )
+
+    @staticmethod
     def __mape_loss(target, hat):
         mask = torch.ge(target, 0)
 
@@ -305,26 +327,29 @@ class Sidarthe(AbstractModel):
         # uses to_torch_float to convert given targets
         targets = {key: to_torch_float(value) for key, value in targets.items()}
 
-        d_rmse_loss = self.__rmse_loss(targets["d"], inferences["d"])
-        r_rmse_loss = self.__rmse_loss(targets["r"], inferences["r"])
-        t_rmse_loss = self.__rmse_loss(targets["t"], inferences["t"])
-        h_rmse_loss = self.__rmse_loss(targets["h_detected"], inferences["h_detected"])
-        e_rmse_loss = self.__rmse_loss(targets["e"], inferences["e"])
+        def compute_total_loss(loss_function, weighted=True):
+            d_loss = loss_function(targets["d"], inferences["d"])
+            r_loss = loss_function(targets["r"], inferences["r"])
+            t_loss = loss_function(targets["t"], inferences["t"])
+            h_loss = loss_function(targets["h_detected"], inferences["h_detected"])
+            e_loss = loss_function(targets["e"], inferences["e"])
 
-        d_mape_loss = self.__mape_loss(targets["d"], inferences["d"])
-        r_mape_loss = self.__mape_loss(targets["r"], inferences["r"])
-        t_mape_loss = self.__mape_loss(targets["t"], inferences["t"])
-        h_mape_loss = self.__mape_loss(targets["h_detected"], inferences["h_detected"])
-        e_mape_loss = self.__mape_loss(targets["e"], inferences["e"])
+            if weighted:
+                total_loss = self.d_weight * d_loss + self.r_weight * r_loss + self.t_weight * t_loss \
+                     + self.h_weight * h_loss + self.e_weight * e_loss
+            else:
+                total_loss = d_loss + r_loss + t_loss + h_loss + e_loss
 
-        total_rmse = self.d_weight * d_rmse_loss + self.r_weight * r_rmse_loss + self.t_weight * t_rmse_loss \
-                     + self.h_weight * h_rmse_loss + self.e_weight * e_rmse_loss
+            return total_loss, (d_loss, r_loss, t_loss, h_loss, e_loss)
 
-        total_mape = self.d_weight * d_mape_loss + self.r_weight * r_mape_loss + self.t_weight * t_mape_loss \
-                     + self.h_weight * h_mape_loss + self.e_weight * e_mape_loss
+        # compute losses
+        total_rmse, rmse_losses = compute_total_loss(self.__rmse_loss)
+        total_nrmse, nrmse_losses = compute_total_loss(self.__norm_rmse_loss)
+        total_mape, mape_losses = compute_total_loss(self.__mape_loss)
+        val_loss, _ = compute_total_loss(self.__rmse_loss, weighted=False)
 
         der_1st_loss = self.first_derivative_loss()
-        der_2nd_loss = self.second_derivative_loss()
+        # der_2nd_loss = self.second_derivative_loss()
 
         bound_reg = self.bound_parameter_regularization()
 
@@ -332,27 +357,31 @@ class Sidarthe(AbstractModel):
             loss = torch.tensor([1e-4], dtype=self.dtype) * total_rmse
         elif self.loss_type == "mape":
             loss = total_mape
+        elif self.loss_type == "nrmse":
+            loss = total_nrmse
         else:
             raise ValueError(f"loss type {self.loss_type} not supported")
 
         total_loss = loss + der_1st_loss + bound_reg
 
-        val_loss = d_rmse_loss + r_rmse_loss + t_rmse_loss + h_rmse_loss + e_rmse_loss 
-
         return {
             self.val_loss_checked: val_loss.squeeze(0),
-            "d_rmse": d_rmse_loss,
-            "r_rmse": r_rmse_loss,
-            "t_rmse": t_rmse_loss,
-            "h_rmse": h_rmse_loss,
-            "e_rmse": e_rmse_loss,
-            "d_mape": d_mape_loss,
-            "r_mape": r_mape_loss,
-            "t_mape": t_mape_loss,
-            "h_mape": h_mape_loss,
-            "e_mape": e_mape_loss,
+            "d_rmse": rmse_losses[0],
+            "r_rmse": rmse_losses[1],
+            "t_rmse": rmse_losses[2],
+            "h_rmse": rmse_losses[3],
+            "e_rmse": rmse_losses[4],
+            "d_nrmse": nrmse_losses[0],
+            "r_nrmse": nrmse_losses[1],
+            "t_nrmse": nrmse_losses[2],
+            "h_nrmse": nrmse_losses[3],
+            "e_nrmse": nrmse_losses[4],
+            "d_mape": mape_losses[0],
+            "r_mape": mape_losses[1],
+            "t_mape": mape_losses[2],
+            "h_mape": mape_losses[3],
+            "e_mape": mape_losses[4],
             "der_1st": der_1st_loss,
-            #"der_2nd": der_2nd_loss,
             "bound_reg": bound_reg,
             self.backward_loss_key: total_loss.squeeze(0)
         }
@@ -371,8 +400,6 @@ class Sidarthe(AbstractModel):
             return ext_tensor
         else:
             return value
-
-
 
     def inference(self, time_grid) -> Dict:
         sol = self.integrate(time_grid)

@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
     # endregion
 
-    runs_directory = "runs_110_test_phi"
+    runs_directory = "runs_110_test_nrmse"
     train_size = 110
     val_len = 40
     der_1st_regs = [4.1e4]
@@ -109,7 +109,7 @@ if __name__ == "__main__":
 
     integrator = Heun
 
-    loss_type = "mape"
+    loss_type = "nrmse"
     d_ws, r_ws, t_ws, h_ws = [1.0], [1.0], [1.0], [1.0]
     e_w = 1.0
     no_momentum_done = False
