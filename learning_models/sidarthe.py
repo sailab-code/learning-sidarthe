@@ -38,6 +38,8 @@ class Sidarthe(AbstractModel):
         self.val_size = kwargs.get("val_size", None)
         self.first_date = kwargs.get("first_date", None)
 
+        self.model_name = kwargs.get("name", "sidarthe")
+
         if self.first_date is None:
             self.format_xtick = format_xtick
         else:
@@ -62,8 +64,6 @@ class Sidarthe(AbstractModel):
             "zeta": self.zeta,
             "rho": self.rho,
             "sigma": self.sigma,
-            "phi": self.phi,
-            "chi": self.chi
         }
 
     # region ModelParams
@@ -135,14 +135,6 @@ class Sidarthe(AbstractModel):
     def sigma(self) -> torch.Tensor:
         return self._params["sigma"]
 
-    @property
-    def phi(self) -> torch.Tensor:
-        return self._params["phi"]
-
-    @property
-    def chi(self) -> torch.Tensor:
-        return self._params["chi"]
-
     # endregion CodeParams
 
     def differential_equations(self, t, x):
@@ -186,8 +178,6 @@ class Sidarthe(AbstractModel):
         zeta = get_param_at_t(self.zeta, t)
         rho = get_param_at_t(self.rho, t)
         sigma = get_param_at_t(self.sigma, t)
-        phi = get_param_at_t(self.phi, t)
-        chi = get_param_at_t(self.chi, t)
         # endregion parameters
 
         S = x[0]
@@ -205,10 +195,10 @@ class Sidarthe(AbstractModel):
         S_dot = -S * (alpha * I + beta * D + gamma * A + delta * R)
         I_dot = -S_dot - (epsilon + zeta + lambda_) * I
         D_dot = epsilon * I - (eta + rho) * D
-        A_dot = zeta * I - (theta + mu + kappa + phi) * A
-        R_dot = eta * D + theta * A - (nu + xi + chi) * R
+        A_dot = zeta * I - (theta + mu + kappa) * A
+        R_dot = eta * D + theta * A - (nu + xi) * R
         T_dot = mu * A + nu * R - (sigma + tau) * T
-        E_dot = phi * A + chi * R + tau * T
+        E_dot = tau * T
         H_detected = rho * D + xi * R + sigma * T
         # H_dot = lambda_ * I + rho * D + kappa * A + zeta * R + sigma * T
 
@@ -391,8 +381,8 @@ class Sidarthe(AbstractModel):
         # region compute R0
         c1 = extended_params['epsilon'] + extended_params['zeta'] + extended_params['lambda']
         c2 = extended_params['eta'] + extended_params['rho']
-        c3 = extended_params['theta'] + extended_params['mu'] + extended_params['kappa'] + extended_params['phi']
-        c4 = extended_params['nu'] + extended_params['xi'] + extended_params['chi']
+        c3 = extended_params['theta'] + extended_params['mu'] + extended_params['kappa']
+        c4 = extended_params['nu'] + extended_params['xi']
 
         r0 = extended_params['alpha'] + extended_params['beta'] * extended_params['epsilon'] / c2
         r0 = r0 + extended_params['gamma'] * extended_params['zeta'] / c3
