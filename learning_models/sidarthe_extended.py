@@ -16,7 +16,8 @@ class SidartheExtended(Sidarthe):
     dtype = torch.float64
 
     def __init__(self, parameters: Dict, population, init_cond, integrator, sample_time, **kwargs):
-        super().__init__(init_cond, integrator, sample_time, **kwargs)
+        super().__init__(parameters, population, init_cond, integrator, sample_time, **kwargs)
+        self.model_name = kwargs.get("name", "sidarthe_extended")
 
     @property
     def params(self) -> Dict:
