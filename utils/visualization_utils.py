@@ -44,8 +44,25 @@ def format_xtick(n, v):
     return (START_DATE + datetime.timedelta(int(n))).strftime("%d %b")  # e.g. "24 Feb", "25 Feb", ...
 
 
+date_formats = [
+    "%Y-%m-%d",
+    "%Y-%m-%dT%H:%M:%S"
+]
+
+
+def parse_date(date):
+    for date_format in date_formats:
+        try:
+            return datetime.datetime.strptime(date, date_format)
+        except ValueError:
+            continue
+
+    raise ValueError("No date formats were able to parse date")
+
+
 def generate_format_xtick(start_date):
-    start_date = datetime.datetime.strptime(start_date, "%Y-%m-%d")
+    start_date = parse_date(start_date)
+
     def custom_xtick(n,v):
         return (start_date + datetime.timedelta(int(n))).strftime("%d %b")
 

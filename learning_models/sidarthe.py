@@ -499,8 +499,11 @@ class Sidarthe(AbstractModel):
             H0_detected
         )
 
-    def plot_params_over_time(self, n_days=100):
+    def plot_params_over_time(self, n_days=None):
         param_plots = []
+
+        if n_days is None:
+            n_days = self.beta.shape[0]
 
         for key, value in self.params.items():
             value = self.extend_param(value, n_days)

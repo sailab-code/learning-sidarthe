@@ -27,7 +27,7 @@ normalize = False
 
 def exp(region, population, initial_params, learning_rates, n_epochs, region_name,
         train_size, val_len, loss_weights, der_1st_reg, bound_reg, time_step, integrator,
-        momentum, m, a, loss_type, references):
+        momentum, m, a, loss_type, references, runs_directory="runs"):
     # region directory creation
     # creating folders, if necessary
     base_path = os.path.join(os.getcwd(), "regioni")
@@ -35,7 +35,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         os.mkdir(base_path)
 
     model_name = "sidarthe"
-    exp_path = os.path.join(base_path, model_name)
+    exp_path = os.path.join(base_path, model_name, runs_directory)
     if not os.path.exists(exp_path):
         os.mkdir(exp_path)
 
@@ -54,13 +54,13 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
     # endregion
 
     # tensorboard summary
-    summary = SummaryWriter(f"runs_test/{region}/{model_name}/{uuid}")
+    summary = SummaryWriter(f"{runs_directory}/{region}/{model_name}/{uuid}")
     exp_prefix = get_exp_prefix(region, initial_params, learning_rates, train_size,
                                 val_len, der_1st_reg, time_step, momentum, m, a, loss_type, integrator)
 
     # creates the json description file with all settings
     description = get_description(region, initial_params, learning_rates, loss_weights, train_size, val_len,
-                                  der_1st_reg, time_step, momentum, m, a, loss_type, integrator)
+                                  der_1st_reg, time_step, momentum, m, a, loss_type, integrator, bound_reg)
     json_description = json.dumps(description, indent=4)
 
     json_file = "settings.json"
@@ -173,6 +173,8 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
     if normalize:
         targets = {key: np.array(value) / population for key, value in targets.items()}
 
+    print(f"Starting training for {uuid}")
+
     sidarthe, logged_info, best_epoch = \
         Sidarthe.train(targets,
                        initial_params,
@@ -187,7 +189,7 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
         val_size = min(train_size + val_len,
                        len(x_target) - 5)
 
-        t_grid = torch.linspace(0, 100, int(100 / time_step) + 1)
+        t_grid = torch.linspace(0, dataset_size, int(dataset_size / time_step) + 1)
 
         inferences = sidarthe.inference(t_grid)
         if normalize:
@@ -325,8 +327,6 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
                 curr_hat_val = hat_val[key]
                 curr_hat_test = hat_test[key]
 
-            # get reference in range of interest
-            ref_y = references[key][dataset_target_slice]
 
             if key in targets:
                 # plot inf and target
@@ -344,9 +344,14 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
             val_curves = get_curves(val_range, curr_hat_val, target_val, key, 'b')
             test_curves = get_curves(test_range, curr_hat_test, target_test, key, 'g')
 
-            reference_curve = Curve(dataset_range, ref_y, "--", label="Reference (Nature)")
+            tot_curves = train_curves + val_curves + test_curves
 
-            tot_curves = train_curves + val_curves + test_curves + [reference_curve]
+            # get reference in range of interest
+            if references is not None:
+                ref_y = references[key][dataset_target_slice]
+                reference_curve = Curve(dataset_range, ref_y, "--", label="Reference (Nature)")
+                tot_curves = tot_curves + [reference_curve]
+
             pl_title = f"{key.upper()} - train/validation/test/reference"
             fig = generic_plot(tot_curves, pl_title, None, formatter=sidarthe.format_xtick)
             summary.add_figure(f"final/{key}_global", fig)
@@ -359,31 +364,32 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
 
 if __name__ == "__main__":
     n_epochs = 8000
-    region = "FR"
+    region = "Italy"
+    runs_directory = "runs_150"
     params = {
-        "alpha": [0.570] * 40,
-        "beta": [0.011] * 40,
-        "gamma": [0.456] * 40,
-        "delta": [0.011] * 40,
-        "epsilon": [0.171] * 40,
+        "alpha": [0.570] * 4 + [0.422] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210] * 94,
+        "beta": [0.011] * 4 + [0.0057] * 18 + [0.005] * (17 + 93),
+        "gamma": [0.456] * 4 + [0.285] * 18 + [0.2] * 6 + [0.11] * 10 + [0.11] * 94,
+        "delta": [0.011] * 4 + [0.0057] * 18 + [0.005] * (17 + 93),
+        "epsilon": [0.171] * 12 + [0.143] * 26 + [0.2] * 94,
         "theta": [0.371],
-        "zeta": [0.125] * 40,
-        "eta": [0.125] * 40,
-        "mu": [0.017] * 40,
-        "nu": [0.027] * 40,
+        "zeta": [0.125] * 22 + [0.034] * 16 + [0.025] * 94,
+        "eta": [0.125] * 22 + [0.034] * 16 + [0.025] * 94,
+        "mu": [0.017] * 22 + [0.008] * (17 + 93),
+        "nu": [0.027] * 22 + [0.015] * (17 + 93),
         "tau": [0.01],
-        "lambda": [0.034] * 40,
-        "kappa": [0.017] * 40,
-        "xi": [0.017] * 40,
-        "rho": [0.034] * 40,
-        "sigma": [0.017] * 40
+        "lambda": [0.034] * 22 + [0.08] * (17 + 93),
+        "kappa": [0.017] * 22 + [0.017] * 16 + [0.02] * 94,
+        "xi": [0.017] * 22 + [0.017] * 16 + [0.02] * 94,
+        "rho": [0.034] * 22 + [0.017] * 16 + [0.02] * 94,
+        "sigma": [0.017] * 22 + [0.017] * 16 + [0.01] * 94
     }
 
     learning_rates = {
         "alpha": 1e-5,
-        "beta": 1e-5,
+        "beta": 1e-6,
         "gamma": 1e-5,
-        "delta": 1e-5,
+        "delta": 1e-6,
         "epsilon": 1e-5,
         "theta": 1e-7,
         "xi": 1e-5,
@@ -399,28 +405,39 @@ if __name__ == "__main__":
     }
 
     loss_weights = {
-        "d_weight": 0.,
-        "r_weight": 12.5,
-        "t_weight": 5.,
+        "d_weight": 1.,
+        "r_weight": 1.,
+        "t_weight": 1.,
         "h_weight": 1.,
         "e_weight": 0.,
     }
 
-    train_size = 70
-    val_len = 20
-    der_1st_reg = 31000.0
+    train_size = 150
+    val_len = 5
+    der_1st_reg = 50000.0
     der_2nd_reg = 0.
     t_inc = 1.
 
-    momentum = False
-    m = None
-    a = None
-    bound_reg = 1e4
+    momentum = True
+    m = 0.125
+    a = 0.1
+    bound_reg = 1e5
     integrator = Heun
     loss_type = "rmse"
     print(region)
 
+    references = {}
+    ref_df = pd.read_csv(os.path.join(os.getcwd(), "regioni/sidarthe_results_new.csv"))
+    for key in 'sidarthe':
+        references[key] = ref_df[key].tolist()
+
+    for key in ["r0", "h_detected"]:
+        references[key] = ref_df[key].tolist()
+
+    for key in params.keys():
+        references[key] = ref_df[key].tolist()
+
     exp(region, populations[region], params,
                             learning_rates, n_epochs, region, train_size, val_len,
                             loss_weights, der_1st_reg, bound_reg, t_inc, integrator,
-                            momentum, m, a, loss_type, None)
+                            momentum, m, a, loss_type, references, runs_directory)
