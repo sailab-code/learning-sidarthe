@@ -10,7 +10,7 @@ from experiments.sidarthe_experiment import SidartheExperiment
 class ExtendedSidartheExperiment(SidartheExperiment):
     """
     Class to run experiments of Extended Sidarthe. In principle this class is not
-    needed to run experiments using ExtendedSidarthe model, however it provides already
+    needed to run experiments using ExtendedSidarthe pretrained_model, however it provides already
     defaults configuration for the extended sidarthe version, runnable as follows:
         experiment = ExtendedSidartheExperiment(region, n_epochs=n_epochs, time_step=t_step, runs_directory="runs")
         experiment.run_exp() # without any input param
@@ -47,10 +47,12 @@ class ExtendedSidartheExperiment(SidartheExperiment):
             "phi": [0.02] * 102,
             "chi": [0.02] * 102
         }
-        return kwargs.get("initial_params", initial_params)
+        _params = kwargs.get("initial_params", {})
+
+        return self.fill_missing_params(_params, initial_params)
 
     def make_model_params(self, **kwargs):
-        # default model params
+        # default pretrained_model params
         model_params = {
             "model_cls": SidartheExtended,
             "name": "sidarthe_extended",
@@ -66,7 +68,9 @@ class ExtendedSidartheExperiment(SidartheExperiment):
             "references": self.references,
             "first_date": self.dataset.first_date,
         }
-        return kwargs.get("model_params", model_params)
+        _params = kwargs.get("model_params", {})
+
+        return self.fill_missing_params(_params, model_params)
 
     def make_learning_rates(self, **kwargs):
         # default learning rates
@@ -90,6 +94,6 @@ class ExtendedSidartheExperiment(SidartheExperiment):
             "phi": 1e-5,
             "chi": 1e-5
         }
-        return kwargs.get("learning_rates", learning_rates)
+        _params = kwargs.get("learning_rates", {})
 
-
+        return self.fill_missing_params(_params, learning_rates)

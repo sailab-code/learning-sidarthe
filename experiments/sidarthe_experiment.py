@@ -37,7 +37,9 @@ class SidartheExperiment(Experiment):
             "rho": [0.034] * 22 + [0.017] * 16 + [0.02] * 64,
             "sigma": [0.017] * 22 + [0.017] * 16 + [0.01] * 64,
         }
-        return kwargs.get("initial_params", initial_params)
+        _params = kwargs.get("initial_params", {})
+
+        return self.fill_missing_params(_params, initial_params)
 
     def make_dataset_params(self, **kwargs):
         # default dataset params
@@ -47,10 +49,12 @@ class SidartheExperiment(Experiment):
             "train_size": 110,
             "val_len": 5,
         }
-        return dataset_params.get("dataset_params", dataset_params)
+        _params = kwargs.get("dataset_params", {})
+
+        return self.fill_missing_params(_params, dataset_params)
 
     def make_model_params(self, **kwargs):
-        # default model params
+        # default pretrained_model params
         model_params = {
             "model_cls": Sidarthe,
             "name": "sidarthe",
@@ -66,7 +70,9 @@ class SidartheExperiment(Experiment):
             "references": self.references,
             "first_date": self.dataset.first_date,
         }
-        return kwargs.get("model_params", model_params)
+        _params = kwargs.get("model_params", {})
+
+        return self.fill_missing_params(_params, model_params)
 
     def make_train_params(self, **kwargs):
         # default train params
@@ -79,7 +85,9 @@ class SidartheExperiment(Experiment):
             "a": 0.1,
             "momentum": True,
         }
-        return kwargs.get("train_params", train_params)
+        _params = kwargs.get("train_params", {})
+
+        return self.fill_missing_params(_params, train_params)
 
     def make_loss_weights(self, **kwargs):
         # default loss weights
@@ -90,7 +98,9 @@ class SidartheExperiment(Experiment):
             "h_weight": 1.,
             "e_weight": 1.
         }
-        return kwargs.get("loss_weights", loss_weights)
+        _params = kwargs.get("loss_weights", {})
+
+        return self.fill_missing_params(_params, loss_weights)
 
     def make_learning_rates(self, **kwargs):
         # default learning rates
@@ -112,7 +122,9 @@ class SidartheExperiment(Experiment):
             "rho": 1e-5,
             "sigma": 1e-5
         }
-        return kwargs.get("learning_rates", learning_rates)
+        _params = kwargs.get("learning_rates", {})
+
+        return self.fill_missing_params(_params, learning_rates)
 
     def make_references(self):
         references = {}

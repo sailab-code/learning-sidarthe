@@ -69,6 +69,21 @@ class Experiment:
 
         self.exp_path = exp_path
 
+    @staticmethod
+    def fill_missing_params(params, default_params):
+        """
+        Fill attributes of params that are missing with
+        the default values.
+        :param params: dict of parameters
+        :param default_params: dict of default parameters
+        :return: filled params dict
+        """
+        for k, v in default_params.items():
+            if k not in params:
+                params[k] = v
+
+        return params
+
     def make_initial_params(self, **kwargs):
         return NotImplementedError
 
@@ -338,7 +353,7 @@ class Experiment:
             'loss_weights': dict,
             }
 
-        :return: model, uuid, results
+        :return: pretrained_model, uuid, results
         """
         # creates initial params
         initial_params = self.make_initial_params(**kwargs)
@@ -348,7 +363,7 @@ class Experiment:
         dataset_params = self.make_dataset_params(**kwargs)
         self.set_dataset_params(dataset_params)
 
-        # gets the data for the model
+        # gets the data for the pretrained_model
         dataset_cls = self.dataset_params["dataset_cls"]
         self.dataset = dataset_cls(self.dataset_params)
         self.dataset.make_dataset()
@@ -359,7 +374,7 @@ class Experiment:
         references = self.make_references()
         self.set_references(references)
 
-        # creates loss/train/learning_rates/model params
+        # creates loss/train/learning_rates/pretrained_model params
         loss_weights = self.make_loss_weights(**kwargs)
         self.set_loss_weights(loss_weights)
 
