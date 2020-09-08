@@ -61,13 +61,15 @@ class AbstractModel(metaclass=abc.ABCMeta):
 
     @classmethod
     @abc.abstractmethod
-    def init_trainable_model(cls, initial_params: dict, initial_conditions, integrator, **model_params):
+    def init_trainable_model(cls, initial_params: dict, initial_conditions, integrator, targets, **model_params):
         """
         Returns the initialized model
 
         :param initial_params: initial values for the parameters
         :param initial_conditions: initial conditions for the model
         :param integrator: integrator to use
+        :param targets: targets to fit
+        :param *
         :return: the initialized model
         """
 
@@ -153,7 +155,7 @@ class AbstractModel(metaclass=abc.ABCMeta):
         initial_conditions = cls.compute_initial_conditions_from_targets(train_targets, model_params)
 
         model: AbstractModel = cls.init_trainable_model(initial_params,
-                                                        initial_conditions, **model_params)
+                                                        initial_conditions, targets, **model_params)
 
         optimizers = cls.init_optimizers(model, learning_rates, train_params)
 

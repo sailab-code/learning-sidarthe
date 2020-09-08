@@ -433,7 +433,7 @@ class Sidarthe(AbstractModel):
         }
 
     @classmethod
-    def init_trainable_model(cls, initial_params: dict, initial_conditions, **model_params):
+    def init_trainable_model(cls, initial_params: dict, initial_conditions, targets, **model_params):
         time_step = model_params["time_step"]
         population = model_params["population"]
         integrator = model_params["integrator"]
@@ -453,7 +453,6 @@ class Sidarthe(AbstractModel):
         loss_type = model_params.get("loss_type", "rmse")
 
         references = model_params.get("references", None)
-        targets = model_params.get("targets", None)
         train_size = model_params.get("train_size", None)
         val_size = model_params.get("val_size", None)
         first_date = model_params.get("first_date", None)
