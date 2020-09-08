@@ -19,7 +19,8 @@ class Experiment:
                  region,
                  n_epochs,
                  time_step,
-                 runs_directory="runs"):
+                 runs_directory="runs",
+                 uuid=None):
 
         self.runs_dir = runs_directory
         self.region = region
@@ -34,7 +35,7 @@ class Experiment:
         self.loss_weights = None
 
         self.exp_path = None
-        self.uuid = uuid4()  # unique exp name
+        self.uuid = uuid or uuid4()  # unique exp name, if not provided
 
         self.dataset = None
         self.model = None

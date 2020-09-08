@@ -9,12 +9,13 @@ from experiments.experiment import Experiment
 
 
 class SidartheExperiment(Experiment):
-    def __init__(self, region, n_epochs, time_step, runs_directory="runs"):
+    def __init__(self, region, n_epochs, time_step, runs_directory="runs", uuid=None):
         super().__init__(
             region,
             n_epochs,
             time_step,
-            runs_directory
+            runs_directory,
+            uuid
         )
 
     def make_initial_params(self, **kwargs):
