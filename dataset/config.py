@@ -14,10 +14,10 @@ def get_region_params(name):
     """
 
     REGION_NAME_DICT = {
-        "Italy": Country(os.path.join(cwd, "COVID-19", "dati-andamento-nazionale", "dpc-covid19-ita-andamento-nazionale.csv"), ["ITA"], "stato"),
-        "UK": Country(os.path.join(cwd, "dati-uk", "uk_data_filled.csv"), ["UK"], "stato"),
-        "FR": Country(os.path.join(cwd, "dati-fr", "fr_data_processed.csv"), ["FR"], "stato"),
-        "it-region": Country(os.path.join(cwd, "COVID-19", "dati-regioni", "dpc-covid19-ita-regioni.csv"), [name], "denominazione_regione"),
+        "Italy": Country(os.path.join(cwd, "data", "COVID-19", "dati-andamento-nazionale", "dpc-covid19-ita-andamento-nazionale.csv"), ["ITA"], "stato"),
+        "UK": Country(os.path.join(cwd, "data", "dati-uk", "uk_data_filled.csv"), ["UK"], "stato"),
+        "FR": Country(os.path.join(cwd, "data", "dati-fr", "fr_data_processed.csv"), ["FR"], "stato"),
+        "it-region": Country(os.path.join(cwd, "data", "COVID-19", "dati-regioni", "dpc-covid19-ita-regioni.csv"), [name], "denominazione_regione"),
     }
 
     return REGION_NAME_DICT[name] if name in REGION_NAME_DICT else REGION_NAME_DICT["it-region"]
