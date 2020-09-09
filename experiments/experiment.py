@@ -54,12 +54,12 @@ class Experiment:
         if not os.path.exists(base_path):
             os.mkdir(base_path)
 
-        # adds directory with the region name
-        exp_path = os.path.join(base_path, self.region)
+        exp_path = os.path.join(base_path, self.model_params["name"])
         if not os.path.exists(exp_path):
             os.mkdir(exp_path)
 
-        exp_path = os.path.join(exp_path, self.model_params["name"])
+        # adds directory with the region name
+        exp_path = os.path.join(exp_path, self.region)
         if not os.path.exists(exp_path):
             os.mkdir(exp_path)
 
@@ -129,7 +129,7 @@ class Experiment:
 
     def create_summaries(self):
         # tensorboard summary
-        self.summary = SummaryWriter(f"{self.runs_dir}/{self.region}/{self.model_params['name']}/{self.uuid}")
+        self.summary = SummaryWriter(f"{self.exp_path}")
         self.train_params["tensorboard_summary"] = self.summary
 
         # creates the json description file with all settings
@@ -400,6 +400,9 @@ class Experiment:
 
         # training
         model_cls = self.model_params["model_cls"]
+
+        print(f"Running experiment {self.uuid}")
+
         self.model, logged_info, self.best_epoch = model_cls.train(
             targets,
             self.initial_params,
