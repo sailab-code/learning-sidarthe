@@ -21,11 +21,11 @@ if __name__ == "__main__":
     experiment_cls = ExtendedSidartheExperiment  # switch class to change experiment: e.g. SidartheExperiment
     for exp in exps_list:
         exp_path = exp_dir = os.path.join(exps_dir, exp)
-        initialization_params = experiment_cls.get_configs_from_json(os.path.join(exp_path, "final.json"))["params"]
+        # initialization_params = experiment_cls.get_configs_from_json(os.path.join(exp_path, "final.json"))["params"]
         settings = experiment_cls.get_configs_from_json(os.path.join(exp_path, "settings.json"))
 
         mu, sigma = 0.0, 0.1
-        perturbed_params = perturb(initialization_params, mu=mu, sigma=sigma)
+        perturbed_params = perturb(settings["initial_values"], mu=mu, sigma=sigma)
 
         for r in range(N_PERTURBED_RUNS):
             experiment = experiment_cls(settings["region"], n_epochs=n_epochs, time_step=settings["t_inc"], runs_directory=f"perturbed_{exp}")
