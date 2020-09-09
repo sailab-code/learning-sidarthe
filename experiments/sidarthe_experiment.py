@@ -129,7 +129,7 @@ class SidartheExperiment(Experiment):
 
     def make_references(self):
         references = {}
-        ref_df = pd.read_csv(os.path.join(os.getcwd(), "regioni/sidarthe_results_new.csv"))
+        ref_df = pd.read_csv(os.path.join(os.getcwd(), "data/sidarthe_results_new.csv"))
         for key in 'sidarthe':
             references[key] = ref_df[key].tolist()
 
