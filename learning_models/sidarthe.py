@@ -236,7 +236,7 @@ class Sidarthe(AbstractModel):
         )
 
     @staticmethod
-    def __norm_rmse_loss(target, hat):
+    def __minmax_rmse_loss(target, hat):
         mask = torch.ge(target, 0)
 
         # normalize values using z-score
@@ -250,6 +250,22 @@ class Sidarthe(AbstractModel):
         max = torch.max(target)
         norm_target = (target - min) / (max - min)
         norm_hat = (hat - min) / (max - min)
+
+        return torch.sqrt(
+            0.5 * torch.mean(
+                torch.pow(norm_target[mask] - norm_hat[mask], 2)
+            )
+        )
+
+    @staticmethod
+    def __zscore_rmse_loss(target, hat):
+        mask = torch.ge(target, 0)
+
+        # normalize values using z-score
+        mean = torch.mean(target)
+        std = torch.std(target)
+        norm_target = (target - mean) / std
+        norm_hat = (hat - mean) / std
 
         return torch.sqrt(
             0.5 * torch.mean(
@@ -334,7 +350,12 @@ class Sidarthe(AbstractModel):
 
         # compute losses
         total_rmse, rmse_losses = compute_total_loss(self.__rmse_loss)
-        total_nrmse, nrmse_losses = compute_total_loss(self.__norm_rmse_loss)
+        if self.loss_type == "minmax_rmse":
+            total_nrmse, nrmse_losses = compute_total_loss(self.__minmax_rmse_loss)
+        elif self.loss_type == "zscore_rmse":
+            total_nrmse, nrmse_losses = compute_total_loss(self.__zscore_rmse_loss)
+        else:
+            total_nrmse, nrmse_losses = 0., [0.] * 5
         total_mape, mape_losses = compute_total_loss(self.__mape_loss)
         val_loss, _ = compute_total_loss(self.__rmse_loss, weighted=False)
 
@@ -347,7 +368,7 @@ class Sidarthe(AbstractModel):
             loss = torch.tensor([1e-4], dtype=self.dtype) * total_rmse
         elif self.loss_type == "mape":
             loss = total_mape
-        elif self.loss_type == "nrmse":
+        elif self.loss_type == "minmax_rmse" or self.loss_type == "zscore_rmse":
             loss = total_nrmse
         else:
             raise ValueError(f"loss type {self.loss_type} not supported")
