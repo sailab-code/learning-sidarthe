@@ -21,12 +21,16 @@ class Sidarthe(AbstractModel):
         self._params = {key: torch.tensor(value, dtype=self.dtype, requires_grad=True) for key, value in
                         parameters.items()}
         self.population = population
+        self.model_name = kwargs.get("name", "sidarthe")
 
-        self.d_weight = kwargs["d_weight"]
-        self.r_weight = kwargs["r_weight"]
-        self.t_weight = kwargs["t_weight"]
-        self.h_weight = kwargs["h_weight"]
-        self.e_weight = kwargs["e_weight"]
+        self.target_weights = {
+            "d": kwargs["d_weight"],
+            "r": kwargs["r_weight"],
+            "t": kwargs["t_weight"],
+            "h": kwargs["h_weight"],
+            "e": kwargs["e_weight"]
+        }
+
         self.der_1st_reg = kwargs["der_1st_reg"]
         self.bound_reg = kwargs["bound_reg"]
         self.verbose = kwargs["verbose"]
@@ -38,7 +42,14 @@ class Sidarthe(AbstractModel):
         self.val_size = kwargs.get("val_size", None)
         self.first_date = kwargs.get("first_date", None)
 
-        self.model_name = kwargs.get("name", "sidarthe")
+        # compute normalization values
+        averages = {
+            key[0]: np.mean(value) for key, value in self.targets.items()
+        }
+        max_average = np.max([value for value in averages.values()])
+        self.norm_weights = {
+            key: max_average / avg for key, avg in averages.items()
+        }
 
         if self.first_date is None:
             self.format_xtick = format_xtick
@@ -236,44 +247,6 @@ class Sidarthe(AbstractModel):
         )
 
     @staticmethod
-    def __minmax_rmse_loss(target, hat):
-        mask = torch.ge(target, 0)
-
-        # normalize values using z-score
-        # mean = torch.mean(target)
-        # std = torch.std(target)
-        # norm_target = (target - mean) / std
-        # norm_hat = (hat - mean) / std
-
-        # normalize values using minmax
-        min = torch.min(target)
-        max = torch.max(target)
-        norm_target = (target - min) / (max - min)
-        norm_hat = (hat - min) / (max - min)
-
-        return torch.sqrt(
-            0.5 * torch.mean(
-                torch.pow(norm_target[mask] - norm_hat[mask], 2)
-            )
-        )
-
-    @staticmethod
-    def __zscore_rmse_loss(target, hat):
-        mask = torch.ge(target, 0)
-
-        # normalize values using z-score
-        mean = torch.mean(target)
-        std = torch.std(target)
-        norm_target = (target - mean) / std
-        norm_hat = (hat - mean) / std
-
-        return torch.sqrt(
-            0.5 * torch.mean(
-                torch.pow(norm_target[mask] - norm_hat[mask], 2)
-            )
-        )
-
-    @staticmethod
     def __mape_loss(target, hat):
         mask = torch.ge(target, 0)
 
@@ -323,7 +296,6 @@ class Sidarthe(AbstractModel):
         return self.bound_reg * torch.mean(bound_reg_total)
 
     def losses(self, inferences, targets) -> Dict:
-
         # this function converts target values to torch.tensor with specified dtype
         def to_torch_float(target):
             if isinstance(target, np.ndarray) or isinstance(target, list):
@@ -333,29 +305,34 @@ class Sidarthe(AbstractModel):
         # uses to_torch_float to convert given targets
         targets = {key: to_torch_float(value) for key, value in targets.items()}
 
-        def compute_total_loss(loss_function, weighted=True):
-            d_loss = loss_function(targets["d"], inferences["d"])
-            r_loss = loss_function(targets["r"], inferences["r"])
-            t_loss = loss_function(targets["t"], inferences["t"])
-            h_loss = loss_function(targets["h_detected"], inferences["h_detected"])
-            e_loss = loss_function(targets["e"], inferences["e"])
+        def compute_total_loss(loss_function, weighted=True, normalized=False):
+            losses = {
+                key[0]: loss_function(targets[key], inferences[key]) for key, value in targets.items()
+            }
+
+            def weight_losses(losses_dict):
+                return {
+                    key: self.target_weights[key] * loss_v for key, loss_v in losses_dict.items()
+                }
+
+            def normalize_losses(losses_dict):
+                return {
+                    key: self.norm_weights[key] * loss_v for key, loss_v in losses_dict.items()
+                }
+
 
             if weighted:
-                total_loss = self.d_weight * d_loss + self.r_weight * r_loss + self.t_weight * t_loss \
-                     + self.h_weight * h_loss + self.e_weight * e_loss
-            else:
-                total_loss = d_loss + r_loss + t_loss + h_loss + e_loss
+                losses = weight_losses(losses)
+                if normalized:
+                    losses = normalize_losses(losses)
 
-            return total_loss, (d_loss, r_loss, t_loss, h_loss, e_loss)
+            total_loss = sum([value for key, value in losses.items()])
+
+            return total_loss, losses
 
         # compute losses
         total_rmse, rmse_losses = compute_total_loss(self.__rmse_loss)
-        if self.loss_type == "minmax_rmse":
-            total_nrmse, nrmse_losses = compute_total_loss(self.__minmax_rmse_loss)
-        elif self.loss_type == "zscore_rmse":
-            total_nrmse, nrmse_losses = compute_total_loss(self.__zscore_rmse_loss)
-        else:
-            total_nrmse, nrmse_losses = 0., [0.] * 5
+        total_nrmse, nrmse_losses = compute_total_loss(self.__rmse_loss, normalized=True)
         total_mape, mape_losses = compute_total_loss(self.__mape_loss)
         val_loss, _ = compute_total_loss(self.__rmse_loss, weighted=False)
 
@@ -368,7 +345,7 @@ class Sidarthe(AbstractModel):
             loss = torch.tensor([1e-4], dtype=self.dtype) * total_rmse
         elif self.loss_type == "mape":
             loss = total_mape
-        elif self.loss_type == "minmax_rmse" or self.loss_type == "zscore_rmse":
+        elif self.loss_type == "nrmse":
             loss = total_nrmse
         else:
             raise ValueError(f"loss type {self.loss_type} not supported")
@@ -377,21 +354,21 @@ class Sidarthe(AbstractModel):
 
         return {
             self.val_loss_checked: val_loss.squeeze(0),
-            "d_rmse": rmse_losses[0],
-            "r_rmse": rmse_losses[1],
-            "t_rmse": rmse_losses[2],
-            "h_rmse": rmse_losses[3],
-            "e_rmse": rmse_losses[4],
-            "d_nrmse": nrmse_losses[0],
-            "r_nrmse": nrmse_losses[1],
-            "t_nrmse": nrmse_losses[2],
-            "h_nrmse": nrmse_losses[3],
-            "e_nrmse": nrmse_losses[4],
-            "d_mape": mape_losses[0],
-            "r_mape": mape_losses[1],
-            "t_mape": mape_losses[2],
-            "h_mape": mape_losses[3],
-            "e_mape": mape_losses[4],
+            "d_rmse": rmse_losses["d"],
+            "r_rmse": rmse_losses["r"],
+            "t_rmse": rmse_losses["t"],
+            "h_rmse": rmse_losses["h"],
+            "e_rmse": rmse_losses["e"],
+            "d_nrmse": nrmse_losses["d"],
+            "r_nrmse": nrmse_losses["r"],
+            "t_nrmse": nrmse_losses["t"],
+            "h_nrmse": nrmse_losses["h"],
+            "e_nrmse": nrmse_losses["e"],
+            "d_mape": mape_losses["d"],
+            "r_mape": mape_losses["r"],
+            "t_mape": mape_losses["t"],
+            "h_mape": mape_losses["h"],
+            "e_mape": mape_losses["e"],
             "der_1st": der_1st_loss,
             "bound_reg": bound_reg,
             self.backward_loss_key: total_loss.squeeze(0)
@@ -459,10 +436,10 @@ class Sidarthe(AbstractModel):
         population = model_params["population"]
         integrator = model_params["integrator"]
 
-        d_weight = model_params.get("d_weight", 0.)
-        r_weight = model_params.get("r_weight", 0.)
-        t_weight = model_params.get("t_weight", 0.)
-        h_weight = model_params.get("h_weight", 0.)
+        d_weight = model_params.get("d_weight", 1.)
+        r_weight = model_params.get("r_weight", 1.)
+        t_weight = model_params.get("t_weight", 1.)
+        h_weight = model_params.get("h_weight", 1.)
         e_weight = model_params.get("e_weight", 1.)
 
         der_1st_reg = model_params.get("der_1st_reg", 2e4)
