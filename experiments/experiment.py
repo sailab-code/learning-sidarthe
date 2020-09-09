@@ -342,6 +342,10 @@ class Experiment:
 
             # endregion
 
+    @staticmethod
+    def get_configs_from_json(json_file):
+        return json.load(open(json_file, "r"))
+
     def run_exp(self, **kwargs):
         """
 
