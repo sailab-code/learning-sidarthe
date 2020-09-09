@@ -36,11 +36,10 @@ if __name__ == "__main__":
                     "dataset_params": {"train_size": train_size, "val_len": val_len, "region": settings["region"]},
                     "model_params": {"der_1st_reg": settings["der_1st_reg"],
                                      "bound_reg": settings["bound_reg"],
-                                     "momentum": settings["momentum"],
                                      "loss_type": settings["loss_type"],
                                      "integrator": settings["integrator"]
                                      },
-                    "train_params": {"m": settings["m"], "a": settings["a"]},
+                    "train_params": {"momentum": settings["momentum"], "m": settings["m"], "a": settings["a"]},
                     "loss_weights": settings["target_weights"],
                     "learning_rates": settings["learning_rates"]
                 }

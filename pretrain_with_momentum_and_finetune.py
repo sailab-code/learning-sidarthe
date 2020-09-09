@@ -6,7 +6,7 @@ from learning_models.sidarthe_extended import SidartheExtended
 from experiments.sidarthe_experiment import SidartheExperiment
 from experiments.sidarthe_extended_experiment import ExtendedSidartheExperiment
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'  # CHOOSE GPU HERE
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # CHOOSE GPU HERE
 if __name__ == "__main__":
     region = "Italy"
     t_step = 1.0
@@ -15,7 +15,7 @@ if __name__ == "__main__":
     n_pretrain_epochs = 100
     pretrain_experiment_cls = ExtendedSidartheExperiment  # switch class to change experiment: e.g. SidartheExperiment
     pretrain_experiment = pretrain_experiment_cls(region, n_epochs=n_pretrain_epochs, time_step=t_step, runs_directory="runs")
-    pretrained_model, uuid, res = pretrain_experiment.run_exp(model_params={"momentum": True})
+    pretrained_model, uuid, res = pretrain_experiment.run_exp(train_params={"momentum": True})
 
     # finetuning
     print("Fine-tuning without momentum")
@@ -31,5 +31,5 @@ if __name__ == "__main__":
 
     fine_tune_experiment_cls = pretrain_experiment_cls
     fine_tune_experiment = fine_tune_experiment_cls(region, n_epochs=n_finetune_epochs, time_step=t_step, runs_directory="runs", uuid=uuid)
-    model, uuid, res = fine_tune_experiment.run_exp(initial_params=pretrained_params, model_params={"momentum": False})
+    model, uuid, res = fine_tune_experiment.run_exp(initial_params=pretrained_params, train_params={"momentum": False})
 

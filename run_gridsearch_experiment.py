@@ -46,8 +46,8 @@ if __name__ == "__main__":
             kwargs={
                 "initial_params": {},
                 "dataset_params": {"train_size": train_size, "val_len": val_len, "region": region},
-                "model_params": {"der_1st_reg": der_1st_reg, "bound_reg": bound_reg, "momentum": momentum},
-                "train_params": {"m": m, "a": a},
+                "model_params": {"der_1st_reg": der_1st_reg, "bound_reg": bound_reg},
+                "train_params": {"momentum": momentum, "m": m, "a": a},
                 "loss_weights": loss_weights
             }
         )
