@@ -228,7 +228,7 @@ class AbstractModel(metaclass=abc.ABCMeta):
                     best_epoch = {
                         "epoch": epoch,
                         "val_loss": val_loss,
-                        "losses": losses
+                        "losses": val_losses
                     }
                     patience = 0
                 elif patience < max_no_improve * 10:
