@@ -169,9 +169,9 @@ class AbstractModel(metaclass=abc.ABCMeta):
         best_params = model.params
         patience = 0
         n_lr_updates = 0
-        max_no_improve = early_stopping_conf.get("max_no_improve", 50)
+        max_no_improve = early_stopping_conf.get("max_no_improve", 100)
         max_n_lr_updates = early_stopping_conf.get("max_n_lr_updates", 5)
-        lr_factor = 1/early_stopping_conf.get("lr_fraction", 2.)
+        lr_factor = 1/early_stopping_conf.get("lr_fraction", 1.0001)
 
         logged_info: List[Dict] = []
 
@@ -201,6 +201,7 @@ class AbstractModel(metaclass=abc.ABCMeta):
 
             if epoch % log_epoch_steps == 0:
                 print(f"epoch {epoch} / {n_epochs}")
+
                 log_info = model.log_info(epoch, losses, train_hats, train_targets, summary)
                 logged_info.append(log_info)
                 epoch_steps_measure = time.time() - time_start
