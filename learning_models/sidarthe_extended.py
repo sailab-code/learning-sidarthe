@@ -1,15 +1,8 @@
-from collections import namedtuple
-from typing import List, Dict
+from typing import Dict
 
-import numpy as np
 import torch
-from torch.optim.optimizer import Optimizer
-from torch.utils.tensorboard import SummaryWriter
 
 from learning_models.sidarthe import Sidarthe
-from learning_models.new_sir_optimizer import NewSirOptimizer
-from utils import derivatives
-from utils.visualization_utils import Curve, generic_plot, format_xtick, generate_format_xtick
 
 
 class SidartheExtended(Sidarthe):
