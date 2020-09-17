@@ -1,4 +1,3 @@
-from collections import namedtuple
 from typing import List, Dict
 
 import numpy as np
@@ -8,7 +7,6 @@ from torch.utils.tensorboard import SummaryWriter
 
 from learning_models.abstract_model import AbstractModel
 from learning_models.new_sir_optimizer import NewSirOptimizer
-from torch.optim import Adam
 from utils import derivatives
 from utils.visualization_utils import Curve, generic_plot, format_xtick, generate_format_xtick
 
@@ -76,6 +74,17 @@ class Sidarthe(AbstractModel):
             "zeta": self.zeta,
             "rho": self.rho,
             "sigma": self.sigma,
+        }
+
+    @property
+    def param_groups(self) -> Dict:
+        return {
+            "infection_rates": ('alpha', 'beta', 'gamma', 'delta'),
+            "detection_rates": ('epsilon', 'theta'),
+            "symptoms_development_rates": ('eta', 'zeta'),
+            "acute_symptoms_development_rates": ('mu', 'nu'),
+            "recovery_rates": ('kappa', 'lambda', 'xi', 'rho', 'sigma'),
+            "death_rates": tuple(['tau']),
         }
 
     # region ModelParams
@@ -147,7 +156,7 @@ class Sidarthe(AbstractModel):
     def sigma(self) -> torch.Tensor:
         return self._params["sigma"]
 
-    # endregion CodeParams
+    # endregion ModelParams
 
     def differential_equations(self, t, x):
         """
@@ -276,7 +285,6 @@ class Sidarthe(AbstractModel):
 
         # apply log
         return -torch.log10(torch.pow(rectified_param, 3.))
-
 
     def first_derivative_loss(self):
         loss_1st_derivative_total = torch.zeros(1, dtype=self.dtype)
@@ -546,25 +554,28 @@ class Sidarthe(AbstractModel):
             H0_detected
         )
 
+
     def plot_params_over_time(self, n_days=None):
         param_plots = []
 
         if n_days is None:
             n_days = self.beta.shape[0]
 
-        for key, value in self.params.items():
-            value = self.extend_param(value, n_days)
-            pl_x = list(range(n_days))
-            pl_title = f"$\\{key}$ over time"
-            param_curve = Curve(pl_x, value.detach().numpy(), '-', f"$\\{key}$", color=None)
-            curves = [param_curve]
+        for param_group, param_keys in self.param_groups.items():
+            params_subdict = {param_key: self.params[param_key] for param_key in param_keys}
+            for param_key, param in params_subdict.items():
+                param = self.extend_param(param, n_days)
+                pl_x = list(range(n_days))
+                pl_title = f"{param_group}/$\\{param_key}$ over time"
+                param_curve = Curve(pl_x, param.detach().numpy(), '-', f"$\\{param_key}$", color=None)
+                curves = [param_curve]
 
-            if self.references is not None:
-                if key in self.references:
-                    ref_curve = Curve(pl_x, self.references[key][:n_days], "--", f"$\\{key}$ reference", color=None)
-                    curves.append(ref_curve)
-            plot = generic_plot(curves, pl_title, None, formatter=self.format_xtick)
-            param_plots.append((plot, pl_title))
+                if self.references is not None:
+                    if param_key in self.references:
+                        ref_curve = Curve(pl_x, self.references[param_key][:n_days], "--", f"$\\{param_key}$ reference", color=None)
+                        curves.append(ref_curve)
+                plot = generic_plot(curves, pl_title, None, formatter=self.format_xtick)
+                param_plots.append((plot, pl_title))
         return param_plots
 
     @staticmethod
@@ -692,7 +703,7 @@ class Sidarthe(AbstractModel):
 
         if summary is not None:
             for fig, fig_title in self.plot_params_over_time():
-                summary.add_figure(f"params_over_time/{fig_title}", fig, close=True, global_step=0)
+                summary.add_figure(f"{fig_title}", fig, close=True, global_step=0)
 
     def log_info(self, epoch, losses, inferences, targets, summary: SummaryWriter = None):
 
