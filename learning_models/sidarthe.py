@@ -483,7 +483,7 @@ class Sidarthe(AbstractModel):
         val_size = model_params.get("val_size", None)
         first_date = model_params.get("first_date", None)
 
-        return Sidarthe(initial_params, population, initial_conditions, integrator, time_step,
+        return cls(initial_params, population, initial_conditions, integrator, time_step,
                         d_weight=d_weight,
                         r_weight=r_weight,
                         t_weight=t_weight,
