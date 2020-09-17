@@ -597,6 +597,7 @@ class Sidarthe(AbstractModel):
     def slice_values(values, slice_):
         return {key: value[slice_] for key, value in values.items()}
 
+
     def plot_fits(self):
         fit_plots = []
         with torch.no_grad():
@@ -641,9 +642,7 @@ class Sidarthe(AbstractModel):
             norm_target_val = self.normalize_values(target_val, self.population)
             norm_target_test = self.normalize_values(target_test, self.population)
 
-            for key, target in targets.items():
-                pl_x = list(range(0, len(target)))
-
+            for key in inferences.keys():
                 if key in ["sol"]:
                     continue
 
@@ -656,9 +655,14 @@ class Sidarthe(AbstractModel):
                     curr_hat_val = hat_val[key]
                     curr_hat_test = hat_test[key]
 
-                target_train = norm_target_train[key]
-                target_val = norm_target_val[key]
-                target_test = norm_target_test[key]
+                if key in norm_target_train:
+                    target_train = norm_target_train[key]
+                    target_val = norm_target_val[key]
+                    target_test = norm_target_test[key]
+                else:
+                    target_train = None
+                    target_val = None
+                    target_test = None
 
                 train_curves = self.get_curves(train_range, curr_hat_train, target_train, key, 'r')
                 val_curves = self.get_curves(val_range, curr_hat_val, target_val, key, 'b')
@@ -704,6 +708,10 @@ class Sidarthe(AbstractModel):
         if summary is not None:
             for fig, fig_title in self.plot_params_over_time():
                 summary.add_figure(f"{fig_title}", fig, close=True, global_step=0)
+
+            for fig, fig_title in self.plot_fits():
+                summary.add_figure(f"fits/{fig_title}", fig, close=True, global_step=0)
+
 
     def log_info(self, epoch, losses, inferences, targets, summary: SummaryWriter = None):
 
