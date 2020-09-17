@@ -35,6 +35,12 @@ class SidartheExtended(Sidarthe):
             "chi": self.chi
         }
 
+    @property
+    def param_groups(self) -> Dict:
+        base_groups = super().param_groups
+        base_groups['death_rates'] = ('tau','phi','chi')
+        return base_groups
+
     # region ModelParams
 
     @property
@@ -45,7 +51,7 @@ class SidartheExtended(Sidarthe):
     def chi(self) -> torch.Tensor:
         return self._params["chi"]
 
-    # endregion CodeParams
+    # endregion ModelParams
 
     def differential_equations(self, t, x):
         """

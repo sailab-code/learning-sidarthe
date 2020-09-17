@@ -51,7 +51,8 @@ if __name__ == "__main__":
         initial_params=initial_params,
         dataset_params={"train_size": train_size+4, "val_len": 10},
         train_params={"momentum": False},
-        model_params={"der_1st_reg": 1e5, "bound_reg": 5e5},
+        model_params={"der_1st_reg": 1e5, "bound_reg": 5e5, "bound_loss_type": "step"},
         loss_weights=loss_weights
+
     )  # params can be set, no params => default configuration
 

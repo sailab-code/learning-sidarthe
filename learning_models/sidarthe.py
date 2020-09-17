@@ -1,4 +1,3 @@
-from collections import namedtuple
 from typing import List, Dict
 
 import numpy as np
@@ -8,7 +7,6 @@ from torch.utils.tensorboard import SummaryWriter
 
 from learning_models.abstract_model import AbstractModel
 from learning_models.new_sir_optimizer import NewSirOptimizer
-from torch.optim import Adam
 from utils import derivatives
 from utils.visualization_utils import Curve, generic_plot, format_xtick, generate_format_xtick
 
@@ -35,6 +33,7 @@ class Sidarthe(AbstractModel):
         self.bound_reg = kwargs["bound_reg"]
         self.verbose = kwargs["verbose"]
         self.loss_type = kwargs["loss_type"]
+        self.bound_loss_type = kwargs["bound_loss_type"]
 
         self.references = kwargs.get("references", None)
         self.targets = kwargs.get("targets", None)
@@ -76,6 +75,17 @@ class Sidarthe(AbstractModel):
             "zeta": self.zeta,
             "rho": self.rho,
             "sigma": self.sigma,
+        }
+
+    @property
+    def param_groups(self) -> Dict:
+        return {
+            "infection_rates": ('alpha', 'beta', 'gamma', 'delta'),
+            "detection_rates": ('epsilon', 'theta'),
+            "symptoms_development_rates": ('eta', 'zeta'),
+            "acute_symptoms_development_rates": ('mu', 'nu'),
+            "recovery_rates": ('kappa', 'lambda', 'xi', 'rho', 'sigma'),
+            "death_rates": tuple(['tau']),
         }
 
     # region ModelParams
@@ -148,7 +158,7 @@ class Sidarthe(AbstractModel):
     def sigma(self) -> torch.Tensor:
         return self._params["sigma"]
 
-    # endregion CodeParams
+    # endregion ModelParams
 
     def differential_equations(self, t, x):
         """
@@ -270,6 +280,14 @@ class Sidarthe(AbstractModel):
                                              torch.ones(1, dtype=cls.dtype),
                                              torch.zeros(1, dtype=cls.dtype))
 
+    @classmethod
+    def __loss_parameter_near_origin(cls, parameter: torch.Tensor, eps=1e-10):
+        # apply ReLU
+        rectified_param = torch.max(torch.full_like(parameter, eps), parameter)
+
+        # apply log
+        return -torch.log10(torch.pow(rectified_param, 3.))
+
     def first_derivative_loss(self):
         loss_1st_derivative_total = torch.zeros(1, dtype=self.dtype)
         if self.der_1st_reg != 0:
@@ -290,10 +308,19 @@ class Sidarthe(AbstractModel):
 
     def bound_parameter_regularization(self):
         bound_reg_total = torch.zeros(1, dtype=self.dtype)
+
         for key, value in self.params.items():
-            # bound_reg = self.__loss_gte_one(value) + self.__loss_lte_zero(value)
-            bound_reg = self.__loss_lte_zero(value)
+            if self.bound_loss_type == "step":
+                bound_reg = self.__loss_lte_zero(value)
+            elif self.bound_loss_type == "log":
+                bound_reg = self.__loss_parameter_near_origin(value)
+            else:
+                raise Exception("Loss type not supported")
+
             bound_reg_total = bound_reg_total + bound_reg
+
+        # average params bound regularization
+        bound_reg_total /= len(self.params)
 
         return self.bound_reg * torch.mean(bound_reg_total)
 
@@ -452,13 +479,14 @@ class Sidarthe(AbstractModel):
         verbose = model_params.get("verbose", False)
 
         loss_type = model_params.get("loss_type", "rmse")
+        bound_loss_type = model_params.get("bound_loss_type", "step")
 
         references = model_params.get("references", None)
         train_size = model_params.get("train_size", None)
         val_size = model_params.get("val_size", None)
         first_date = model_params.get("first_date", None)
 
-        return model_cls(initial_params, population, initial_conditions, integrator, time_step,
+        return cls(initial_params, population, initial_conditions, integrator, time_step,
                         d_weight=d_weight,
                         r_weight=r_weight,
                         t_weight=t_weight,
@@ -472,7 +500,8 @@ class Sidarthe(AbstractModel):
                         targets=targets,
                         train_size=train_size,
                         val_size=val_size,
-                        first_date=first_date
+                        first_date=first_date,
+                        bound_loss_type=bound_loss_type
                         )
 
     @classmethod
@@ -528,25 +557,28 @@ class Sidarthe(AbstractModel):
             H0_detected
         )
 
+
     def plot_params_over_time(self, n_days=None):
         param_plots = []
 
         if n_days is None:
             n_days = self.beta.shape[0]
 
-        for key, value in self.params.items():
-            value = self.extend_param(value, n_days)
-            pl_x = list(range(n_days))
-            pl_title = f"$\\{key}$ over time"
-            param_curve = Curve(pl_x, value.detach().numpy(), '-', f"$\\{key}$", color=None)
-            curves = [param_curve]
+        for param_group, param_keys in self.param_groups.items():
+            params_subdict = {param_key: self.params[param_key] for param_key in param_keys}
+            for param_key, param in params_subdict.items():
+                param = self.extend_param(param, n_days)
+                pl_x = list(range(n_days))
+                pl_title = f"{param_group}/$\\{param_key}$ over time"
+                param_curve = Curve(pl_x, param.detach().numpy(), '-', f"$\\{param_key}$", color=None)
+                curves = [param_curve]
 
-            if self.references is not None:
-                if key in self.references:
-                    ref_curve = Curve(pl_x, self.references[key][:n_days], "--", f"$\\{key}$ reference", color=None)
-                    curves.append(ref_curve)
-            plot = generic_plot(curves, pl_title, None, formatter=self.format_xtick)
-            param_plots.append((plot, pl_title))
+                if self.references is not None:
+                    if param_key in self.references:
+                        ref_curve = Curve(pl_x, self.references[param_key][:n_days], "--", f"$\\{param_key}$ reference", color=None)
+                        curves.append(ref_curve)
+                plot = generic_plot(curves, pl_title, None, formatter=self.format_xtick)
+                param_plots.append((plot, pl_title))
         return param_plots
 
     @staticmethod
@@ -567,6 +599,7 @@ class Sidarthe(AbstractModel):
     @staticmethod
     def slice_values(values, slice_):
         return {key: value[slice_] for key, value in values.items()}
+
 
     def plot_fits(self):
         fit_plots = []
@@ -612,9 +645,7 @@ class Sidarthe(AbstractModel):
             norm_target_val = self.normalize_values(target_val, self.population)
             norm_target_test = self.normalize_values(target_test, self.population)
 
-            for key, target in targets.items():
-                pl_x = list(range(0, len(target)))
-
+            for key in inferences.keys():
                 if key in ["sol"]:
                     continue
 
@@ -627,9 +658,14 @@ class Sidarthe(AbstractModel):
                     curr_hat_val = hat_val[key]
                     curr_hat_test = hat_test[key]
 
-                target_train = norm_target_train[key]
-                target_val = norm_target_val[key]
-                target_test = norm_target_test[key]
+                if key in norm_target_train:
+                    target_train = norm_target_train[key]
+                    target_val = norm_target_val[key]
+                    target_test = norm_target_test[key]
+                else:
+                    target_train = None
+                    target_val = None
+                    target_test = None
 
                 train_curves = self.get_curves(train_range, curr_hat_train, target_train, key, 'r')
                 val_curves = self.get_curves(val_range, curr_hat_val, target_val, key, 'b')
@@ -674,7 +710,11 @@ class Sidarthe(AbstractModel):
 
         if summary is not None:
             for fig, fig_title in self.plot_params_over_time():
-                summary.add_figure(f"params_over_time/{fig_title}", fig, close=True, global_step=0)
+                summary.add_figure(f"{fig_title}", fig, close=True, global_step=0)
+
+            for fig, fig_title in self.plot_fits():
+                summary.add_figure(f"fits/{fig_title}", fig, close=True, global_step=0)
+
 
     def log_info(self, epoch, losses, inferences, targets, summary: SummaryWriter = None):
         if self.verbose:

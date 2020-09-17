@@ -20,7 +20,8 @@ class Experiment:
                  n_epochs,
                  time_step,
                  runs_directory="runs",
-                 uuid=None):
+                 uuid=None,
+                 uuid_prefix=None):
 
         self.runs_dir = runs_directory
         self.region = region
@@ -35,6 +36,7 @@ class Experiment:
         self.loss_weights = None
 
         self.exp_path = None
+        self.uuid_prefix = f"{uuid_prefix}_" if uuid_prefix is not None else ""
         self.uuid = uuid or uuid4()  # unique exp name, if not provided
 
         self.dataset = None
@@ -64,7 +66,7 @@ class Experiment:
             os.mkdir(exp_path)
 
         # adds directory with the uuid
-        exp_path = os.path.join(exp_path, str(self.uuid))
+        exp_path = os.path.join(exp_path, f"{self.uuid_prefix}{self.uuid}")
         if not os.path.exists(exp_path):
             os.mkdir(exp_path)
 
