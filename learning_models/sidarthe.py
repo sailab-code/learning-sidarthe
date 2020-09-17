@@ -50,6 +50,7 @@ class Sidarthe(AbstractModel):
         self.norm_weights = {
             key: max_average / avg for key, avg in averages.items()
         }
+        print(self.norm_weights)
 
         if self.first_date is None:
             self.format_xtick = format_xtick
@@ -94,7 +95,7 @@ class Sidarthe(AbstractModel):
     @property
     def delta(self) -> torch.Tensor:
         return self._params["delta"]
-        #return self._params["beta"]
+        # return self._params["beta"]
 
     @property
     def epsilon(self) -> torch.Tensor:
@@ -130,17 +131,18 @@ class Sidarthe(AbstractModel):
 
     @property
     def kappa(self) -> torch.Tensor:
-        #return self._params["xi"]
+        # return self._params["xi"]
         return self._params["kappa"]
 
     @property
     def zeta(self) -> torch.Tensor:
-        #return self._params["zeta"]
-        return self._params["eta"]
+        return self._params["zeta"]
+        # return self._params["eta"]
 
     @property
     def rho(self) -> torch.Tensor:
         return self._params["rho"]
+        # return self._params["lambda"]
 
     @property
     def sigma(self) -> torch.Tensor:
@@ -167,9 +169,9 @@ class Sidarthe(AbstractModel):
         def get_param_at_t(param, _t):
             _t = _t.long()
             if 0 <= _t < param.shape[0]:
-                return param[_t].unsqueeze(0)
+                return torch.relu(param[_t].unsqueeze(0))
             else:
-                return param[-1].unsqueeze(0)
+                return torch.relu(param[-1].unsqueeze(0))
 
         # region parameters
         alpha = get_param_at_t(self.alpha, t) / self.population
@@ -387,7 +389,7 @@ class Sidarthe(AbstractModel):
                 ext_tensor = torch.cat((ext_tensor, ext_tensor[-1].expand(remaining)))
             return ext_tensor
         else:
-            return value
+            return torch.relu(value)
 
     def inference(self, time_grid) -> Dict:
         sol = self.integrate(time_grid)
@@ -432,6 +434,7 @@ class Sidarthe(AbstractModel):
 
     @classmethod
     def init_trainable_model(cls, initial_params: dict, initial_conditions, targets, **model_params):
+        model_cls = model_params["model_cls"]
         time_step = model_params["time_step"]
         population = model_params["population"]
         integrator = model_params["integrator"]
@@ -455,7 +458,7 @@ class Sidarthe(AbstractModel):
         val_size = model_params.get("val_size", None)
         first_date = model_params.get("first_date", None)
 
-        return Sidarthe(initial_params, population, initial_conditions, integrator, time_step,
+        return model_cls(initial_params, population, initial_conditions, integrator, time_step,
                         d_weight=d_weight,
                         r_weight=r_weight,
                         t_weight=t_weight,
@@ -674,7 +677,6 @@ class Sidarthe(AbstractModel):
                 summary.add_figure(f"params_over_time/{fig_title}", fig, close=True, global_step=0)
 
     def log_info(self, epoch, losses, inferences, targets, summary: SummaryWriter = None):
-
         if self.verbose:
             print(f"Params at epoch {epoch}.")
             self.print_params()
@@ -686,6 +688,7 @@ class Sidarthe(AbstractModel):
         if summary is not None:
             for fig, fig_title in self.plot_params_over_time():
                 summary.add_figure(f"params_over_time/{fig_title}", fig, close=True, global_step=epoch)
+
 
             for fig, fig_title in self.plot_fits():
                 summary.add_figure(f"fits/{fig_title}", fig, close=True, global_step=epoch)
