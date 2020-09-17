@@ -107,11 +107,11 @@ class SidartheExperiment(Experiment):
         # default learning rates
         learning_rates = {
             "alpha": 1e-5,
-            "beta": 1e-6,
+            "beta": 1e-5,
             "gamma": 1e-5,
-            "delta": 1e-6,
+            "delta": 1e-5,
             "epsilon": 1e-5,
-            "theta": 1e-7,
+            "theta": 1e-5,
             "xi": 1e-5,
             "eta": 1e-5,
             "mu": 1e-5,
