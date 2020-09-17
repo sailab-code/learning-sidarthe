@@ -35,6 +35,7 @@ class Sidarthe(AbstractModel):
         self.bound_reg = kwargs["bound_reg"]
         self.verbose = kwargs["verbose"]
         self.loss_type = kwargs["loss_type"]
+        self.bound_loss_type = kwargs["bound_loss_type"]
 
         self.references = kwargs.get("references", None)
         self.targets = kwargs.get("targets", None)
@@ -268,6 +269,15 @@ class Sidarthe(AbstractModel):
                                              torch.ones(1, dtype=cls.dtype),
                                              torch.zeros(1, dtype=cls.dtype))
 
+    @classmethod
+    def __loss_parameter_near_origin(cls, parameter: torch.Tensor, eps=1e-10):
+        # apply ReLU
+        rectified_param = torch.max(torch.full_like(parameter, eps), parameter)
+
+        # apply log
+        return -torch.log10(torch.pow(rectified_param, 3.))
+
+
     def first_derivative_loss(self):
         loss_1st_derivative_total = torch.zeros(1, dtype=self.dtype)
         if self.der_1st_reg != 0:
@@ -288,10 +298,19 @@ class Sidarthe(AbstractModel):
 
     def bound_parameter_regularization(self):
         bound_reg_total = torch.zeros(1, dtype=self.dtype)
+
         for key, value in self.params.items():
-            # bound_reg = self.__loss_gte_one(value) + self.__loss_lte_zero(value)
-            bound_reg = self.__loss_lte_zero(value)
+            if self.bound_loss_type == "step":
+                bound_reg = self.__loss_lte_zero(value)
+            elif self.bound_loss_type == "log":
+                bound_reg = self.__loss_parameter_near_origin(value)
+            else:
+                raise Exception("Loss type not supported")
+
             bound_reg_total = bound_reg_total + bound_reg
+
+        # average params bound regularization
+        bound_reg_total /= len(self.params)
 
         return self.bound_reg * torch.mean(bound_reg_total)
 
@@ -449,6 +468,7 @@ class Sidarthe(AbstractModel):
         verbose = model_params.get("verbose", False)
 
         loss_type = model_params.get("loss_type", "rmse")
+        bound_loss_type = model_params.get("bound_loss_type", "step")
 
         references = model_params.get("references", None)
         train_size = model_params.get("train_size", None)
@@ -469,7 +489,8 @@ class Sidarthe(AbstractModel):
                         targets=targets,
                         train_size=train_size,
                         val_size=val_size,
-                        first_date=first_date
+                        first_date=first_date,
+                        bound_loss_type=bound_loss_type
                         )
 
     @classmethod
