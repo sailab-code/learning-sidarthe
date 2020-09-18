@@ -111,6 +111,10 @@ class SidartheParamGenerator:
     @staticmethod
     def __random_fill_list(param_list, param_range):
         list_len = len(param_list)
+
+        if list_len == 1:
+            param_list[0] = random.uniform(param_range[0], param_range[1])
+
         curr_index = 0
         next_index = random.randint(1, list_len)
         while next_index < list_len:
