@@ -112,17 +112,16 @@ class SidartheParamGenerator:
     def __random_fill_list(param_list, param_range):
         list_len = len(param_list)
 
-        if list_len == 1:
-            param_list[0] = random.uniform(param_range[0], param_range[1])
+        #if list_len == 1:
+        #    param_list[0] = random.uniform(param_range[0], param_range[1])
 
         curr_index = 0
-        next_index = random.randint(1, list_len)
-        while next_index < list_len:
+        while curr_index < list_len:
+            next_index = random.randint(curr_index+1, list_len)
             rand_value = random.uniform(param_range[0], param_range[1])
             for i in range(curr_index, next_index):
                 param_list[i] = rand_value
             curr_index = next_index
-            next_index = random.randint(curr_index+1, list_len)
 
     def random_init(self, length=39, ranges="giordano", param_types=None):
         if ranges is None or ranges == "giordano":
