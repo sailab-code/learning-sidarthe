@@ -52,6 +52,7 @@ random_ranges = {
     "zeta": (0.01, 0.3),
     "eta": (0.01, 0.3),
     "mu": (0.001, 0.05),
+    "nu": (0.002, 0.1),
     "tau": (0.005, 0.02),
     "lambda": (0.01, 0.06),
     "kappa": (0.005, 0.03),
@@ -92,6 +93,7 @@ extended_random_ranges = {
     "zeta": (0.01, 0.3),
     "eta": (0.01, 0.3),
     "mu": (0.001, 0.05),
+    "nu": (0.002, 0.1),
     "tau": (0.1, 0.3),
     "lambda": (0.01, 0.06),
     "kappa": (0.005, 0.03),
@@ -118,9 +120,11 @@ class SidartheParamGenerator:
             curr_index = next_index
             next_index = random.randint(curr_index+1, list_len)
 
-    def random_init(self, length=39, ranges=None, param_types=None):
-        if ranges is None:
+    def random_init(self, length=39, ranges="giordano", param_types=None):
+        if ranges is None or ranges == "giordano":
             ranges = random_ranges
+        elif ranges == "extended":
+            ranges = extended_random_ranges
         if param_types is None:
             param_types = default_param_types
 
