@@ -727,7 +727,7 @@ class Sidarthe(AbstractModel):
 
         if summary is not None:
             for fig, fig_title in self.plot_params_over_time():
-                summary.add_figure(f"params_over_time/{fig_title}", fig, close=True, global_step=epoch)
+                summary.add_figure(f"{fig_title}", fig, close=True, global_step=epoch)
 
 
             for fig, fig_title in self.plot_fits():
