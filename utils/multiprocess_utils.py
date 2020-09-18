@@ -21,12 +21,12 @@ class ProcessPool:
         proc.start()
         self.procs[proc.pid] = proc
 
-    def wait_for_empty_slot(self):
+    def wait_for_empty_slot(self, timeout=TIMEOUT):
         # run N_PROCESSES exps at a time
         if len(self.procs) == N_PROCESSES:
             while True:
                 for pid, proc in self.procs.items():
-                    proc.join(TIMEOUT)
+                    proc.join(timeout=timeout)
                     if not proc.is_alive():
                         del self.procs[pid]
                         return
