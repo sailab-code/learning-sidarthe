@@ -154,8 +154,9 @@ class SidartheParamGenerator:
             self.base_params = params
 
     def perturb(self, mu=0.0, sigma=0.01):
+        eps = 1e-8
         for k, weights in self.base_params.items():
-            self.base_params[k] = [w + random.gauss(mu, sigma) for w in weights]
+            self.base_params[k] = [max(eps, min(w + random.gauss(mu, sigma), 1.0)) for w in weights]
 
     def extend(self, total_days):
         base_params = self.base_params
