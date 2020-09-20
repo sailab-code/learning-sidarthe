@@ -8,7 +8,7 @@ TIMEOUT=10
 
 
 class ProcessPool:
-    def __init__(self, max_n_procs=None):
+    def __init__(self, max_n_procs=N_PROCESSES):
         self.max_n_procs = max_n_procs
         self.procs: Dict[int, mp.Process] = {} # id => Process
 
@@ -23,7 +23,7 @@ class ProcessPool:
 
     def wait_for_empty_slot(self, timeout=TIMEOUT):
         # run N_PROCESSES exps at a time
-        if len(self.procs) == N_PROCESSES:
+        if len(self.procs) == self.max_n_procs:
             while True:
                 for pid, proc in self.procs.items():
                     proc.join(timeout=timeout)
