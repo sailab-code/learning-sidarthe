@@ -29,12 +29,12 @@ if __name__ == "__main__":
     n_epochs = 2000
 
     procs = []
-    process_pool = ProcessPool(1)
+    process_pool = ProcessPool(N_PROCESSES)
     mp.set_start_method('spawn')
 
     m_space = np.linspace(0., 0.5, 11)
     train_sizes = range(40, 120, 20)
-    n_tries = 1
+    n_tries = 3
 
     for n_try in range(0, n_tries):
         gen = SidartheParamGenerator()
