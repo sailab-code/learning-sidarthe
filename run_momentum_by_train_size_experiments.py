@@ -29,7 +29,7 @@ if __name__ == "__main__":
     n_epochs = 2000
 
     procs = []
-    process_pool = ProcessPool(1)
+    process_pool = ProcessPool(N_PROCESSES)
     mp.set_start_method('spawn')
 
     m_space = np.linspace(0., 0.5, 11)
