@@ -9,7 +9,7 @@ class GitManager:
     def __init__(self):
 
         if not path.exists(f"./{REPO_NAME}"):
-            command = f"git clone {REPO_URL}"
+            command = f"git clone --depth 1 -b master --single-branch {REPO_URL}"
             cwd = os.curdir
         else:
             command = f"git pull"

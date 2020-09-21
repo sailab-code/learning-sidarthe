@@ -31,9 +31,9 @@ class Sidarthe(AbstractModel):
 
         self.der_1st_reg = kwargs["der_1st_reg"]
         self.bound_reg = kwargs["bound_reg"]
-        self.verbose = kwargs["verbose"]
-        self.loss_type = kwargs["loss_type"]
-        self.bound_loss_type = kwargs["bound_loss_type"]
+        self.verbose = kwargs.get("verbose", False)
+        self.loss_type = kwargs.get("loss_type", "nrmse")
+        self.bound_loss_type = kwargs.get("bound_loss_type", "step")
 
         self.references = kwargs.get("references", None)
         self.targets = kwargs.get("targets", None)
@@ -41,15 +41,16 @@ class Sidarthe(AbstractModel):
         self.val_size = kwargs.get("val_size", None)
         self.first_date = kwargs.get("first_date", None)
 
-        # compute normalization values
-        averages = {
-            key[0]: np.mean(value) for key, value in self.targets.items()
-        }
-        max_average = np.max([value for value in averages.values()])
-        self.norm_weights = {
-            key: max_average / avg for key, avg in averages.items()
-        }
-        print(self.norm_weights)
+        if self.targets is not None:
+            # compute normalization values
+            averages = {
+                key[0]: np.mean(value) for key, value in self.targets.items()
+            }
+            max_average = np.max([value for value in averages.values()])
+            self.norm_weights = {
+                key: max_average / avg for key, avg in averages.items()
+            }
+            print(self.norm_weights)
 
         if self.first_date is None:
             self.format_xtick = format_xtick
