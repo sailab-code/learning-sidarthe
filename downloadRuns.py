@@ -2,6 +2,7 @@ import os
 import subprocess
 import os.path
 import argparse
+from tqdm import tqdm
 
 parser = argparse.ArgumentParser("Download runs from a remote server")
 
@@ -14,12 +15,9 @@ parser.add_argument('--region', metavar="region", type=str, dest="region", help=
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    #ls_runs_command = ["ssh", "-t", args.remote, f"'ls {args.remote_root}/runs/{args.runs_directory}/{args.model}/{args.region}'"]
     ls_runs_command = ["ssh", "-t", args.remote, f"ls -1 {args.remote_root}/runs/{args.runs_directory}/{args.model}/{args.region}"]
     ls_process = subprocess.run(ls_runs_command, capture_output=True, shell=False, text=True)
-    #run_dirs = [run_dir for run_dir in ls_process.stdout.split("\n") if run_dir != '']
-
-    for run_dir in ls_process.stdout.split("\n"):
+    for run_dir in tqdm(ls_process.stdout.split("\n")):
         if run_dir == '':
             continue
 
@@ -34,8 +32,3 @@ if __name__ == "__main__":
         scp_cmd = ["scp",  f"{remote_run_path}{{settings,final}}.json", f"{local_run_path}"]
     
         subprocess.run(scp_cmd)
-
-
-    #command = f"scp {args.remote}:{args.remote_root}/runs/{args.runs_directory} ./runs/{args.runs_directory}"
-    #subprocess.Popen()
-
