@@ -264,7 +264,7 @@ class Sidarthe(AbstractModel):
 
         return torch.mean(
             torch.abs(
-                (target[mask] - hat[mask]) / target
+                (target[mask] - hat[mask]) / target[mask]
             )
         )
 
