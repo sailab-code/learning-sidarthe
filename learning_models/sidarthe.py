@@ -286,8 +286,8 @@ class Sidarthe(AbstractModel):
         # apply ReLU
         rectified_param = torch.max(torch.full_like(parameter, eps), parameter)
 
-        # apply log
-        return -torch.log10(torch.pow(rectified_param, 3.))
+        # apply loss
+        return torch.pow(torch.log(rectified_param) / torch.log(torch.tensor(2e3)), 4)
 
     def first_derivative_loss(self):
         loss_1st_derivative_total = torch.zeros(1, dtype=self.dtype)
