@@ -673,6 +673,25 @@ class Sidarthe(AbstractModel):
                 pl_title = f"Estimated {key.upper()} on fit"
                 fit_plots.append((fig, pl_title))
 
+
+                if target_train is not None:
+                    # add error plots
+                    pl_title = f"{key.upper()} - errors"
+                    fig_name = f"Error {key.upper()} on fit"
+                    curr_errors_train = curr_hat_train - np.array(target_train)
+
+                    curr_errors_val = curr_hat_val - np.array(target_val)
+
+                    curr_errors_test = curr_hat_test - np.array(target_test)
+
+                    train_curves = self.get_curves(train_range, curr_errors_train, None, key, 'r')
+                    val_curves = self.get_curves(val_range, curr_errors_val, None, key, 'b')
+                    test_curves = self.get_curves(test_range, curr_errors_test, None, key, 'g')
+                    tot_curves = train_curves + val_curves + test_curves
+
+                    fig = generic_plot(tot_curves, pl_title, None, formatter=self.format_xtick)
+                    fit_plots.append((fig, fig_name))
+
         return fit_plots
 
     def plot_r0(self, r0):
