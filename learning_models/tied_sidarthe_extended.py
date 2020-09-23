@@ -10,7 +10,7 @@ class TiedSidartheExtended(SidartheExtended):
 
     def __init__(self, parameters: Dict, population, init_cond, integrator, sample_time, **kwargs):
         super().__init__(parameters, population, init_cond, integrator, sample_time, **kwargs)
-        self.model_name = kwargs.get("name", "sidarthe_extended")
+        self.model_name = kwargs.get("name", "tied_sidarthe_extended")
 
     @property
     def params(self) -> Dict:

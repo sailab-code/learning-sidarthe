@@ -38,7 +38,7 @@ class SidartheExtended(Sidarthe):
     @property
     def param_groups(self) -> Dict:
         base_groups = super().param_groups
-        base_groups['death_rates'] = ('tau','phi','chi')
+        base_groups['death_rates'] = ('tau', 'phi', 'chi')
         return base_groups
 
     # region ModelParams

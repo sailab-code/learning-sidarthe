@@ -16,8 +16,7 @@ class Sidarthe(AbstractModel):
 
     def __init__(self, parameters: Dict, population, init_cond, integrator, sample_time, **kwargs):
         super().__init__(init_cond, integrator, sample_time)
-        self._params = {key: torch.tensor(value, dtype=self.dtype, requires_grad=True) for key, value in
-                        parameters.items()}
+        self.set_initial_params(parameters)
         self.population = population
         self.model_name = kwargs.get("name", "sidarthe")
 
@@ -245,6 +244,10 @@ class Sidarthe(AbstractModel):
         else:
             return torch.tensor([[1.] + [0.] * 7], dtype=self.dtype)
 
+    def set_initial_params(self, params):
+        self._params = {key: torch.tensor(value, dtype=self.dtype, requires_grad=True) for key, value in
+                        params.items()}
+
     def set_params(self, params):
         self._params = params
 
@@ -308,19 +311,20 @@ class Sidarthe(AbstractModel):
 
     def bound_parameter_regularization(self):
         bound_reg_total = torch.zeros(1, dtype=self.dtype)
+        if self.bound_reg != 0:
 
-        for key, value in self.params.items():
-            if self.bound_loss_type == "step":
-                bound_reg = self.__loss_lte_zero(value)
-            elif self.bound_loss_type == "log":
-                bound_reg = self.__loss_parameter_near_origin(value)
-            else:
-                raise Exception("Loss type not supported")
+            for key, value in self._params.items():
+                if self.bound_loss_type == "step":
+                    bound_reg = self.__loss_lte_zero(value)
+                elif self.bound_loss_type == "log":
+                    bound_reg = self.__loss_parameter_near_origin(value)
+                else:
+                    raise Exception("Loss type not supported")
 
-            bound_reg_total = bound_reg_total + bound_reg
+                bound_reg_total = bound_reg_total + bound_reg
 
-        # average params bound regularization
-        bound_reg_total /= len(self.params)
+            # average params bound regularization
+            bound_reg_total /= len(self._params)
 
         return self.bound_reg * torch.mean(bound_reg_total)
 
@@ -404,19 +408,12 @@ class Sidarthe(AbstractModel):
         }
 
     def extend_param(self, value, length):
+
         len_diff = length - value.shape[0]
-        t_inc = self.time_step
-        ext_tensor = torch.tensor([], dtype=self.dtype)
-        if len_diff > 0:
-            for t in range(0, value.shape[0]):
-                ext_tensor = torch.cat((ext_tensor, value[t].expand(int(1/t_inc))))
-            
-            remaining = length - ext_tensor.shape[0]
-            if remaining > 0:
-                ext_tensor = torch.cat((ext_tensor, ext_tensor[-1].expand(remaining)))
-            return ext_tensor
-        else:
-            return torch.relu(value)
+        ext_tensor = torch.tensor([value[-1] for _ in range(len_diff)], dtype=self.dtype)
+        ext_tensor = torch.cat((value, ext_tensor))
+
+        return torch.relu(ext_tensor)
 
     def inference(self, time_grid) -> Dict:
         sol = self.integrate(time_grid)
