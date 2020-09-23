@@ -165,9 +165,13 @@ class Sidarthe(AbstractModel):
     def get_param_at_t(param, _t):
         _t = _t.long()
         if 0 <= _t < param.shape[0]:
-            return torch.relu(param[_t].unsqueeze(0))
+            rectified_param = torch.relu(param[_t].unsqueeze(0))
         else:
-            return torch.relu(param[-1].unsqueeze(0).detach())
+            rectified_param = torch.relu(param[-1].unsqueeze(0).detach())
+
+        return rectified_param + torch.tensor(1e-6)
+
+
 
     def differential_equations(self, t, x):
         """
