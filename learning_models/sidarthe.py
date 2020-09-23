@@ -267,6 +267,14 @@ class Sidarthe(AbstractModel):
         )
 
     @staticmethod
+    def __mae_loss(target, hat):
+        mask = torch.ge(target, 0)
+
+        return torch.mean(
+            torch.abs(target[mask] - hat[mask])
+        )
+
+    @staticmethod
     def __mape_loss(target, hat):
         mask = torch.ge(target, 0)
 
@@ -377,12 +385,18 @@ class Sidarthe(AbstractModel):
         if self.loss_type == "rmse":
             total_rmse, losses_dict = compute_total_loss(self.__rmse_loss)
             loss = torch.tensor([1e-4], dtype=self.dtype) * total_rmse
+        elif self.loss_type == "mae":
+            total_mae, losses_dict = compute_total_loss(self.__mae_loss)
+            loss = total_mae
         elif self.loss_type == "mape":
             total_mape, losses_dict = compute_total_loss(self.__mape_loss)
             loss = total_mape
         elif self.loss_type == "nrmse":
             total_nrmse, losses_dict = compute_total_loss(self.__rmse_loss, normalized=True)
             loss = total_nrmse
+        elif self.loss_type == "nmae":
+            total_nmae, losses_dict = compute_total_loss(self.__mae_loss, normalized=True)
+            loss = total_nmae
         else:
             raise ValueError(f"loss type {self.loss_type} not supported")
 
