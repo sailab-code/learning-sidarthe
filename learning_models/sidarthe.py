@@ -169,7 +169,7 @@ class Sidarthe(AbstractModel):
         else:
             rectified_param = torch.relu(param[-1].unsqueeze(0).detach())
 
-        return rectified_param + torch.tensor(1e-6)
+        return rectified_param + torch.tensor(1e-10)
 
 
 
