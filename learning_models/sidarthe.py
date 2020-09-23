@@ -294,7 +294,7 @@ class Sidarthe(AbstractModel):
         rectified_param = torch.max(torch.full_like(parameter, eps), parameter)
 
         # apply loss
-        return torch.pow(torch.log(rectified_param) / torch.log(torch.tensor(2e3)), 4)
+        return torch.pow(torch.log(rectified_param) / torch.log(torch.tensor(1./0.5e3)), 10)
 
     def first_derivative_loss(self):
         loss_1st_derivative_total = torch.zeros(1, dtype=self.dtype)
@@ -328,9 +328,9 @@ class Sidarthe(AbstractModel):
             bound_reg_total = bound_reg_total + bound_reg
 
         # average params bound regularization
-        bound_reg_total /= len(self.params)
+        #bound_reg_total /= len(self.params)
 
-        return self.bound_reg * torch.mean(bound_reg_total)
+        return self.bound_reg * torch.sum(bound_reg_total)
 
     def losses(self, inferences, targets) -> Dict:
         # this function converts target values to torch.tensor with specified dtype
