@@ -14,7 +14,7 @@ N_PROCESSES = 6
 
 if __name__ == "__main__":
     region = "Italy"
-    n_epochs = 10000
+    n_epochs = 5000
     t_step = 1.0
     train_size = 187
     val_len = 10
@@ -24,10 +24,10 @@ if __name__ == "__main__":
     momentums = [True]
     ms = [0.2]
     ass = [0.]
-    bound_regs = [1e3, 1e4, 1e5, 1e6, 1e7, 1e8]
+    bound_regs = [1, 1e1]
     loss_type = "nrmse"
     bound_loss_type = "log"
-    d_ws, r_ws, t_ws, h_ws, e_ws = [5.0], [1.0], [1.0], [1.0], [1.0]
+    d_ws, r_ws, t_ws, h_ws, e_ws = [2.5], [1.0], [1.0], [1.0], [1.0]
 
     experiment_cls = ExtendedSidartheExperiment  # switch class to change experiment: e.g. SidartheExperiment
 
@@ -52,7 +52,7 @@ if __name__ == "__main__":
         }
 
         for k,v in loss_weights.items():
-            loss_weights[k] = 0.002 * v
+            loss_weights[k] = 0.02 * v
 
         experiment = experiment_cls(region, n_epochs=n_epochs, time_step=t_step, runs_directory="runs/iaml_exps", uuid_prefix=f"{bound_reg:.0e}")
 
