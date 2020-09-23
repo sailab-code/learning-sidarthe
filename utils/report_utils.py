@@ -17,7 +17,7 @@ def get_exp_prefix(area, initial_params, learning_rates, train_size, val_len, de
 
 
 def get_description(area, initial_params, learning_rates, target_weights, train_size, val_len, der_1st_reg,
-                    t_inc, momentum, m, a, loss_type, integrator, bound_reg):
+                    t_inc, momentum, m, a, loss_type, integrator, bound_reg, bound_loss_type):
     return {
         "started": datetime.now().strftime('%d/%B/%Y %H:%M:%S'),
         "region": area,
@@ -32,8 +32,9 @@ def get_description(area, initial_params, learning_rates, target_weights, train_
         "a": a if momentum else None,
         "integrator": integrator.__name__,
         "loss_type": loss_type,
-        "initial_values": initial_params,
-        "bound_reg": bound_reg
+        "bound_reg": bound_reg,
+        "bound_loss_type": bound_loss_type,
+        "initial_values": initial_params
     }
 
 def get_markdown_description(description_json, exp_id):

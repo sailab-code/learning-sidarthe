@@ -54,21 +54,21 @@ class Experiment:
         """
         base_path = os.path.join(os.getcwd(), self.runs_dir)
         if not os.path.exists(base_path):
-            os.mkdir(base_path)
+            os.makedirs(base_path)
 
         exp_path = os.path.join(base_path, self.model_params["name"])
         if not os.path.exists(exp_path):
-            os.mkdir(exp_path)
+            os.makedirs(exp_path)
 
         # adds directory with the region name
         exp_path = os.path.join(exp_path, self.region)
         if not os.path.exists(exp_path):
-            os.mkdir(exp_path)
+            os.makedirs(exp_path)
 
         # adds directory with the uuid
         exp_path = os.path.join(exp_path, f"{self.uuid_prefix}{self.uuid}")
         if not os.path.exists(exp_path):
-            os.mkdir(exp_path)
+            os.makedirs(exp_path)
 
         self.exp_path = exp_path
 
@@ -140,7 +140,7 @@ class Experiment:
             self.dataset_params["train_size"], self.dataset_params["val_len"],
             self.model_params["der_1st_reg"], self.time_step,
             self.train_params["momentum"], self.train_params["m"], self.train_params["a"], self.model_params["loss_type"],
-            self.model_params["integrator"], self.model_params["bound_reg"]
+            self.model_params["integrator"], self.model_params["bound_reg"], self.model_params["bound_loss_type"]
         )
 
         json_description = json.dumps(description, indent=4)

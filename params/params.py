@@ -1,5 +1,4 @@
 import random
-import seaborn as sns
 
 # original params taken from Giordano's paper
 default_param_types = {

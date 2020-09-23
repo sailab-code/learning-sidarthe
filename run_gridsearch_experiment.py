@@ -1,13 +1,13 @@
 import os
 
-import multiprocessing as mp
-import itertools
-
-from experiments.sidarthe_experiment import SidartheExperiment
 from experiments.sidarthe_extended_experiment import ExtendedSidartheExperiment
 
-from utils.multiprocess_utils import ProcessPool
+from learning_models.tied_sidarthe_extended import TiedSidartheExtended
 from params.params import SidartheParamGenerator
+from utils.multiprocess_utils import ProcessPool
+
+import multiprocessing as mp
+import itertools
 
 N_PROCESSES = 10
 N_PERTURBED_RUNS = 50

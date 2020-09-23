@@ -2,6 +2,7 @@ import os
 import subprocess
 import os.path
 import argparse
+from tqdm import tqdm
 
 parser = argparse.ArgumentParser("Download runs from a remote server")
 
@@ -14,28 +15,20 @@ parser.add_argument('--region', metavar="region", type=str, dest="region", help=
 
 if __name__ == "__main__":
     args = parser.parse_args()
-    #ls_runs_command = ["ssh", "-t", args.remote, f"'ls {args.remote_root}/runs/{args.runs_directory}/{args.model}/{args.region}'"]
-    ls_runs_command = ["ssh", "-t", args.remote, f"ls -1 {args.remote_root}/runs/{args.runs_directory}/{args.model}/{args.region}"]
-    ls_process = subprocess.run(ls_runs_command, capture_output=True, shell=False, text=True)
-    #run_dirs = [run_dir for run_dir in ls_process.stdout.split("\n") if run_dir != '']
-
-    for run_dir in ls_process.stdout.split("\n"):
-        if run_dir == '':
-            continue
-
-        run_dir_path = f"{args.runs_directory}/{args.model}/{args.region}/{run_dir}/"
-
-        local_run_path = f"./runs/{run_dir_path}"
-        remote_run_path = f"{args.remote}:{args.remote_root}/runs/{run_dir_path}"
-
-        if not os.path.exists(local_run_path):
-            os.makedirs(local_run_path)
-
-        scp_cmd = ["scp",  f"{remote_run_path}{{settings,final}}.json", f"{local_run_path}"]
+    #ls_runs_command = ["ssh", "-t", args.remote, f"ls -1 {args.remote_root}/runs/{args.runs_directory}/{args.model}/{args.region}"]
+    #ls_process = subprocess.run(ls_runs_command, capture_output=True, shell=False, text=True)
     
-        subprocess.run(scp_cmd)
+    run_dir_path = f"{args.runs_directory}/{args.model}/{args.region}/"
+    local_run_path = f"{run_dir_path}"
 
+    if not os.path.exists(local_run_path):
+        os.makedirs(local_run_path)
 
-    #command = f"scp {args.remote}:{args.remote_root}/runs/{args.runs_directory} ./runs/{args.runs_directory}"
-    #subprocess.Popen()
+    remote_run_path = f"{args.remote}:{args.remote_root}/{run_dir_path}"
 
+    rsync_cmd = ["rsync", "-zhae", "ssh", "--exclude", "*tfevents*", f"{remote_run_path}", f"{local_run_path}"]
+    print("Executing command \"" + " ".join(rsync_cmd) + "\"")
+
+    subprocess.run(rsync_cmd, shell=True)
+
+       

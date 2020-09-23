@@ -6,7 +6,7 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.tensorboard import SummaryWriter
 
 from learning_models.abstract_model import AbstractModel
-from learning_models.new_sir_optimizer import NewSirOptimizer
+from learning_models.optimizers.new_sir_optimizer import NewSirOptimizer
 from utils import derivatives
 from utils.visualization_utils import Curve, generic_plot, format_xtick, generate_format_xtick
 
@@ -30,9 +30,9 @@ class Sidarthe(AbstractModel):
 
         self.der_1st_reg = kwargs["der_1st_reg"]
         self.bound_reg = kwargs["bound_reg"]
-        self.verbose = kwargs["verbose"]
-        self.loss_type = kwargs["loss_type"]
-        self.bound_loss_type = kwargs["bound_loss_type"]
+        self.verbose = kwargs.get("verbose", False)
+        self.loss_type = kwargs.get("loss_type", "nrmse")
+        self.bound_loss_type = kwargs.get("bound_loss_type", "step")
 
         self.references = kwargs.get("references", None)
         self.targets = kwargs.get("targets", None)
@@ -40,15 +40,16 @@ class Sidarthe(AbstractModel):
         self.val_size = kwargs.get("val_size", None)
         self.first_date = kwargs.get("first_date", None)
 
-        # compute normalization values
-        averages = {
-            key[0]: np.mean(value) for key, value in self.targets.items()
-        }
-        max_average = np.max([value for value in averages.values()])
-        self.norm_weights = {
-            key: max_average / avg for key, avg in averages.items()
-        }
-        print(self.norm_weights)
+        if self.targets is not None:
+            # compute normalization values
+            averages = {
+                key[0]: np.mean(value) for key, value in self.targets.items()
+            }
+            max_average = np.max([value for value in averages.values()])
+            self.norm_weights = {
+                key: max_average / avg for key, avg in averages.items()
+            }
+            print(self.norm_weights)
 
         if self.first_date is None:
             self.format_xtick = format_xtick
@@ -159,6 +160,14 @@ class Sidarthe(AbstractModel):
 
     # endregion ModelParams
 
+    @staticmethod
+    def get_param_at_t(param, _t):
+        _t = _t.long()
+        if 0 <= _t < param.shape[0]:
+            return torch.relu(param[_t].unsqueeze(0))
+        else:
+            return torch.relu(param[-1].unsqueeze(0).detach())
+
     def differential_equations(self, t, x):
         """
         Returns the right-hand side of SIDARTHE model
@@ -175,12 +184,7 @@ class Sidarthe(AbstractModel):
         :return: right-hand side of SIDARTHE model, i.e. f(t,x(t))
         """
 
-        def get_param_at_t(param, _t):
-            _t = _t.long()
-            if 0 <= _t < param.shape[0]:
-                return torch.relu(param[_t].unsqueeze(0))
-            else:
-                return torch.relu(param[-1].unsqueeze(0))
+        get_param_at_t = self.get_param_at_t
 
         # region parameters
         alpha = get_param_at_t(self.alpha, t) / self.population
@@ -288,8 +292,8 @@ class Sidarthe(AbstractModel):
         # apply ReLU
         rectified_param = torch.max(torch.full_like(parameter, eps), parameter)
 
-        # apply log
-        return -torch.log10(torch.pow(rectified_param, 3.))
+        # apply loss
+        return torch.pow(torch.log(rectified_param) / torch.log(torch.tensor(2e3)), 4)
 
     def first_derivative_loss(self):
         loss_1st_derivative_total = torch.zeros(1, dtype=self.dtype)
