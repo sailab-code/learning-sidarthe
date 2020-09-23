@@ -364,47 +364,34 @@ class Sidarthe(AbstractModel):
             return total_loss, losses
 
         # compute losses
-        total_rmse, rmse_losses = compute_total_loss(self.__rmse_loss)
-        total_nrmse, nrmse_losses = compute_total_loss(self.__rmse_loss, normalized=True)
-        total_mape, mape_losses = compute_total_loss(self.__mape_loss)
-        val_loss, _ = compute_total_loss(self.__rmse_loss, weighted=False)
 
-        der_1st_loss = self.first_derivative_loss()
+
         # der_2nd_loss = self.second_derivative_loss()
 
         bound_reg = self.bound_parameter_regularization()
 
         if self.loss_type == "rmse":
+            total_rmse, losses_dict = compute_total_loss(self.__rmse_loss)
             loss = torch.tensor([1e-4], dtype=self.dtype) * total_rmse
         elif self.loss_type == "mape":
+            total_mape, losses_dict = compute_total_loss(self.__mape_loss)
             loss = total_mape
         elif self.loss_type == "nrmse":
+            total_nrmse, losses_dict = compute_total_loss(self.__rmse_loss, normalized=True)
             loss = total_nrmse
         else:
             raise ValueError(f"loss type {self.loss_type} not supported")
 
+        der_1st_loss = self.first_derivative_loss()
         total_loss = loss + der_1st_loss + bound_reg
+        val_loss, _ = compute_total_loss(self.__rmse_loss, weighted=False)
 
         return {
             self.val_loss_checked: val_loss.squeeze(0),
-            "d_rmse": rmse_losses["d"],
-            "r_rmse": rmse_losses["r"],
-            "t_rmse": rmse_losses["t"],
-            "h_rmse": rmse_losses["h"],
-            "e_rmse": rmse_losses["e"],
-            "d_nrmse": nrmse_losses["d"],
-            "r_nrmse": nrmse_losses["r"],
-            "t_nrmse": nrmse_losses["t"],
-            "h_nrmse": nrmse_losses["h"],
-            "e_nrmse": nrmse_losses["e"],
-            "d_mape": mape_losses["d"],
-            "r_mape": mape_losses["r"],
-            "t_mape": mape_losses["t"],
-            "h_mape": mape_losses["h"],
-            "e_mape": mape_losses["e"],
+            self.backward_loss_key: total_loss.squeeze(0),
             "der_1st": der_1st_loss,
             "bound_reg": bound_reg,
-            self.backward_loss_key: total_loss.squeeze(0)
+            **losses_dict
         }
 
     def extend_param(self, value, length):
