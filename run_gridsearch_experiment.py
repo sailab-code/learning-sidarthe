@@ -52,7 +52,6 @@ if __name__ == "__main__":
     }
 
     experiment_cls = ExtendedSidartheExperiment  # switch class to change experiment: e.g. SidartheExperiment
-    experiment = experiment_cls(region, n_epochs=n_epochs, time_step=t_step, runs_directory="fit_FR")
 
     process_pool = ProcessPool(N_PROCESSES)
     mp.set_start_method('spawn')
@@ -77,6 +76,7 @@ if __name__ == "__main__":
         for k, v in loss_weights.items():
             loss_weights[k] = 0.002 * v
 
+        experiment = experiment_cls(region, n_epochs=n_epochs, time_step=t_step, runs_directory="fit_FR")
         process_pool.start(
             target=experiment.run_exp,
             kwargs={
