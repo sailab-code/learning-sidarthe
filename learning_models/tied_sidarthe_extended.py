@@ -7,8 +7,6 @@ from learning_models.sidarthe_extended import SidartheExtended
 from learning_models.optimizers.tied_optimizer import TiedOptimizer
 
 class TiedSidartheExtended(SidartheExtended):
-    dtype = torch.float64
-
     def __init__(self, parameters: Dict, population, init_cond, integrator, sample_time, **kwargs):
         super().__init__(parameters, population, init_cond, integrator, sample_time, **kwargs)
         self.model_name = kwargs.get("name", "sidarthe_extended")
