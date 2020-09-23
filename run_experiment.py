@@ -2,7 +2,7 @@ import os
 
 from experiments.sidarthe_experiment import SidartheExperiment
 from experiments.sidarthe_extended_experiment import ExtendedSidartheExperiment
-
+from learning_models.tied_sidarthe_extended import TiedSidartheExtended
 
 if __name__ == "__main__":
     region = "Italy"
@@ -51,7 +51,7 @@ if __name__ == "__main__":
         initial_params=initial_params,
         dataset_params={"train_size": train_size+4, "val_len": 10},
         train_params={"momentum": False},
-        model_params={"der_1st_reg": 1e5, "bound_reg": 5e5, "bound_loss_type": "step"},
+        model_params={"der_1st_reg": 1e5, "bound_reg": 5e5, "bound_loss_type": "step", "model_cls": TiedSidartheExtended},
         loss_weights=loss_weights
 
     )  # params can be set, no params => default configuration

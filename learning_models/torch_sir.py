@@ -3,16 +3,14 @@ import time
 import numpy
 import torch
 import torch.nn as nn
-from torch.optim import SGD, Adam
-from torch.optim.optimizer import Optimizer
-from torch_euler import euler, Heun
-from torchdiffeq import odeint
+from torch.optim import Adam
+from torch_euler import euler
 
 import matplotlib.pyplot as pl
 
 from utils.visualization_utils import generic_plot, format_xtick, Curve
 
-from learning_models.sir_optimizer import SirOptimizer
+from learning_models.optimizers.sir_optimizer import SirOptimizer
 
 class SirEq:
     def __init__(self, beta, gamma, delta, population, init_cond, mode="dynamic", **kwargs):

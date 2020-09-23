@@ -6,7 +6,7 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.tensorboard import SummaryWriter
 
 from learning_models.abstract_model import AbstractModel
-from learning_models.new_sir_optimizer import NewSirOptimizer
+from learning_models.optimizers.new_sir_optimizer import NewSirOptimizer
 from utils import derivatives
 from utils.visualization_utils import Curve, generic_plot, format_xtick, generate_format_xtick
 

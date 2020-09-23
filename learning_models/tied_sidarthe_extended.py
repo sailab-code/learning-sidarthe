@@ -1,9 +1,10 @@
-from typing import Dict
+from typing import Dict, List
 
 import torch
+from torch.optim import Optimizer
 
 from learning_models.sidarthe_extended import SidartheExtended
-
+from learning_models.optimizers.tied_optimizer import TiedOptimizer
 
 class TiedSidartheExtended(SidartheExtended):
     dtype = torch.float64
@@ -47,6 +48,7 @@ class TiedSidartheExtended(SidartheExtended):
     def gamma(self) -> torch.Tensor:
         return self._params["gamma"]
 
+    # tied to beta
     @property
     def delta(self) -> torch.Tensor:
         return self._params["beta"]
@@ -79,6 +81,7 @@ class TiedSidartheExtended(SidartheExtended):
     def tau(self) -> torch.Tensor:
         return self._params["tau"]
 
+    # tied to rho
     @property
     def lambda_(self) -> torch.Tensor:
         return self._params["rho"]
@@ -87,6 +90,7 @@ class TiedSidartheExtended(SidartheExtended):
     def kappa(self) -> torch.Tensor:
         return self._params["xi"]
 
+    # tied to eta
     @property
     def zeta(self) -> torch.Tensor:
         return self._params["eta"]
@@ -106,3 +110,21 @@ class TiedSidartheExtended(SidartheExtended):
     @property
     def chi(self) -> torch.Tensor:
         return self._params["chi"]
+
+    @property
+    def tied_params(self) -> Dict:
+        return {
+            "delta": "beta",
+            "lambda": "rho",
+            "zeta": "eta"
+        }
+
+    @classmethod
+    def init_optimizers(cls, model: 'TiedSidartheExtended', learning_rates: dict, optimizers_params: dict) -> List[Optimizer]:
+        m = optimizers_params.get("m", 1 / 9)
+        a = optimizers_params.get("a", 0.05)
+        momentum = optimizers_params.get("momentum", True)
+        summary = optimizers_params.get("tensorboard_summary", None)
+
+        optimizer = TiedOptimizer(model._params, learning_rates, m=m, a=a, momentum=momentum, summary=summary, tied_params=model.tied_params)
+        return [optimizer]
