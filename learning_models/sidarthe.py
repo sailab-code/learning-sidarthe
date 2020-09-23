@@ -12,7 +12,7 @@ from utils.visualization_utils import Curve, generic_plot, format_xtick, generat
 
 
 class Sidarthe(AbstractModel):
-    dtype = torch.float64
+    dtype = torch.float32
 
     def __init__(self, parameters: Dict, population, init_cond, integrator, sample_time, **kwargs):
         super().__init__(init_cond, integrator, sample_time)
