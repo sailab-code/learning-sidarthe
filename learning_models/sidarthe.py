@@ -161,6 +161,14 @@ class Sidarthe(AbstractModel):
 
     # endregion ModelParams
 
+    @staticmethod
+    def get_param_at_t(param, _t):
+        _t = _t.long()
+        if 0 <= _t < param.shape[0]:
+            return torch.relu(param[_t].unsqueeze(0))
+        else:
+            return torch.relu(param[-1].unsqueeze(0).detach())
+
     def differential_equations(self, t, x):
         """
         Returns the right-hand side of SIDARTHE model
@@ -177,12 +185,7 @@ class Sidarthe(AbstractModel):
         :return: right-hand side of SIDARTHE model, i.e. f(t,x(t))
         """
 
-        def get_param_at_t(param, _t):
-            _t = _t.long()
-            if 0 <= _t < param.shape[0]:
-                return torch.relu(param[_t].unsqueeze(0))
-            else:
-                return torch.relu(param[-1].unsqueeze(0))
+        get_param_at_t = self.get_param_at_t
 
         # region parameters
         alpha = get_param_at_t(self.alpha, t) / self.population
