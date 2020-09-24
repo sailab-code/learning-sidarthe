@@ -39,7 +39,7 @@ class Dataset:
         """
         region_params = get_region_params(self.region)
         self.x, self.y = self.load_data(region_params)
-        self.y, self.first_date = self.select_targets(self.y)
+        self.x, self.y, self.first_date = self.select_targets(self.y)
 
     @property
     def inputs(self):

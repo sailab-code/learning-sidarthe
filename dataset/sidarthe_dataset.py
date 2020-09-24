@@ -56,4 +56,4 @@ class SidartheDataset(Dataset):
             "e": e_target
         }
 
-        return self.y, first_date
+        return self.x[-len(self.y["d"]):], self.y, first_date
