@@ -20,6 +20,7 @@ if __name__ == "__main__":
 
     der_1st_regs = [1e7]
     momentums = [True]
+
     ms = [0.125]
     ass = [0.0]
     bound_reg = 1e6
@@ -98,6 +99,7 @@ if __name__ == "__main__":
                 "dataset_params": {"train_size": train_size, "val_len": val_len, "region": region},
                 "model_params": {"der_1st_reg": der_1st_reg, "bound_reg": bound_reg, "bound_loss_type": "step"},
                 "train_params": {"momentum": momentum, "m": m, "a": a},
+
                 "loss_weights": loss_weights
             }
         )

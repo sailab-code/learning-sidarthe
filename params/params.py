@@ -1,6 +1,8 @@
 import random
 
 # original params taken from Giordano's paper
+from typing import Dict
+
 default_param_types = {
     "alpha": "dyn",
     "beta": "dyn",
@@ -106,6 +108,8 @@ extended_random_ranges = {
 class SidartheParamGenerator:
     def __init__(self):
         self.base_params = {}
+        self.param_types = default_param_types
+        self.random_ranges = {}
 
     @staticmethod
     def __random_fill_list(param_list, param_range):
@@ -122,17 +126,22 @@ class SidartheParamGenerator:
                 param_list[i] = rand_value
             curr_index = next_index
 
-    def random_init(self, length=39, ranges="giordano", param_types=None):
+    def set_param_types(self, param_types="default"):
+        if param_types is None or param_types == 'default':
+            self.param_types = default_param_types.copy()
+        else:
+            self.param_types = default_param_types.copy()
+            self.param_types.update(param_types)
+
+    def random_init(self, length=39, ranges="giordano"):
         if ranges is None or ranges == "giordano":
-            ranges = random_ranges
+            self.random_ranges = random_ranges
         elif ranges == "extended":
-            ranges = extended_random_ranges
-        if param_types is None:
-            param_types = default_param_types
+            self.random_ranges = extended_random_ranges
 
         random_params = {}
-        for param_key, param_range in ranges.items():
-            if param_types[param_key] == "const":
+        for param_key, param_range in self.random_ranges.items():
+            if self.param_types[param_key] == "const":
                 param_list = [0.]
             else:
                 param_list = [0.]*length
@@ -167,7 +176,7 @@ class SidartheParamGenerator:
             current_len = len(base_param)
 
             # skip constant params
-            if current_len == 1:
+            if self.param_types[key] == 'const':
                 continue
 
             to_add = total_days - current_len

@@ -6,7 +6,6 @@ from learning_models.sidarthe import Sidarthe
 
 
 class SidartheExtended(Sidarthe):
-    dtype = torch.float64
 
     def __init__(self, parameters: Dict, population, init_cond, integrator, sample_time, **kwargs):
         super().__init__(parameters, population, init_cond, integrator, sample_time, **kwargs)
