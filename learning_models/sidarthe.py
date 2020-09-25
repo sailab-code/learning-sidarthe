@@ -11,6 +11,8 @@ from utils import derivatives
 from utils.visualization_utils import Curve, generic_plot, format_xtick, generate_format_xtick
 
 
+EPS = 1e-3
+
 class Sidarthe(AbstractModel):
     dtype = torch.float64
 
@@ -164,9 +166,9 @@ class Sidarthe(AbstractModel):
     def get_param_at_t(param, _t):
         _t = _t.long()
         if 0 <= _t < param.shape[0]:
-            return torch.relu(param[_t].unsqueeze(0))
+            return torch.relu(param[_t].unsqueeze(0)) + EPS
         else:
-            return torch.relu(param[-1].unsqueeze(0).detach())
+            return torch.relu(param[-1].unsqueeze(0).detach()) + EPS
 
     def differential_equations(self, t, x):
         """
@@ -412,12 +414,11 @@ class Sidarthe(AbstractModel):
         }
 
     def extend_param(self, value, length):
-
         len_diff = length - value.shape[0]
         ext_tensor = torch.tensor([value[-1] for _ in range(len_diff)], dtype=self.dtype)
         ext_tensor = torch.cat((value, ext_tensor))
 
-        return torch.relu(ext_tensor)
+        return torch.relu(ext_tensor) + EPS
 
     def inference(self, time_grid) -> Dict:
         sol = self.integrate(time_grid)
@@ -609,6 +610,7 @@ class Sidarthe(AbstractModel):
             targets = self.targets
             dataset_size = len(self.targets["d"])
             t_grid = torch.linspace(0, dataset_size, dataset_size+1)
+
             inferences = self.inference(t_grid)
             norm_inferences = self.normalize_values(inferences, self.population)
 
