@@ -4,7 +4,9 @@ import torch
 from torch.optim import Optimizer
 
 from learning_models.sidarthe_extended import SidartheExtended
-from learning_models.optimizers.tied_optimizer import TiedOptimizer
+from learning_models.optimizers.tied_optimizer import NewSirOptimizer
+# from learning_models.optimizers.tied_optimizer import TiedOptimizer
+
 
 class TiedSidartheExtended(SidartheExtended):
     dtype = torch.float64
@@ -126,5 +128,5 @@ class TiedSidartheExtended(SidartheExtended):
         momentum = optimizers_params.get("momentum", True)
         summary = optimizers_params.get("tensorboard_summary", None)
 
-        optimizer = TiedOptimizer(model._params, learning_rates, m=m, a=a, momentum=momentum, summary=summary, tied_params=model.tied_params)
+        optimizer = NewSirOptimizer(model._params, learning_rates, m=m, a=a, momentum=momentum, summary=summary)
         return [optimizer]
