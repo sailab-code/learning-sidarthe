@@ -6,6 +6,7 @@ import torch
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.optim.optimizer import Optimizer
 from torch.utils.tensorboard import SummaryWriter
+import copy
 
 
 class AbstractModel(metaclass=abc.ABCMeta):
@@ -225,7 +226,7 @@ class AbstractModel(metaclass=abc.ABCMeta):
                 if val_loss < best and not torch.isclose(val_loss, best):
                     # maintains the best solution found so far
                     best = val_loss
-                    best_params = model.params
+                    best_params = copy.deepcopy(model.params)
                     best_epoch = {
                         "epoch": epoch,
                         "val_loss": val_loss,
