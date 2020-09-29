@@ -30,8 +30,8 @@ if __name__ == "__main__":
     process_pool = ProcessPool()
     mp.set_start_method('spawn')
 
-    m_space = np.linspace(0., 0.5, 6)
-    a_space = np.linspace(0., 0.2, 6) * -1
+    m_space = np.linspace(0., 0.5, 11)
+    a_space = np.linspace(-0.2, 0.2, 11)
     n_tries = 1
 
     for n_try in range(0, n_tries):

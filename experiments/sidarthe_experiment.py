@@ -66,6 +66,7 @@ class SidartheExperiment(Experiment):
             "time_step": self.time_step,
             "bound_reg": 1e5,
             "loss_type": "nrmse",
+            "bound_loss_type": "step",
             "verbose": False,
             "val_size": self.dataset.val_len,
             "train_size": self.dataset.train_size,
