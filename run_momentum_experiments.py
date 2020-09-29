@@ -26,7 +26,7 @@ if __name__ == "__main__":
 
     der_1st_reg = 1e8
 
-    n_epochs = 2000
+    n_epochs = 3000
 
     process_pool = ProcessPool(N_PROCESSES)
     mp.set_start_method('spawn')
@@ -48,13 +48,15 @@ if __name__ == "__main__":
         }
     }
 
+    runs_directory = "runs/momentum_exps"
+
     for n_try in range(0, n_tries):
         gen = SidartheParamGenerator()    
         gen.set_param_types(param_types={'tau': 'dyn', 'theta': 'dyn'})
         gen.random_init(115, ranges="extended")
 
         
-        experiment = experiment_cls(region, n_epochs=n_epochs, time_step=t_step, runs_directory="runs/momentum_exps", uuid_prefix=None)
+        experiment = experiment_cls(region, n_epochs=n_epochs, time_step=t_step, runs_directory=runs_directory, uuid_prefix=None)
         # launch experiment with momentum=False
         process_pool.start(
                 target=experiment.run_exp,
@@ -67,7 +69,7 @@ if __name__ == "__main__":
 
         # launch experiments with momentum=True
         for m, a in itertools.product(m_space, a_space):
-            experiment = experiment_cls(region, n_epochs=n_epochs, time_step=t_step, runs_directory="runs/momentum_exps", uuid_prefix=None)
+            experiment = experiment_cls(region, n_epochs=n_epochs, time_step=t_step, runs_directory=runs_directory, uuid_prefix=None)
             process_pool.start(
                 target=experiment.run_exp,
                 kwargs={
