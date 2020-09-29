@@ -67,6 +67,8 @@ if __name__ == "__main__":
                 }
             )
 
+        process_pool.wait_for_empty_slot()
+
         # launch experiments with momentum=True
         for m, a in itertools.product(m_space, a_space):
             experiment = experiment_cls(region, n_epochs=n_epochs, time_step=t_step, runs_directory=runs_directory, uuid_prefix=None)
