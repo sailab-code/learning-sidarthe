@@ -74,6 +74,7 @@ if __name__ == "__main__":
                 target=experiment.run_exp,
                 kwargs={
                     **kwargs,
+                    "initial_params": gen.params,
                     "train_params": {"momentum": True, "m": m, "a": a},
                 }
             )
