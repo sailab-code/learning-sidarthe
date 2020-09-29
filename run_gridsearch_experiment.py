@@ -22,18 +22,19 @@ if __name__ == "__main__":
     t_inc = 1.
 
     momentums = [True]
-    ms = [0.2]
+    ms = [0.01]
     ass = [0.]
-    bound_regs = [1, 1e1]
+    bound_regs = [1e0]
     loss_type = "nrmse"
     bound_loss_type = "log"
-    d_ws, r_ws, t_ws, h_ws, e_ws = [2.5], [1.0], [1.0], [1.0], [1.0]
+    d_ws, r_ws, t_ws, h_ws, e_ws = [4.], [2.0], [1.0], [2.0], [1.0]
 
     experiment_cls = ExtendedSidartheExperiment  # switch class to change experiment: e.g. SidartheExperiment
 
 
     gen = SidartheParamGenerator()
     gen.init_from_base_params("extended")
+    gen.set_param_types(param_types={'tau': 'dyn', 'theta': 'dyn'})
     gen.extend(train_size-5)
     process_pool = ProcessPool(N_PROCESSES)
 
@@ -54,20 +55,21 @@ if __name__ == "__main__":
         for k,v in loss_weights.items():
             loss_weights[k] = 0.02 * v
 
-        experiment = experiment_cls(region, n_epochs=n_epochs, time_step=t_step, runs_directory="runs/iaml_exps", uuid_prefix=f"{bound_reg:.0e}")
+        experiment = experiment_cls(region, n_epochs=n_epochs, time_step=t_step, runs_directory="runs/iaml_exps/tied_opt", uuid_prefix=f"{bound_reg:.0e}")
 
         proc = mp.Process(
             target=experiment.run_exp,
             kwargs={
-                "initial_params": {},
+                "initial_params": gen.params,
                 "dataset_params": {"train_size": train_size, "val_len": val_len, "region": region},
                 "model_params": {
                     "der_1st_reg": der_1st_reg, 
                     "bound_reg": bound_reg, 
                     "model_cls": TiedSidartheExtended,
-                    "bound_loss_type": "log"
+                    "bound_loss_type": "log",
+                    "loss_type": loss_type
                     },
-                "train_params": {"momentum": momentum, "m": m, "a": a},
+                "train_params": {"momentum": momentum, "m": m, "a": a, "log_epoch_steps": 50},
                 "loss_weights": loss_weights
             }
         )
