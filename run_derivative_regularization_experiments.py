@@ -24,9 +24,9 @@ if __name__ == "__main__":
     train_size = 120
     val_len = 40
 
-    n_epochs = 2000
+    n_epochs = 3000
 
-    der_1st_regs = [0., 1., 1e2, 1e3, 1e4, 1e5, 1e6, 1e7, 1e8, 1e9, 1e10, 1e11, 1e12, 1e13]
+    der_1st_regs = [0., 1., 1e3, 1e5, 1e8, 1e11, 1e13]
     n_tries = 20
 
     process_pool = ProcessPool(N_PROCESSES)
@@ -45,7 +45,7 @@ if __name__ == "__main__":
                 kwargs={
                     "initial_params": gen.params,
                     "dataset_params": {"train_size": train_size, "val_len": val_len, "region": region},
-                    "model_params": {"der_1st_reg": der_1st_reg, "model_cls": TiedSidartheExtended, "bound_loss_type": "step"},
+                    "model_params": {"der_1st_reg": der_1st_reg, "model_cls": TiedSidartheExtended, "bound_loss_type": "log", "bound_reg":1e0},
                     "train_params": {"momentum": False},
                 }
             )
