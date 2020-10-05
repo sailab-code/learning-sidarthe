@@ -66,7 +66,7 @@ if __name__ == "__main__":
         "eta": 1e-5,
         "mu": 1e-5,
         "nu": 1e-5,
-        "tau": 1e-6,
+        "tau": 1e-7,
         "lambda": 1e-5,
         "kappa": 1e-5,
         "zeta": 1e-5,
@@ -91,8 +91,7 @@ if __name__ == "__main__":
         references[key] = ref_df[key].tolist()
 
     for key in params.keys():
-        if key in ref_df:
-            references[key] = ref_df[key].tolist()
+        references[key] = ref_df[key].tolist()
 
     # endregion
 
