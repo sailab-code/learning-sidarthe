@@ -38,13 +38,18 @@ export function ModelSelector(props: IProps) {
 
     const placeholder = modelList.length == 0 ? "Loading models": "Select a model";
 
+    function getModelViewText(model: IModel)
+    {
+        return `${model.region} => Trained with ${model.train_size} days.`
+    }
+
     return (
         <Input type="select" onChange={handleChange} placeholder={placeholder} defaultValue={"none"}>
             {
                 [
                     <option key={-1} disabled value={"none"}> -- Select a model --</option>,
                     ...modelList.map( (model, index) => 
-                        <option key={index} value={index}>{model.model_name}</option>
+                        <option key={index} value={index}>{getModelViewText(model)}</option>
                     )
                 ]
             }
