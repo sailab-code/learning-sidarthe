@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Input, Container, Row, Col } from "reactstrap";
 import Chart from "react-google-charts";
 
+
 export interface IData {
     descriptor: string;
 
@@ -38,7 +39,7 @@ export function SelectableChart(props: IProps) {
                     <Input type="select" onChange={handleSelect}>
                         {
                             dataChoices.map( (data, index) => 
-                                <option value={index}>{data.descriptor}</option>
+                                <option key={index} value={index}>{data.descriptor}</option>
                             )
                         }
                     </Input>
