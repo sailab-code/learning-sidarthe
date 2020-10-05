@@ -87,7 +87,7 @@ class Sidarthe(AbstractModel):
             "symptoms_development_rates": ('eta', 'zeta'),
             "acute_symptoms_development_rates": ('mu', 'nu'),
             "recovery_rates": ('kappa', 'lambda', 'xi', 'rho', 'sigma'),
-            "death_rates": tuple(['tau']),
+            "death_rates": tuple(['tau'])
         }
 
     # region ModelParams
@@ -160,8 +160,6 @@ class Sidarthe(AbstractModel):
     def sigma(self) -> torch.Tensor:
         return self._params["sigma"]
 
-    # endregion ModelParams
-
     @staticmethod
     def get_param_at_t(param, _t):
         _t = _t.long()
@@ -171,8 +169,6 @@ class Sidarthe(AbstractModel):
             rectified_param = torch.relu(param[-1].unsqueeze(0).detach())
 
         return rectified_param + EPS
-
-
 
     def differential_equations(self, t, x):
         """
