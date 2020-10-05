@@ -364,25 +364,33 @@ def exp(region, population, initial_params, learning_rates, n_epochs, region_nam
 if __name__ == "__main__":
     n_epochs = 8000
     region = "Italy"
-    runs_directory = "runs_150"
+    runs_directory = "runs_110_test_nrmse"
     params = {
-        "alpha": [0.570] * 4 + [0.422] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210] * 94,
-        "beta": [0.011] * 4 + [0.0057] * 18 + [0.005] * (17 + 93),
-        "gamma": [0.456] * 4 + [0.285] * 18 + [0.2] * 6 + [0.11] * 10 + [0.11] * 94,
-        "delta": [0.011] * 4 + [0.0057] * 18 + [0.005] * (17 + 93),
-        "epsilon": [0.171] * 12 + [0.143] * 26 + [0.2] * 94,
+        "alpha": [0.570] * 4 + [0.422] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210] * 64,
+        "beta": [0.011] * 4 + [0.0057] * 18 + [0.005] * (17 + 63),
+        "gamma": [0.456] * 4 + [0.285] * 18 + [0.2] * 6 + [0.11] * 10 + [0.11] * 64,
+        "delta": [0.011] * 4 + [0.0057] * 18 + [0.005] * (17 + 63),
+        "epsilon": [0.171] * 12 + [0.143] * 26 + [0.2] * 64,
         "theta": [0.371],
-        "zeta": [0.125] * 22 + [0.034] * 16 + [0.025] * 94,
-        "eta": [0.125] * 22 + [0.034] * 16 + [0.025] * 94,
-        "mu": [0.017] * 22 + [0.008] * (17 + 93),
-        "nu": [0.027] * 22 + [0.015] * (17 + 93),
-        "tau": [0.01],
-        "lambda": [0.034] * 22 + [0.08] * (17 + 93),
-        "kappa": [0.017] * 22 + [0.017] * 16 + [0.02] * 94,
-        "xi": [0.017] * 22 + [0.017] * 16 + [0.02] * 94,
-        "rho": [0.034] * 22 + [0.017] * 16 + [0.02] * 94,
-        "sigma": [0.017] * 22 + [0.017] * 16 + [0.01] * 94
+        "zeta": [0.125] * 22 + [0.034] * 16 + [0.025] * 64,
+        "eta": [0.125] * 22 + [0.034] * 16 + [0.025] * 64,
+        "mu": [0.017] * 22 + [0.008] * (17 + 63),
+        "nu": [0.027] * 22 + [0.015] * (17 + 63),
+        "tau": [0.15] * 102,
+        "lambda": [0.034] * 22 + [0.08] * (17 + 63),
+        "kappa": [0.017] * 22 + [0.017] * 16 + [0.02] * 64,
+        "xi": [0.017] * 22 + [0.017] * 16 + [0.02] * 64,
+        "rho": [0.034] * 22 + [0.017] * 16 + [0.02] * 64,
+        "sigma": [0.017] * 22 + [0.017] * 16 + [0.01] * 64,
+        "phi": [0.02] * 102,
+        "chi": [0.02] * 102
     }
+
+    sizes = {
+        key: len(value) for key, value in params.items()
+    }
+
+    print(sizes)
 
     learning_rates = {
         "alpha": 1e-5,
@@ -395,12 +403,14 @@ if __name__ == "__main__":
         "eta": 1e-5,
         "mu": 1e-5,
         "nu": 1e-5,
-        "tau": 1e-7,
+        "tau": 1e-5,
         "lambda": 1e-5,
         "kappa": 1e-5,
         "zeta": 1e-5,
         "rho": 1e-5,
-        "sigma": 1e-5
+        "sigma": 1e-5,
+        "phi": 1e-5,
+        "chi": 1e-5
     }
 
     loss_weights = {
@@ -408,10 +418,10 @@ if __name__ == "__main__":
         "r_weight": 1.,
         "t_weight": 1.,
         "h_weight": 1.,
-        "e_weight": 0.,
+        "e_weight": 1.,
     }
 
-    train_size = 150
+    train_size = 110
     val_len = 5
     der_1st_reg = 50000.0
     der_2nd_reg = 0.
@@ -422,7 +432,7 @@ if __name__ == "__main__":
     a = 0.1
     bound_reg = 1e5
     integrator = Heun
-    loss_type = "rmse"
+    loss_type = "nrmse"
     print(region)
 
     references = {}
@@ -434,7 +444,8 @@ if __name__ == "__main__":
         references[key] = ref_df[key].tolist()
 
     for key in params.keys():
-        references[key] = ref_df[key].tolist()
+        if key in ref_df:
+            references[key] = ref_df[key].tolist()
 
     exp(region, populations[region], params,
                             learning_rates, n_epochs, region, train_size, val_len,

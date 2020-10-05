@@ -58,6 +58,7 @@ def select_data(file, areas, area_col_name, value_col_name, groupby_cols, file_s
     """
 
     df = pd.read_csv(file, sep=file_sep)
+    df = df.fillna(-1)  # set nans to -1
     area_df = select_regions(df, areas, col_name=area_col_name)
     y = select_column_values(area_df, col_name=value_col_name, groupby=groupby_cols)
     x = list(range(1, len(y)+1))

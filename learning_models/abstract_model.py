@@ -3,8 +3,10 @@ import time
 from typing import List, Dict
 
 import torch
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.optim.optimizer import Optimizer
 from torch.utils.tensorboard import SummaryWriter
+import copy
 
 
 class AbstractModel(metaclass=abc.ABCMeta):
@@ -61,13 +63,15 @@ class AbstractModel(metaclass=abc.ABCMeta):
 
     @classmethod
     @abc.abstractmethod
-    def init_trainable_model(cls, initial_params: dict, initial_conditions, integrator, **model_params):
+    def init_trainable_model(cls, initial_params: dict, initial_conditions, integrator, targets, **model_params):
         """
         Returns the initialized model
 
         :param initial_params: initial values for the parameters
         :param initial_conditions: initial conditions for the model
         :param integrator: integrator to use
+        :param targets: targets to fit
+        :param *
         :return: the initialized model
         """
 
@@ -153,7 +157,7 @@ class AbstractModel(metaclass=abc.ABCMeta):
         initial_conditions = cls.compute_initial_conditions_from_targets(train_targets, model_params)
 
         model: AbstractModel = cls.init_trainable_model(initial_params,
-                                                        initial_conditions, **model_params)
+                                                        initial_conditions, targets, **model_params)
 
         optimizers = cls.init_optimizers(model, learning_rates, train_params)
 
@@ -166,15 +170,21 @@ class AbstractModel(metaclass=abc.ABCMeta):
         best_params = model.params
         patience = 0
         n_lr_updates = 0
-        max_no_improve = early_stopping_conf.get("max_no_improve", 25)
+        max_no_improve = early_stopping_conf.get("max_no_improve", 100)
         max_n_lr_updates = early_stopping_conf.get("max_n_lr_updates", 5)
-        lr_fraction = early_stopping_conf.get("lr_fraction", 2.)
+        lr_factor = 1/early_stopping_conf.get("lr_fraction", 1.0001)
 
         logged_info: List[Dict] = []
 
         inferences = model.inference(train_time_grid)
         print(f'Initial R0: {inferences["r0"]}')
         time_start = time.time()
+
+        schedulers = []
+        for optimizer in optimizers:
+            lr_scheduler = ReduceLROnPlateau(optimizer, factor=lr_factor, patience=max_no_improve, verbose=True)
+            schedulers.append(lr_scheduler)
+
         for epoch in range(1, n_epochs + 1):
             for optimizer in optimizers:
                 optimizer.zero_grad()
@@ -192,6 +202,7 @@ class AbstractModel(metaclass=abc.ABCMeta):
 
             if epoch % log_epoch_steps == 0:
                 print(f"epoch {epoch} / {n_epochs}")
+
                 log_info = model.log_info(epoch, losses, train_hats, train_targets, summary)
                 logged_info.append(log_info)
                 epoch_steps_measure = time.time() - time_start
@@ -207,25 +218,23 @@ class AbstractModel(metaclass=abc.ABCMeta):
                     val_losses = model.losses(val_hats, val_targets)
                     model.log_validation_error(epoch, val_losses, summary)
                 val_loss = val_losses[model.val_loss_checked]
+
+                # apply lr scheduling
+                for scheduler in schedulers:
+                    scheduler.step(val_loss)
+
                 if val_loss < best and not torch.isclose(val_loss, best):
                     # maintains the best solution found so far
                     best = val_loss
-                    best_params = model.params
+                    best_params = copy.deepcopy(model.params)
                     best_epoch = {
                         "epoch": epoch,
                         "val_loss": val_loss,
-                        "losses": losses
+                        "losses": val_losses
                     }
                     patience = 0
-                elif patience < max_no_improve:
+                elif patience < max_no_improve * 10:
                     patience += 1
-                elif n_lr_updates < max_n_lr_updates:
-                    # when patience is over reduce learning rate by lr_fraction
-                    print(f"Reducing learning rate at step {epoch}")
-                    learning_rates = {key: value / lr_fraction for key, value in learning_rates.items()}
-                    cls.update_optimizers(optimizers, model, learning_rates)
-                    n_lr_updates += 1
-                    patience = 0
                 else:
                     print(f"Early stop at step {epoch}")
                     break

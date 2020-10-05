@@ -1,4 +1,3 @@
-from collections import namedtuple
 from typing import List, Dict
 
 import numpy as np
@@ -7,36 +6,52 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.tensorboard import SummaryWriter
 
 from learning_models.abstract_model import AbstractModel
-from learning_models.new_sir_optimizer import NewSirOptimizer
-from torch.optim import Adam
+from learning_models.optimizers.new_sir_optimizer import NewSirOptimizer
 from utils import derivatives
 from utils.visualization_utils import Curve, generic_plot, format_xtick, generate_format_xtick
 
 
+EPS = 1e-3
+
 class Sidarthe(AbstractModel):
-    dtype = torch.float64
+    dtype = torch.float32
 
     def __init__(self, parameters: Dict, population, init_cond, integrator, sample_time, **kwargs):
         super().__init__(init_cond, integrator, sample_time)
-        self._params = {key: torch.tensor(value, dtype=self.dtype, requires_grad=True) for key, value in
-                        parameters.items()}
+        self.set_initial_params(parameters)
         self.population = population
+        self.model_name = kwargs.get("name", "sidarthe")
 
-        self.d_weight = kwargs["d_weight"]
-        self.r_weight = kwargs["r_weight"]
-        self.t_weight = kwargs["t_weight"]
-        self.h_weight = kwargs["h_weight"]
-        self.e_weight = kwargs["e_weight"]
+        self.target_weights = {
+            "d": kwargs["d_weight"],
+            "r": kwargs["r_weight"],
+            "t": kwargs["t_weight"],
+            "h": kwargs["h_weight"],
+            "e": kwargs["e_weight"]
+        }
+
         self.der_1st_reg = kwargs["der_1st_reg"]
         self.bound_reg = kwargs["bound_reg"]
-        self.verbose = kwargs["verbose"]
-        self.loss_type = kwargs["loss_type"]
+        self.verbose = kwargs.get("verbose", False)
+        self.loss_type = kwargs.get("loss_type", "nrmse")
+        self.bound_loss_type = kwargs.get("bound_loss_type", "step")
 
         self.references = kwargs.get("references", None)
         self.targets = kwargs.get("targets", None)
         self.train_size = kwargs.get("train_size", None)
         self.val_size = kwargs.get("val_size", None)
         self.first_date = kwargs.get("first_date", None)
+
+        if self.targets is not None:
+            # compute normalization values
+            averages = {
+                key[0]: np.mean(value) for key, value in self.targets.items()
+            }
+            max_average = np.max([value for value in averages.values()])
+            self.norm_weights = {
+                key: max_average / avg for key, avg in averages.items()
+            }
+            print(self.norm_weights)
 
         if self.first_date is None:
             self.format_xtick = format_xtick
@@ -61,7 +76,18 @@ class Sidarthe(AbstractModel):
             "kappa": self.kappa,
             "zeta": self.zeta,
             "rho": self.rho,
-            "sigma": self.sigma
+            "sigma": self.sigma,
+        }
+
+    @property
+    def param_groups(self) -> Dict:
+        return {
+            "infection_rates": ('alpha', 'beta', 'gamma', 'delta'),
+            "detection_rates": ('epsilon', 'theta'),
+            "symptoms_development_rates": ('eta', 'zeta'),
+            "acute_symptoms_development_rates": ('mu', 'nu'),
+            "recovery_rates": ('kappa', 'lambda', 'xi', 'rho', 'sigma'),
+            "death_rates": tuple(['tau'])
         }
 
     # region ModelParams
@@ -80,8 +106,8 @@ class Sidarthe(AbstractModel):
 
     @property
     def delta(self) -> torch.Tensor:
-        #return self._params["delta"]
-        return self._params["beta"]
+        return self._params["delta"]
+        # return self._params["beta"]
 
     @property
     def epsilon(self) -> torch.Tensor:
@@ -117,23 +143,32 @@ class Sidarthe(AbstractModel):
 
     @property
     def kappa(self) -> torch.Tensor:
-        return self._params["xi"]
-        #return self._params["kappa"]
+        # return self._params["xi"]
+        return self._params["kappa"]
 
     @property
     def zeta(self) -> torch.Tensor:
-        #return self._params["zeta"]
-        return self._params["eta"]
+        return self._params["zeta"]
+        # return self._params["eta"]
 
     @property
     def rho(self) -> torch.Tensor:
         return self._params["rho"]
+        # return self._params["lambda"]
 
     @property
     def sigma(self) -> torch.Tensor:
         return self._params["sigma"]
 
-    # endregion CodeParams
+    @staticmethod
+    def get_param_at_t(param, _t):
+        _t = _t.long()
+        if 0 <= _t < param.shape[0]:
+            rectified_param = torch.relu(param[_t].unsqueeze(0))
+        else:
+            rectified_param = torch.relu(param[-1].unsqueeze(0).detach())
+
+        return rectified_param + EPS
 
     def differential_equations(self, t, x):
         """
@@ -151,12 +186,7 @@ class Sidarthe(AbstractModel):
         :return: right-hand side of SIDARTHE model, i.e. f(t,x(t))
         """
 
-        def get_param_at_t(param, _t):
-            _t = _t.long()
-            if 0 <= _t < param.shape[0]:
-                return param[_t].unsqueeze(0)
-            else:
-                return param[-1].unsqueeze(0)
+        get_param_at_t = self.get_param_at_t
 
         # region parameters
         alpha = get_param_at_t(self.alpha, t) / self.population
@@ -220,6 +250,10 @@ class Sidarthe(AbstractModel):
         else:
             return torch.tensor([[1.] + [0.] * 7], dtype=self.dtype)
 
+    def set_initial_params(self, params):
+        self._params = {key: torch.tensor(value, dtype=self.dtype, requires_grad=True) for key, value in
+                        params.items()}
+
     def set_params(self, params):
         self._params = params
 
@@ -234,12 +268,20 @@ class Sidarthe(AbstractModel):
         )
 
     @staticmethod
+    def __mae_loss(target, hat):
+        mask = torch.ge(target, 0)
+
+        return torch.mean(
+            torch.abs(target[mask] - hat[mask])
+        )
+
+    @staticmethod
     def __mape_loss(target, hat):
         mask = torch.ge(target, 0)
 
         return torch.mean(
             torch.abs(
-                (target[mask] - hat[mask]) / target
+                (target[mask] - hat[mask]) / target[mask]
             )
         )
 
@@ -254,6 +296,14 @@ class Sidarthe(AbstractModel):
         return parameter.abs() * torch.where(parameter.le(0.),
                                              torch.ones(1, dtype=cls.dtype),
                                              torch.zeros(1, dtype=cls.dtype))
+
+    @classmethod
+    def __loss_parameter_near_origin(cls, parameter: torch.Tensor, eps=1e-10):
+        # apply ReLU
+        rectified_param = torch.max(torch.full_like(parameter, eps), parameter)
+
+        # apply loss
+        return torch.pow(torch.log(rectified_param) / torch.log(torch.tensor(1./0.5e3)), 10)
 
     def first_derivative_loss(self):
         loss_1st_derivative_total = torch.zeros(1, dtype=self.dtype)
@@ -275,15 +325,24 @@ class Sidarthe(AbstractModel):
 
     def bound_parameter_regularization(self):
         bound_reg_total = torch.zeros(1, dtype=self.dtype)
-        for key, value in self.params.items():
-            # bound_reg = self.__loss_gte_one(value) + self.__loss_lte_zero(value)
-            bound_reg = self.__loss_lte_zero(value)
-            bound_reg_total = bound_reg_total + bound_reg
+        if self.bound_reg != 0:
 
-        return self.bound_reg * torch.mean(bound_reg_total)
+            for key, value in self._params.items():
+                if self.bound_loss_type == "step":
+                    bound_reg = self.__loss_lte_zero(value)
+                elif self.bound_loss_type == "log":
+                    bound_reg = self.__loss_parameter_near_origin(value)
+                else:
+                    raise Exception("Loss type not supported")
+
+                bound_reg_total = bound_reg_total + bound_reg
+
+        # average params bound regularization
+        #bound_reg_total /= len(self.params)
+
+        return self.bound_reg * torch.sum(bound_reg_total)
 
     def losses(self, inferences, targets) -> Dict:
-
         # this function converts target values to torch.tensor with specified dtype
         def to_torch_float(target):
             if isinstance(target, np.ndarray) or isinstance(target, list):
@@ -293,74 +352,74 @@ class Sidarthe(AbstractModel):
         # uses to_torch_float to convert given targets
         targets = {key: to_torch_float(value) for key, value in targets.items()}
 
-        d_rmse_loss = self.__rmse_loss(targets["d"], inferences["d"])
-        r_rmse_loss = self.__rmse_loss(targets["r"], inferences["r"])
-        t_rmse_loss = self.__rmse_loss(targets["t"], inferences["t"])
-        h_rmse_loss = self.__rmse_loss(targets["h_detected"], inferences["h_detected"])
-        e_rmse_loss = self.__rmse_loss(targets["e"], inferences["e"])
+        def compute_total_loss(loss_function, weighted=True, normalized=False):
+            losses = {
+                key[0]: loss_function(targets[key], inferences[key]) for key, value in targets.items()
+            }
 
-        d_mape_loss = self.__mape_loss(targets["d"], inferences["d"])
-        r_mape_loss = self.__mape_loss(targets["r"], inferences["r"])
-        t_mape_loss = self.__mape_loss(targets["t"], inferences["t"])
-        h_mape_loss = self.__mape_loss(targets["h_detected"], inferences["h_detected"])
-        e_mape_loss = self.__mape_loss(targets["e"], inferences["e"])
+            def weight_losses(losses_dict):
+                return {
+                    key: self.target_weights[key] * loss_v for key, loss_v in losses_dict.items()
+                }
 
-        total_rmse = self.d_weight * d_rmse_loss + self.r_weight * r_rmse_loss + self.t_weight * t_rmse_loss \
-                     + self.h_weight * h_rmse_loss + self.e_weight * e_rmse_loss
+            def normalize_losses(losses_dict):
+                return {
+                    key: self.norm_weights[key] * loss_v for key, loss_v in losses_dict.items()
+                }
 
-        total_mape = self.d_weight * d_mape_loss + self.r_weight * r_mape_loss + self.t_weight * t_mape_loss \
-                     + self.h_weight * h_mape_loss + self.e_weight * e_mape_loss
 
-        der_1st_loss = self.first_derivative_loss()
-        der_2nd_loss = self.second_derivative_loss()
+            if weighted:
+                losses = weight_losses(losses)
+                if normalized:
+                    losses = normalize_losses(losses)
+
+            total_loss = sum([value for key, value in losses.items()])
+
+            return total_loss, losses
+
+        # compute losses
+
+
+        # der_2nd_loss = self.second_derivative_loss()
 
         bound_reg = self.bound_parameter_regularization()
 
         if self.loss_type == "rmse":
+            total_rmse, losses_dict = compute_total_loss(self.__rmse_loss)
             loss = torch.tensor([1e-4], dtype=self.dtype) * total_rmse
+        elif self.loss_type == "mae":
+            total_mae, losses_dict = compute_total_loss(self.__mae_loss)
+            loss = total_mae
         elif self.loss_type == "mape":
+            total_mape, losses_dict = compute_total_loss(self.__mape_loss)
             loss = total_mape
+        elif self.loss_type == "nrmse":
+            total_nrmse, losses_dict = compute_total_loss(self.__rmse_loss, normalized=True)
+            loss = total_nrmse
+        elif self.loss_type == "nmae":
+            total_nmae, losses_dict = compute_total_loss(self.__mae_loss, normalized=True)
+            loss = total_nmae
         else:
             raise ValueError(f"loss type {self.loss_type} not supported")
 
+        der_1st_loss = self.first_derivative_loss()
         total_loss = loss + der_1st_loss + bound_reg
-
-        val_loss = d_rmse_loss + r_rmse_loss + t_rmse_loss + h_rmse_loss + e_rmse_loss 
+        val_loss, _ = compute_total_loss(self.__rmse_loss, weighted=False)
 
         return {
             self.val_loss_checked: val_loss.squeeze(0),
-            "d_rmse": d_rmse_loss,
-            "r_rmse": r_rmse_loss,
-            "t_rmse": t_rmse_loss,
-            "h_rmse": h_rmse_loss,
-            "e_rmse": e_rmse_loss,
-            "d_mape": d_mape_loss,
-            "r_mape": r_mape_loss,
-            "t_mape": t_mape_loss,
-            "h_mape": h_mape_loss,
-            "e_mape": e_mape_loss,
+            self.backward_loss_key: total_loss.squeeze(0),
             "der_1st": der_1st_loss,
-            #"der_2nd": der_2nd_loss,
             "bound_reg": bound_reg,
-            self.backward_loss_key: total_loss.squeeze(0)
+            **losses_dict
         }
 
     def extend_param(self, value, length):
         len_diff = length - value.shape[0]
-        t_inc = self.time_step
-        ext_tensor = torch.tensor([], dtype=self.dtype)
-        if len_diff > 0:
-            for t in range(0, value.shape[0]):
-                ext_tensor = torch.cat((ext_tensor, value[t].expand(int(1/t_inc))))
-            
-            remaining = length - ext_tensor.shape[0]
-            if remaining > 0:
-                ext_tensor = torch.cat((ext_tensor, ext_tensor[-1].expand(remaining)))
-            return ext_tensor
-        else:
-            return value
+        ext_tensor = torch.tensor([value[-1] for _ in range(len_diff)], dtype=self.dtype)
+        ext_tensor = torch.cat((value, ext_tensor))
 
-
+        return torch.relu(ext_tensor) + EPS
 
     def inference(self, time_grid) -> Dict:
         sol = self.integrate(time_grid)
@@ -404,15 +463,16 @@ class Sidarthe(AbstractModel):
         }
 
     @classmethod
-    def init_trainable_model(cls, initial_params: dict, initial_conditions, **model_params):
+    def init_trainable_model(cls, initial_params: dict, initial_conditions, targets, **model_params):
+        model_cls = model_params["model_cls"]
         time_step = model_params["time_step"]
         population = model_params["population"]
         integrator = model_params["integrator"]
 
-        d_weight = model_params.get("d_weight", 0.)
-        r_weight = model_params.get("r_weight", 0.)
-        t_weight = model_params.get("t_weight", 0.)
-        h_weight = model_params.get("h_weight", 0.)
+        d_weight = model_params.get("d_weight", 1.)
+        r_weight = model_params.get("r_weight", 1.)
+        t_weight = model_params.get("t_weight", 1.)
+        h_weight = model_params.get("h_weight", 1.)
         e_weight = model_params.get("e_weight", 1.)
 
         der_1st_reg = model_params.get("der_1st_reg", 2e4)
@@ -422,14 +482,14 @@ class Sidarthe(AbstractModel):
         verbose = model_params.get("verbose", False)
 
         loss_type = model_params.get("loss_type", "rmse")
+        bound_loss_type = model_params.get("bound_loss_type", "step")
 
         references = model_params.get("references", None)
-        targets = model_params.get("targets", None)
         train_size = model_params.get("train_size", None)
         val_size = model_params.get("val_size", None)
         first_date = model_params.get("first_date", None)
 
-        return Sidarthe(initial_params, population, initial_conditions, integrator, time_step,
+        return cls(initial_params, population, initial_conditions, integrator, time_step,
                         d_weight=d_weight,
                         r_weight=r_weight,
                         t_weight=t_weight,
@@ -443,7 +503,8 @@ class Sidarthe(AbstractModel):
                         targets=targets,
                         train_size=train_size,
                         val_size=val_size,
-                        first_date=first_date
+                        first_date=first_date,
+                        bound_loss_type=bound_loss_type
                         )
 
     @classmethod
@@ -499,24 +560,28 @@ class Sidarthe(AbstractModel):
             H0_detected
         )
 
+
     def plot_params_over_time(self, n_days=None):
         param_plots = []
 
         if n_days is None:
             n_days = self.beta.shape[0]
 
-        for key, value in self.params.items():
-            value = self.extend_param(value, n_days)
-            pl_x = list(range(n_days))
-            pl_title = f"$\\{key}$ over time"
-            param_curve = Curve(pl_x, value.detach().numpy(), '-', f"$\\{key}$", color=None)
-            curves = [param_curve]
+        for param_group, param_keys in self.param_groups.items():
+            params_subdict = {param_key: self.params[param_key] for param_key in param_keys}
+            for param_key, param in params_subdict.items():
+                param = self.extend_param(param, n_days)
+                pl_x = list(range(n_days))
+                pl_title = f"{param_group}/$\\{param_key}$ over time"
+                param_curve = Curve(pl_x, param.detach().numpy(), '-', f"$\\{param_key}$", color=None)
+                curves = [param_curve]
 
-            if self.references is not None:
-                ref_curve = Curve(pl_x, self.references[key][:n_days], "--", f"$\\{key}$ reference", color=None)
-                curves.append(ref_curve)
-            plot = generic_plot(curves, pl_title, None, formatter=self.format_xtick)
-            param_plots.append((plot, pl_title))
+                if self.references is not None:
+                    if param_key in self.references:
+                        ref_curve = Curve(pl_x, self.references[param_key][:n_days], "--", f"$\\{param_key}$ reference", color=None)
+                        curves.append(ref_curve)
+                plot = generic_plot(curves, pl_title, None, formatter=self.format_xtick)
+                param_plots.append((plot, pl_title))
         return param_plots
 
     @staticmethod
@@ -538,6 +603,7 @@ class Sidarthe(AbstractModel):
     def slice_values(values, slice_):
         return {key: value[slice_] for key, value in values.items()}
 
+
     def plot_fits(self):
         fit_plots = []
         with torch.no_grad():
@@ -545,6 +611,7 @@ class Sidarthe(AbstractModel):
             targets = self.targets
             dataset_size = len(self.targets["d"])
             t_grid = torch.linspace(0, dataset_size, dataset_size+1)
+
             inferences = self.inference(t_grid)
             norm_inferences = self.normalize_values(inferences, self.population)
 
@@ -582,9 +649,7 @@ class Sidarthe(AbstractModel):
             norm_target_val = self.normalize_values(target_val, self.population)
             norm_target_test = self.normalize_values(target_test, self.population)
 
-            for key, target in targets.items():
-                pl_x = list(range(0, len(target)))
-
+            for key in inferences.keys():
                 if key in ["sol"]:
                     continue
 
@@ -597,9 +662,14 @@ class Sidarthe(AbstractModel):
                     curr_hat_val = hat_val[key]
                     curr_hat_test = hat_test[key]
 
-                target_train = norm_target_train[key]
-                target_val = norm_target_val[key]
-                target_test = norm_target_test[key]
+                if key in norm_target_train:
+                    target_train = norm_target_train[key]
+                    target_val = norm_target_val[key]
+                    target_test = norm_target_test[key]
+                else:
+                    target_train = None
+                    target_val = None
+                    target_test = None
 
                 train_curves = self.get_curves(train_range, curr_hat_train, target_train, key, 'r')
                 val_curves = self.get_curves(val_range, curr_hat_val, target_val, key, 'b')
@@ -615,6 +685,25 @@ class Sidarthe(AbstractModel):
                 fig = generic_plot(tot_curves, pl_title, None, formatter=self.format_xtick)
                 pl_title = f"Estimated {key.upper()} on fit"
                 fit_plots.append((fig, pl_title))
+
+
+                if target_train is not None:
+                    # add error plots
+                    pl_title = f"{key.upper()} - errors"
+                    fig_name = f"Error {key.upper()} on fit"
+                    curr_errors_train = curr_hat_train - np.array(target_train)
+
+                    curr_errors_val = curr_hat_val - np.array(target_val)
+
+                    curr_errors_test = curr_hat_test - np.array(target_test)
+
+                    train_curves = self.get_curves(train_range, curr_errors_train, None, key, 'r')
+                    val_curves = self.get_curves(val_range, curr_errors_val, None, key, 'b')
+                    test_curves = self.get_curves(test_range, curr_errors_test, None, key, 'g')
+                    tot_curves = train_curves + val_curves + test_curves
+
+                    fig = generic_plot(tot_curves, pl_title, None, formatter=self.format_xtick)
+                    fit_plots.append((fig, fig_name))
 
         return fit_plots
 
@@ -644,10 +733,13 @@ class Sidarthe(AbstractModel):
 
         if summary is not None:
             for fig, fig_title in self.plot_params_over_time():
-                summary.add_figure(f"params_over_time/{fig_title}", fig, close=True, global_step=0)
+                summary.add_figure(f"{fig_title}", fig, close=True, global_step=0)
+
+            for fig, fig_title in self.plot_fits():
+                summary.add_figure(f"fits/{fig_title}", fig, close=True, global_step=0)
+
 
     def log_info(self, epoch, losses, inferences, targets, summary: SummaryWriter = None):
-
         if self.verbose:
             print(f"Params at epoch {epoch}.")
             self.print_params()
@@ -658,7 +750,8 @@ class Sidarthe(AbstractModel):
 
         if summary is not None:
             for fig, fig_title in self.plot_params_over_time():
-                summary.add_figure(f"params_over_time/{fig_title}", fig, close=True, global_step=epoch)
+                summary.add_figure(f"{fig_title}", fig, close=True, global_step=epoch)
+
 
             for fig, fig_title in self.plot_fits():
                 summary.add_figure(f"fits/{fig_title}", fig, close=True, global_step=epoch)

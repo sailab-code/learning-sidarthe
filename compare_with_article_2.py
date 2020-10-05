@@ -68,7 +68,7 @@ sidarthe = Sidarthe(params, 1, initial_values, euler, 0.01,
 
 
 # %%
-size = 100
+size = 197
 t_grid = torch.linspace(0, size, int(size/t_inc) + 1)
 t_slice = slice(0, int(size/t_inc) + 1, int(1/t_inc))
 
