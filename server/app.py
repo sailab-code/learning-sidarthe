@@ -1,5 +1,5 @@
 import torch
-from flask import Flask
+from flask import Flask, jsonify
 from learning_models.sidarthe import Sidarthe
 import os
 import json
@@ -37,14 +37,14 @@ def get_model_list():
     model_names = [model_dir for model_dir in os.listdir(models_root)
                    if os.path.isdir(os.path.join(models_root, model_dir))]
 
-    model_settings = {model_name: get_settings(model_name) for model_name in model_names}
+    model_settings = jsonify([{"model_name":model_name, **get_settings(model_name)} for model_name in model_names])
 
     return model_settings
 
 
 @app.route('/models/<model_name>')
 def get_model_settings(model_name):
-    return get_settings(model_name)
+    return {"model_name": model_name, **get_settings(model_name)}
 
 
 @app.route('/models/<model_name>/inferences/')
