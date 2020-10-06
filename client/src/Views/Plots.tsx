@@ -28,41 +28,30 @@ export function Plots(props: IProps) {
 
     const plots = [];
 
-    for(const inferenceID of inferenceIDs)
+    const inferences = inferenceIDs.filter(id => props.activePlots[id]).map(inferenceID => props.inferences[inferenceID])
+    const descriptors = inferenceIDs.filter(id => props.activePlots[id]).map(inferenceID => inferenceNameDictionary[inferenceID])
+
+    const predictionLength = props.inferences[inferenceIDs[0]].length
+
+    const chartData = []
+    for(let i = 0; i < predictionLength; ++i)
     {
-        if(props.activePlots[inferenceID])
-        {
-
-            const descriptor = inferenceNameDictionary[inferenceID]
-
-            const data = props.inferences[inferenceID] as number[];
-            const chartData = data.map( (value, index) => [index, value])
-
-            plots.push(
-                <Row key={inferenceID}>
-                    <Col>
-                        <Chart
-                            chartType="LineChart"
-                            data={[["Giorni", descriptor], ...chartData]}
-                            width="100%"
-                            height="400px"
-                            legendToggle
-                        />
-                    </Col>
-                </Row>
-            )
-        }
+        const data = inferences.map( value => value[i])
+        //console.log(data)
+        chartData.push([i, ...data])
     }
 
+    console.log(chartData)
 
     return (
         <Container>
-                {
-                    plots
-                }
+                <Chart
+                        chartType="LineChart"
+                        data={[["Giorni", ...descriptors], ...chartData]}
+                        width="100%"
+                        height="400px"
+                        legendToggle
+                    />
         </Container>
     )
-
-
-
 }

@@ -14,7 +14,7 @@ export type Inferences = any;
 const defaultActivePlots: ActivePlots = {} as ActivePlots;
 for(const inferenceID of inferenceIDs)
 {
-    defaultActivePlots[inferenceID] = true;
+    defaultActivePlots[inferenceID] = inferenceID != "s";
 }
 
 export function PlotsArea() {

@@ -24,7 +24,7 @@ export function PlotsSelector(props:IProps)
     const checkboxes = inferenceIDs.map( (inferenceID, index) => 
         <FormGroup key={index} check inline>
             <Label check>
-                <Input type="checkbox" defaultChecked={true}  onChange={handleChange.bind(this, inferenceID)}/>
+                <Input type="checkbox" defaultChecked={props.activePlots[inferenceID]}  onChange={handleChange.bind(this, inferenceID)}/>
                 {inferenceID.toUpperCase()}
             </Label>
         </FormGroup>
