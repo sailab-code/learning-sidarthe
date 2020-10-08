@@ -50,6 +50,28 @@ export function Plots(props: IProps) {
                         data={[["Giorni", ...descriptors], ...chartData]}
                         width="100%"
                         height="400px"
+                        controls={[
+                            {
+                                controlType: 'ChartRangeFilter',
+                                options: {
+                                  filterColumnIndex: 0,
+                                  ui: {
+                                    chartType: 'LineChart',
+                                    chartOptions: {
+                                      chartArea: { width: '90%', height: '50%' },
+                                      hAxis: { baselineColor: 'none' },
+                                    },
+                                  },
+                                },
+                                controlPosition: 'bottom',
+                                controlWrapperParams: {
+                                  state: {
+                                    range: { start: 0, end: 365 },
+                                  },
+                                },
+                            }
+
+                        ]}
                         legendToggle
                     />
         </Container>
