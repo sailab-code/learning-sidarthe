@@ -159,7 +159,7 @@ class Experiment:
         """normalize values by a norm, e.g. population"""
         return {key: np.array(value) / norm for key, value in values.items()}
 
-    def _compute_final_losses(self, x_target, targets):
+    def compute_final_losses(self, x_target, targets):
         """
         Make inference on x_targets and compute the loss.
         :param x_target:
@@ -215,6 +215,7 @@ class Experiment:
         dataset_risks = self.model.losses(hat_dataset, target_dataset)
 
         hat_t, target_t = (hat_train, hat_val, hat_test), (target_train, target_val, target_test)
+
         return {"train": train_risks, "val": val_risks, "test": test_risks, "dataset": dataset_risks}, hat_t, target_t, dataset_target_slice
 
     def valid_json_dict(self, tensor_dict):
@@ -241,7 +242,7 @@ class Experiment:
             "val_risks": risks["val"],
             "test_risks": risks["test"],
             "dataset_risks": risks["dataset"],
-            "params": self.model.params
+            "params": self.model.params,
         }
 
         json_final = json.dumps(self.valid_json_dict(final_dict), indent=4)
@@ -257,12 +258,13 @@ class Experiment:
         for (plot, plot_title) in params_plots:
             self.summary.add_figure(f"final/{plot_title}", plot, close=True, global_step=-1)
 
-    def _plot_final_inferences(self, hat_t, target_t, dataset_target_slice):
+    def plot_final_inferences(self, hat_t, target_t, dataset_target_slice, summary, prefix="final", collapse=False):
         """
         Plot inferences
         :param hat_t: a tuple with train val and test hat
         :param target_t: a tuple with train val and test target_t
         :param dataset_target_slice: data slice
+        :param prefix:
         :return:
         """
 
@@ -298,6 +300,7 @@ class Experiment:
             else:
                 return [hat_curve]
 
+        tot_curves = []
         for key in self.inferences.keys():
 
             # skippable keys
@@ -330,7 +333,10 @@ class Experiment:
             val_curves = get_curves(val_range, curr_hat_val, target_val, key, 'b')
             test_curves = get_curves(test_range, curr_hat_test, target_test, key, 'g')
 
-            tot_curves = train_curves + val_curves + test_curves
+            if collapse:
+                tot_curves += train_curves + val_curves + test_curves
+            else:
+                tot_curves = train_curves + val_curves + test_curves
 
             # get reference in range of interest
             if self.references is not None:
@@ -340,9 +346,7 @@ class Experiment:
 
             pl_title = f"{key.upper()} - train/validation/test/reference"
             fig = generic_plot(tot_curves, pl_title, None, formatter=self.model.format_xtick)
-            self.summary.add_figure(f"final/{key}_global", fig)
-
-            # endregion
+            summary.add_figure(f"{prefix}/{key}_global", fig)
 
     @staticmethod
     def get_configs_from_json(json_file):
@@ -416,12 +420,122 @@ class Experiment:
 
         # inferences
         with torch.no_grad():
-            risks, hat_t, target_t, dataset_slice = self._compute_final_losses(x_target=x_targets, targets=targets)
+            risks, hat_t, target_t, dataset_slice = self.compute_final_losses(x_target=x_targets, targets=targets)
             self._make_final_report(risks)
             self._plot_final_params()
-            self._plot_final_inferences(hat_t, target_t, dataset_slice)
+            self.plot_final_inferences(hat_t, target_t, dataset_slice, self.summary)
 
         self.summary.flush()
 
         return self.model, self.uuid, risks["val"][self.model.val_loss_checked]
+
+    def days_before_diverge(self, threshold=0.1):
+        targets = self.dataset.targets
+        train_size = self.dataset_params["train_size"]
+
+        Ts = {}
+        for key,value in targets.items():
+            t_len = len(targets[key])
+            Ts[key] = (t_len-train_size, abs(value[t_len-1] - self.inferences[key][t_len-1])/value[t_len-1])
+            for t in range(train_size, t_len):
+                if value[t] > 0 and abs(value[t] - self.inferences[key][t])/value[t] >= threshold:
+                    rel_error = abs(value[t] - self.inferences[key][t]) / value[t]
+                    print("________________________________")
+                    print(key)
+                    print(value[t])
+                    print(self.inferences[key][t])
+                    print(rel_error)
+                    print(t)
+                    print(t-train_size)
+                    Ts[key] = (t - train_size, rel_error.detach().numpy().item())
+                    break
+
+        return Ts
+
+    def eval_exp(self, threshold=0.1, **kwargs):
+        """
+
+                :param kwargs: Optional arguments. Expected (optional) attributes
+                    {'initial_params': dict,
+                    'model_params': dict,
+                    'dataset_params': dict,
+                    }
+
+                :return: pretrained_model, uuid, results
+                """
+        # creates initial params
+        initial_params = self.make_initial_params(**kwargs)
+        self.set_initial_params(initial_params)
+
+        # creates dataset params
+        dataset_params = self.make_dataset_params(**kwargs)
+        self.set_dataset_params(dataset_params)
+
+        # gets the data for the pretrained_model
+        dataset_cls = self.dataset_params["dataset_cls"]
+        self.dataset = dataset_cls(self.dataset_params)
+        self.dataset.make_dataset()
+        x_targets = self.dataset.inputs
+        targets = self.dataset.targets
+
+        # create references
+        references = self.make_references()
+        self.set_references(references)
+
+        # creates pretrained_model params
+        model_params = self.make_model_params(**kwargs)
+        self.set_model_params(model_params, {})
+
+        # evaluation
+        model_cls = self.model_params["model_cls"]
+        initial_conditions = model_cls.compute_initial_conditions_from_targets(targets, model_params)
+
+        self.model = model_cls.init_trainable_model(
+            initial_params,
+            initial_conditions,
+            targets,
+            **model_params
+        )
+
+        dataset_size = len(x_targets)
+        time_step = 1.0
+        t_grid = torch.linspace(0, dataset_size, int(dataset_size / time_step))  # NB removed +1
+        self.inferences = self.model.inference(t_grid)
+
+        self.model.loss_type = "mape"
+        # print(len(self.inferences["d"]))
+        # print(len(targets["d"]))
+
+        def rel_error(inferences, target):
+            target = torch.tensor(target)
+            mask = torch.ge(target, 0)
+
+            return torch.abs(
+                    (target[mask] - inferences[mask]) / target[mask]
+                )
+
+        with torch.no_grad():
+            rel_error_dict = {}
+            for key in targets.keys():
+                inference_slice = self.inferences[key][self.dataset.train_size:]
+                target_slice = targets[key][self.dataset.train_size:]
+                rel_error_dict[key] = rel_error(inference_slice, target_slice)
+                increase_mean_rate = torch.mean((rel_error_dict[key][1:] - rel_error_dict[key][:-1]) / 2)
+                increase_std_rate = torch.std((rel_error_dict[key][1:] - rel_error_dict[key][:-1]) / 2)
+                print(f"Initial Error rate {key}")
+                print(rel_error_dict[key][0])
+                print(f"Increase of Relative Error rate {key}")
+                # print(rel_error_dict[key])
+                print(f"Mean: {increase_mean_rate}; STD: {increase_std_rate}")
+
+
+            # print(rel_error_dict["d"])
+            ts = self.days_before_diverge(threshold=threshold)
+            print(ts)
+            print("_____________________")
+            # print(self.inferences["t"])
+            # print(targets["t"])
+        return ts, rel_error_dict
+
+        # print(f"Evaluating experiment {self.uuid}")
 

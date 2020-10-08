@@ -26,7 +26,7 @@ if __name__ == "__main__":
     final_json = experiment_cls.get_configs_from_json(os.path.join(exp_path, "final.json"))
     initial_params = final_json["params"]
 
-    runs_dir = "runs/sliding_train_exps"
+    runs_dir = "runs/sliding_train_exps_a_default"
 
     global_summary = SummaryWriter(f"{os.path.join(os.getcwd(), runs_dir)}")
 
@@ -45,7 +45,7 @@ if __name__ == "__main__":
         model, uuid, res = experiment.run_exp(
             initial_params=param_gen.params,
             dataset_params={"train_size": train_size, "val_len": val_len},
-            train_params={"momentum": momentum},
+            train_params={"momentum": momentum, "m": 0.125},
             model_params={"der_1st_reg": der_1st_reg, "bound_reg": bound_reg, "bound_loss_type": bound_loss_type, "model_cls": model_cls},
             loss_weights=loss_weights
 
