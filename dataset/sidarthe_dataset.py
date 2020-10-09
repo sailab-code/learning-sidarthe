@@ -33,7 +33,8 @@ class SidartheDataset(Dataset):
         tmp_d, tmp_r, tmp_t, tmp_h, tmp_e = [], [], [], [], []
         first_date = None
         for i in range(initial_len):
-            if y_target[i] > 0:
+            # if y_target[i] > 0:
+            if d_target[i] + r_target[i] > 0:
                 tmp_d = d_target[i:]
                 tmp_r = r_target[i:]
                 tmp_t = t_target[i:]
