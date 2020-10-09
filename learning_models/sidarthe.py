@@ -45,11 +45,11 @@ class Sidarthe(AbstractModel):
         if self.targets is not None:
             # compute normalization values
             averages = {
-                key[0]: np.mean(value) for key, value in self.targets.items()
+                key[0]: np.mean(value) if self.target_weights[key[0]] > 0.0 else 0.0 for key, value in self.targets.items()
             }
             max_average = np.max([value for value in averages.values()])
             self.norm_weights = {
-                key: max_average / avg for key, avg in averages.items()
+                key: max_average / avg if avg > 0.0 else 0.0 for key, avg in averages.items()
             }
             print(self.norm_weights)
 
