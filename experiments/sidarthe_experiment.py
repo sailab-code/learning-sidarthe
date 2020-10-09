@@ -129,17 +129,20 @@ class SidartheExperiment(Experiment):
 
         return self.fill_missing_params(_params, learning_rates)
 
-    def make_references(self):
-        references = {}
-        ref_df = pd.read_csv(os.path.join(os.getcwd(), "data/sidarthe_results_new.csv"))
-        for key in 'sidarthe':
-            references[key] = ref_df[key].tolist()
-
-        for key in ["r0", "h_detected"]:
-            references[key] = ref_df[key].tolist()
-
-        for key in self.initial_params.keys():
-            if key in ref_df:
+    def make_references(self, **kwargs):
+        references = None
+        plot_references = kwargs.get("plot_references", False)
+        if plot_references:
+            references = {}
+            ref_df = pd.read_csv(os.path.join(os.getcwd(), "data/sidarthe_results_new.csv"))
+            for key in 'sidarthe':
                 references[key] = ref_df[key].tolist()
+
+            for key in ["r0", "h_detected"]:
+                references[key] = ref_df[key].tolist()
+
+            for key in self.initial_params.keys():
+                if key in ref_df:
+                    references[key] = ref_df[key].tolist()
 
         return references

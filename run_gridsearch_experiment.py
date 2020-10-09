@@ -16,16 +16,16 @@ if __name__ == "__main__":
     region = "FR"
     n_epochs = 8000
     t_step = 1.0
-    train_size = 185
+    train_size = 182
 
-    der_1st_regs = [1e5]
-    momentums = [True, False]
+    der_1st_regs = [5e5, 1e7]
+    momentums = [True]
 
     ms = [0.1]
     ass = [0.0]
     bound_regs = [1.0, 2.5, 5.0]
     loss_type = "nrmse"
-    d_ws, r_ws, t_ws, h_ws, e_ws = [1.0, 2.5, 3.5, 3.0], [1.0], [1.0], [1.0], [1.0]
+    d_ws, r_ws, t_ws, h_ws, e_ws = [0.0], [1.0, 2.0, 3.0], [1.0], [1.0], [1.0]
     val_len = 20
 
     # Italy
@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
     # France
     initial_params = {
-        "alpha": [0.21] * train_size,
+        "alpha": [0.25] * train_size,
         "beta": [0.0055] * train_size,
         "gamma": [0.2] * train_size,
         "delta": [0.0057] * train_size,
@@ -100,8 +100,8 @@ if __name__ == "__main__":
                 "dataset_params": {"train_size": train_size, "val_len": val_len, "region": region},
                 "model_params": {"model_cls": TiedSidartheExtended, "der_1st_reg": der_1st_reg, "bound_reg": bound_reg, "bound_loss_type": "log"},
                 "train_params": {"momentum": momentum, "m": m, "a": a},
-
-                "loss_weights": loss_weights
+                "loss_weights": loss_weights,
+                "plot_references": False
             }
         )
         process_pool.wait_for_empty_slot(timeout=5)

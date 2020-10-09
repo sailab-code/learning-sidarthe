@@ -105,7 +105,7 @@ class Experiment:
     def make_learning_rates(self, **kwargs):
         return NotImplementedError
 
-    def make_references(self):
+    def make_references(self, **kwargs):
         return NotImplementedError
 
     def set_initial_params(self, initial_params):
@@ -382,7 +382,7 @@ class Experiment:
         targets = self.dataset.targets
 
         # create references
-        references = self.make_references()
+        references = self.make_references(**kwargs)
         self.set_references(references)
 
         # creates loss/train/learning_rates/pretrained_model params
