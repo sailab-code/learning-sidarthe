@@ -25,7 +25,7 @@ if __name__ == "__main__":
     ass = [0.0]
     bound_regs = [1.0, 2.5, 5.0]
     loss_type = "nrmse"
-    d_ws, r_ws, t_ws, h_ws, e_ws = [0.0], [1.0, 2.0, 3.0], [1.0], [1.0], [1.0]
+    d_ws, r_ws, t_ws, h_ws, e_ws = [0.5, 1.0], [1.0, 2.0, 3.0], [1.0], [1.0], [1.0]
     val_len = 20
 
     # Italy
