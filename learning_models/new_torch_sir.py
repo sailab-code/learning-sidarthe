@@ -1,4 +1,3 @@
-from functools import reduce
 from typing import List
 
 import numpy
@@ -8,7 +7,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from learning_models.abstract_model import AbstractModel
 import utils.derivatives as derivatives
-from learning_models.sir_optimizer import SirOptimizer
+from learning_models.optimizers.sir_optimizer import SirOptimizer
 from utils.visualization_utils import Curve, generic_plot, format_xtick
 
 
