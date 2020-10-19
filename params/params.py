@@ -163,6 +163,9 @@ class SidartheParamGenerator:
             self.base_params = sidarthe_extended_params.copy()
         elif type(params) is dict:
             self.base_params = params
+            for key, val in self.base_params.items():
+                if len(val) > 1:
+                    self.param_types[key] = 'dyn'
 
     def perturb(self, mu=0.0, sigma=0.01):
         eps = 1e-8
