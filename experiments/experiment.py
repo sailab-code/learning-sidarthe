@@ -250,7 +250,8 @@ class Experiment:
         with open(os.path.join(self.exp_path, json_file), "a") as f:
             f.write(json_final)
 
-        self.summary.add_text("settings/final", get_markdown_description(json_final, self.uuid))
+        if self.summary:
+            self.summary.add_text("settings/final", get_markdown_description(json_final, self.uuid))
 
     def _plot_final_params(self):
         # plot params
@@ -429,28 +430,14 @@ class Experiment:
 
         return self.model, self.uuid, risks["val"][self.model.val_loss_checked]
 
-    def days_before_diverge(self, threshold=0.1):
-        targets = self.dataset.targets
-        train_size = self.dataset_params["train_size"]
-
-        Ts = {}
-        for key,value in targets.items():
-            t_len = len(targets[key])
-            Ts[key] = (t_len-train_size, abs(value[t_len-1] - self.inferences[key][t_len-1])/value[t_len-1])
-            for t in range(train_size, t_len):
-                if value[t] > 0 and abs(value[t] - self.inferences[key][t])/value[t] >= threshold:
-                    rel_error = abs(value[t] - self.inferences[key][t]) / value[t]
-                    print("________________________________")
-                    print(key)
-                    print(value[t])
-                    print(self.inferences[key][t])
-                    print(rel_error)
-                    print(t)
-                    print(t-train_size)
-                    Ts[key] = (t - train_size, rel_error.detach().numpy().item())
-                    break
-
-        return Ts
+    def days_before_diverge(self, rel_err, threshold=0.1):
+        is_diverged_day = torch.gt(rel_err, threshold)
+        diverged_days = torch.nonzero(is_diverged_day)
+        n_diverged_days = diverged_days.shape[0]
+        if diverged_days.shape[0] > 0:
+            return diverged_days[0].item(), n_diverged_days
+        else:
+            return is_diverged_day.shape[0], n_diverged_days
 
     def eval_exp(self, threshold=0.1, **kwargs):
         """
@@ -490,6 +477,9 @@ class Experiment:
         model_cls = self.model_params["model_cls"]
         initial_conditions = model_cls.compute_initial_conditions_from_targets(targets, model_params)
 
+        train_params = self.make_train_params(**kwargs)
+        self.set_train_params(train_params)
+
         self.model = model_cls.init_trainable_model(
             initial_params,
             initial_conditions,
@@ -497,45 +487,56 @@ class Experiment:
             **model_params
         )
 
+        # creates experiment's folder
+        self.set_exp_paths()
+
         dataset_size = len(x_targets)
+        print(f"Dataset Size: {dataset_size}")
         time_step = 1.0
         t_grid = torch.linspace(0, dataset_size, int(dataset_size / time_step))  # NB removed +1
         self.inferences = self.model.inference(t_grid)
 
-        self.model.loss_type = "mape"
-        # print(len(self.inferences["d"]))
-        # print(len(targets["d"]))
-
-        def rel_error(inferences, target):
-            target = torch.tensor(target)
-            mask = torch.ge(target, 0)
-
-            return torch.abs(
-                    (target[mask] - inferences[mask]) / target[mask]
-                )
-
         with torch.no_grad():
-            rel_error_dict = {}
-            for key in targets.keys():
-                inference_slice = self.inferences[key][self.dataset.train_size:]
-                target_slice = targets[key][self.dataset.train_size:]
-                rel_error_dict[key] = rel_error(inference_slice, target_slice)
-                increase_mean_rate = torch.mean((rel_error_dict[key][1:] - rel_error_dict[key][:-1]) / 2)
-                increase_std_rate = torch.std((rel_error_dict[key][1:] - rel_error_dict[key][:-1]) / 2)
-                print(f"Initial Error rate {key}")
-                print(rel_error_dict[key][0])
-                print(f"Increase of Relative Error rate {key}")
-                # print(rel_error_dict[key])
-                print(f"Mean: {increase_mean_rate}; STD: {increase_std_rate}")
+            with open(os.path.join(self.exp_path, "val_rel_err.txt"), "w") as f:
+                print(f"________VALIDATION________")
+                val_slice = slice(self.dataset.train_size, self.dataset.train_size + self.dataset.val_len)
+                for key in targets.keys():
+                    print(f"________Relative Error of: {key}________")
+                    target, hat = torch.tensor(targets[key][val_slice]), torch.tensor(self.inferences[key][val_slice])
+                    mean_err, _, days_bef_div,n_diverged_days = self.get_n_days_before_diverges(target, hat, threshold)
+                    f.write(f"{key} & {threshold} & {mean_err:.2f} & {days_bef_div} & {n_diverged_days}\\\\ \n")
 
+            with open(os.path.join(self.exp_path, "test_rel_err.txt"), "w") as f:
+                print(f"________TEST________")
+                test_slice = slice(self.dataset.train_size + self.dataset.val_len, dataset_size)
+                for key in targets.keys():
+                    print(f"________Relative Error of: {key}________")
+                    target, hat = torch.tensor(targets[key][test_slice]), torch.tensor(self.inferences[key][test_slice])
+                    mean_err, _, days_bef_div, n_diverged_days = self.get_n_days_before_diverges(target, hat, threshold)
+                    f.write(f"{key} & {threshold} & {mean_err:.2f} & {days_bef_div} & {n_diverged_days}\\\\ \n")
 
-            # print(rel_error_dict["d"])
-            ts = self.days_before_diverge(threshold=threshold)
-            print(ts)
+            # inferences
+            with torch.no_grad():
+                risks, hat_t, target_t, dataset_slice = self.compute_final_losses(x_target=x_targets, targets=targets)
+                self._make_final_report(risks)
+
+            r0 = np.max(self.inferences["r0"].numpy())
+            return risks["val"]["nrmse"].item(), r0
+            # return risks["val"]["nrmse"].item()
+
+    def get_n_days_before_diverges(self, target, hat, threshold):
+            mask = torch.gt(target, 0)
+            rel_err = torch.abs((target[mask] - hat[mask]) / target[mask])
+            print(target[mask])
+            print(hat[mask])
+            print(rel_err)
+            mean_err = torch.mean(rel_err)
+            std_err = torch.std(rel_err)
+            print(f"Mean: {mean_err}; STD: {std_err}")
+            day_before_diverge, n_diverged_days = self.days_before_diverge(rel_err, threshold=threshold)
+            print(f"Diverges after {day_before_diverge} days")
+            print(f"Number of days above threshold {n_diverged_days}")
             print("_____________________")
-            # print(self.inferences["t"])
-            # print(targets["t"])
-        return ts, rel_error_dict
+            return mean_err, std_err, day_before_diverge, n_diverged_days
 
-        # print(f"Evaluating experiment {self.uuid}")
 
