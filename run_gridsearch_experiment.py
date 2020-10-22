@@ -9,52 +9,35 @@ from utils.multiprocess_utils import ProcessPool
 import multiprocessing as mp
 import itertools
 
-N_PROCESSES = 4
+N_PROCESSES = 1
 N_PERTURBED_RUNS = 0
 
 if __name__ == "__main__":
     region = "FR"
-    n_epochs = 6000
+    n_epochs = 2500
     t_step = 1.0
-    train_size = 182
+    train_size = 166 # 185
 
-    der_1st_regs = [1e6, 1e7]
+    der_1st_regs = [5e5]
     momentums = [True]
 
-    ms = [0.015]
+    ms = [0.1]
     ass = [0.0]
-    bound_regs = [1e6, 5e5]  # [1.0, 2.5, 5.0]
+    bound_regs = [1e5]
     loss_type = "nrmse"
-    d_ws, r_ws, t_ws, h_ws, e_ws = [3.0], [2.5], [1.5], [1.0], [2.0]
-    val_len = 20
+    d_ws, r_ws, t_ws, h_ws, e_ws = [1.0], [2.0], [1.0], [1.0], [2.5]
+    val_len = 7
 
     # Italy
-    # initial_params = {
-    #         "alpha": [0.210] * 4 + [0.570] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210] * (train_size - 38),
-    #         "beta": [0.011] * 4 + [0.0057] * 18 + [0.005] * (train_size - 22),
-    #         "gamma": [0.2] * 4 + [0.456] * 18 + [0.285] * 6 + [0.11] * 10 + [0.11] * (train_size - 38),
-    #         "delta": [0.011] * 4 + [0.0057] * 18 + [0.005] * (train_size - 22),
-    #         "epsilon": [0.171] * 12 + [0.143] * 26 + [0.2] * (train_size - 38),
-    #         "theta": [0.371] * train_size,
-    #         "zeta": [0.125] * 22 + [0.034] * 16 + [0.025] * (train_size - 38),
-    #         "eta": [0.125] * 22 + [0.034] * 16 + [0.025] * (train_size - 38),
-    #         "mu": [0.017] * 22 + [0.008] * (train_size - 22),
-    #         "nu": [0.027] * 22 + [0.015] * (train_size - 22),
-    #         "tau": [0.05]*train_size,
-    #         "lambda": [0.034] * 22 + [0.08] * (train_size - 22),
-    #         "kappa": [0.017] * 22 + [0.017] * 16 + [0.02] * (train_size - 38),
-    #         "xi": [0.017] * 22 + [0.017] * 16 + [0.02] * (train_size - 38),
-    #         "rho": [0.034] * 22 + [0.017] * 16 + [0.02] * (train_size - 38),
-    #         "sigma": [0.017] * 22 + [0.017] * 16 + [0.01] * (train_size - 38),
-    #         "phi": [0.02] * train_size,
-    #         "chi": [0.02] * train_size
-    #     }
-
+    # param_gen = SidartheParamGenerator()
+    # param_gen.init_from_base_params(params="extended")
+    # param_gen.extend(train_size)
+    # initial_params = param_gen.params
     # France
     initial_params = {
-        "alpha": [0.165] * train_size,
+        "alpha": [0.21] * train_size,
         "beta": [0.005] * train_size,
-        "gamma": [0.11] * train_size,
+        "gamma": [0.10] * train_size,
         "delta": [0.005] * train_size,
         "epsilon": [0.1] * train_size,
         "theta": [0.18] * train_size,
@@ -71,13 +54,6 @@ if __name__ == "__main__":
         "phi": [0.02] * train_size,
         "chi": [0.02] * train_size
     }
-
-    # initial_params_list = []
-    # for _ in range(10):
-    #     param_gen = SidartheParamGenerator()
-    #     param_gen.random_init(train_size)
-    #     initial_params = param_gen.params
-    #     initial_params_list.append(initial_params)
 
     experiment_cls = ExtendedSidartheExperiment  # switch class to change experiment: e.g. SidartheExperiment
 
@@ -97,9 +73,9 @@ if __name__ == "__main__":
         }
 
         for k, v in loss_weights.items():
-            loss_weights[k] = 0.0005 * v # 0.0005
+            loss_weights[k] = 0.00005 * v # 0.00005
 
-        experiment = experiment_cls(region, n_epochs=n_epochs, time_step=t_step, runs_directory=f"runs/FR", uuid_prefix=f"_m{m}_train_size{train_size}_der{der_1st_reg}_m{momentum}_dt_{d_w}_breg{bound_reg}")
+        experiment = experiment_cls(region, n_epochs=n_epochs, time_step=t_step, runs_directory=f"runs/FR", uuid_prefix=f"EPS_0_m{m}_ts{train_size}_der{der_1st_reg}_dw_{d_w}_breg{bound_reg}")
         process_pool.start(
             target=experiment.run_exp,
             kwargs={
