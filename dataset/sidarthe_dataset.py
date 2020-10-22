@@ -28,6 +28,7 @@ class SidartheDataset(Dataset):
 
     def select_targets(self, targets):
         y_target, dates = targets["y"], targets["dates"]
+
         d_target, r_target, t_target, h_detected_target, e_target = targets["d"], targets["r"], targets["t"], targets["h_detected"], targets["e"]
         initial_len = len(y_target)
         tmp_d, tmp_r, tmp_t, tmp_h, tmp_e = [], [], [], [], []
