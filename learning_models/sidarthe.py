@@ -1,3 +1,6 @@
+import json
+import os
+from datetime import datetime
 from typing import List, Dict
 
 import numpy as np
@@ -7,11 +10,13 @@ from torch.utils.tensorboard import SummaryWriter
 
 from learning_models.abstract_model import AbstractModel
 from learning_models.optimizers.new_sir_optimizer import NewSirOptimizer
+from populations import populations
+from torch_euler import Heun, euler
 from utils import derivatives
 from utils.visualization_utils import Curve, generic_plot, format_xtick, generate_format_xtick
 
-
 EPS = 0
+
 
 class Sidarthe(AbstractModel):
     dtype = torch.float32
@@ -57,6 +62,31 @@ class Sidarthe(AbstractModel):
             self.format_xtick = format_xtick
         else:
             self.format_xtick = generate_format_xtick(self.first_date)
+
+    @classmethod
+    def from_model_summaries(cls, model_path):
+        with open(os.path.join(model_path, 'settings.json')) as settings_f:
+            settings = json.load(settings_f)
+
+        with open(os.path.join(model_path, 'final.json')) as final_f:
+            final = json.load(final_f)
+
+        # default value taken from csv
+        init_conditions = settings.get('init_conditions', (59999576.0, 94, 94, 101, 101, 26, 7, 1))
+
+        first_date = settings.get('first_date', "2020-02-24")
+
+        return cls(
+            parameters=final['params'],
+            population=populations[settings['region']],
+            init_cond=init_conditions,
+            integrator=Heun if settings['integrator'] == 'Heun' else euler,
+            sample_time=settings['t_inc'],
+            first_date=first_date,
+            d_weight=1., r_weight=1., t_weight=1., h_weight=1., e_weight=1.,
+            der_1st_reg=0.,
+            bound_reg=0.
+        )
 
     @property
     def params(self) -> Dict:
@@ -160,6 +190,7 @@ class Sidarthe(AbstractModel):
     def sigma(self) -> torch.Tensor:
         return self._params["sigma"]
 
+    # endregion ModelParams
     @staticmethod
     def get_param_at_t(param, _t):
         _t = _t.long()
@@ -167,9 +198,8 @@ class Sidarthe(AbstractModel):
             rectified_param = torch.relu(param[_t].unsqueeze(0))
         else:
             rectified_param = torch.relu(param[-1].unsqueeze(0).detach())
-
+        
         return torch.where(rectified_param >= EPS, rectified_param, rectified_param + EPS)
-        # return rectified_param + EPS
 
     def differential_equations(self, t, x):
         """
@@ -304,7 +334,7 @@ class Sidarthe(AbstractModel):
         rectified_param = torch.max(torch.full_like(parameter, eps), parameter)
 
         # apply loss
-        return torch.pow(torch.log(rectified_param) / torch.log(torch.tensor(1./0.5e3)), 10)
+        return torch.pow(torch.log(rectified_param) / torch.log(torch.tensor(1. / 0.5e3)), 10)
 
     def first_derivative_loss(self):
         loss_1st_derivative_total = torch.zeros(1, dtype=self.dtype)
@@ -339,7 +369,7 @@ class Sidarthe(AbstractModel):
                 bound_reg_total = bound_reg_total + bound_reg
 
         # average params bound regularization
-        #bound_reg_total /= len(self.params)
+        # bound_reg_total /= len(self.params)
 
         return self.bound_reg * torch.sum(bound_reg_total)
 
@@ -368,7 +398,6 @@ class Sidarthe(AbstractModel):
                     key: self.norm_weights[key] * loss_v for key, loss_v in losses_dict.items()
                 }
 
-
             if weighted:
                 losses = weight_losses(losses)
                 if normalized:
@@ -379,7 +408,6 @@ class Sidarthe(AbstractModel):
             return total_loss, losses
 
         # compute losses
-
 
         # der_2nd_loss = self.second_derivative_loss()
 
@@ -493,26 +521,26 @@ class Sidarthe(AbstractModel):
         first_date = model_params.get("first_date", None)
 
         return cls(initial_params, population, initial_conditions, integrator, time_step,
-                        d_weight=d_weight,
-                        r_weight=r_weight,
-                        t_weight=t_weight,
-                        h_weight=h_weight,
-                        e_weight=e_weight,
-                        der_1st_reg=der_1st_reg,
-                        bound_reg=bound_reg,
-                        verbose=verbose,
-                        loss_type=loss_type,
-                        references=references,
-                        targets=targets,
-                        train_size=train_size,
-                        val_size=val_size,
-                        first_date=first_date,
-                        bound_loss_type=bound_loss_type
-                        )
+                   d_weight=d_weight,
+                   r_weight=r_weight,
+                   t_weight=t_weight,
+                   h_weight=h_weight,
+                   e_weight=e_weight,
+                   der_1st_reg=der_1st_reg,
+                   bound_reg=bound_reg,
+                   verbose=verbose,
+                   loss_type=loss_type,
+                   references=references,
+                   targets=targets,
+                   train_size=train_size,
+                   val_size=val_size,
+                   first_date=first_date,
+                   bound_loss_type=bound_loss_type
+                   )
 
     @classmethod
     def init_optimizers(cls, model: 'Sidarthe', learning_rates: dict, optimizers_params: dict) -> List[Optimizer]:
-        m = optimizers_params.get("m", 1/9)
+        m = optimizers_params.get("m", 1 / 9)
         a = optimizers_params.get("a", 0.05)
         momentum = optimizers_params.get("momentum", True)
         summary = optimizers_params.get("tensorboard_summary", None)
@@ -563,7 +591,6 @@ class Sidarthe(AbstractModel):
             H0_detected
         )
 
-
     def plot_params_over_time(self, n_days=None):
         param_plots = []
 
@@ -581,7 +608,8 @@ class Sidarthe(AbstractModel):
 
                 if self.references is not None:
                     if param_key in self.references:
-                        ref_curve = Curve(pl_x, self.references[param_key][:n_days], "--", f"$\\{param_key}$ reference", color=None)
+                        ref_curve = Curve(pl_x, self.references[param_key][:n_days], "--", f"$\\{param_key}$ reference",
+                                          color=None)
                         curves.append(ref_curve)
                 plot = generic_plot(curves, pl_title, None, formatter=self.format_xtick)
                 param_plots.append((plot, pl_title))
@@ -606,14 +634,13 @@ class Sidarthe(AbstractModel):
     def slice_values(values, slice_):
         return {key: value[slice_] for key, value in values.items()}
 
-
     def plot_fits(self):
         fit_plots = []
         with torch.no_grad():
 
             targets = self.targets
             dataset_size = len(self.targets["d"])
-            t_grid = torch.linspace(0, dataset_size, dataset_size+1)
+            t_grid = torch.linspace(0, dataset_size, dataset_size + 1)
 
             inferences = self.inference(t_grid)
             norm_inferences = self.normalize_values(inferences, self.population)
@@ -681,14 +708,14 @@ class Sidarthe(AbstractModel):
                 tot_curves = train_curves + val_curves + test_curves
 
                 if self.references is not None:
-                    reference_curve = Curve(list(dataset_range), self.references[key][dataset_target_slice], "--", label="Reference (Nature)")
+                    reference_curve = Curve(list(dataset_range), self.references[key][dataset_target_slice], "--",
+                                            label="Reference (Nature)")
                     tot_curves = tot_curves + [reference_curve]
 
                 pl_title = f"{key.upper()} - train/validation/test/reference"
                 fig = generic_plot(tot_curves, pl_title, None, formatter=self.format_xtick)
                 pl_title = f"Estimated {key.upper()} on fit"
                 fit_plots.append((fig, pl_title))
-
 
                 if target_train is not None:
                     # add error plots
@@ -741,7 +768,6 @@ class Sidarthe(AbstractModel):
             for fig, fig_title in self.plot_fits():
                 summary.add_figure(f"fits/{fig_title}", fig, close=True, global_step=0)
 
-
     def log_info(self, epoch, losses, inferences, targets, summary: SummaryWriter = None):
         if self.verbose:
             print(f"Params at epoch {epoch}.")
@@ -754,7 +780,6 @@ class Sidarthe(AbstractModel):
         if summary is not None:
             for fig, fig_title in self.plot_params_over_time():
                 summary.add_figure(f"{fig_title}", fig, close=True, global_step=epoch)
-
 
             for fig, fig_title in self.plot_fits():
                 summary.add_figure(f"fits/{fig_title}", fig, close=True, global_step=epoch)
