@@ -41,7 +41,7 @@ export function PlotsArea() {
             const fetchInferences = async () => {
             const request = {
                 method: Method.Get,
-                url: `/models/${model.model_name}/inferences/`,
+                url: `/api/models/${model.model_name}/inferences/`,
                 data: {}
             }
     

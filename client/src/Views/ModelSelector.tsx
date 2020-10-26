@@ -16,7 +16,7 @@ export function ModelSelector(props: IProps) {
         const fetchModels = async () => {
             const request = {
                 method: Method.Get,
-                url: "/models/",
+                url: "/api/models/",
                 data: {}
             };
 
