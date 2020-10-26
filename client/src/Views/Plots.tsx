@@ -9,6 +9,7 @@ import { number } from "prop-types";
 interface IProps {
     activePlots: ActivePlots;
     inferences: Inferences;
+    targets: any;
 }
 
 const inferenceNameDictionary = {
@@ -24,24 +25,61 @@ const inferenceNameDictionary = {
 }
 
 
+const colorsDictionary = {
+    "s": 'Tomato',
+    "i": "DodgerBlue",
+    "d": "MediumSeaGreen",
+    "a": "SlateBlue",
+    "r": "Violet",
+    "t": "Orange",
+    "h_detected": "Purple",
+    "e": "Black",
+    "r0": "Teal" 
+}
+
+
 export function Plots(props: IProps) {
 
-    const plots = [];
+    if(!props.targets || !props.inferences)
+      return null;
 
-    const inferences = inferenceIDs.filter(id => props.activePlots[id]).map(inferenceID => props.inferences[inferenceID])
-    const descriptors = inferenceIDs.filter(id => props.activePlots[id]).map(inferenceID => inferenceNameDictionary[inferenceID])
+    const inferenceFilter = id => props.activePlots[id];
+    const targetFilter = id => props.activePlots[id] && ['d', 'r', 't', 'h_detected', 'e'].includes(id);
 
-    const predictionLength = props.inferences[inferenceIDs[0]].length
+
+    const activeInferences = inferenceIDs.filter(inferenceFilter);
+    const activeTargets = inferenceIDs.filter(targetFilter);
+    
+    const inferencesInfo = activeInferences.map(inferenceID => ({
+      data: props.inferences[inferenceID],
+      descriptor: inferenceNameDictionary[inferenceID], 
+      color: colorsDictionary[inferenceID]
+    }));
+
+
+    const targetsInfo = activeTargets.map(inferenceID => ({
+      data: props.targets[inferenceID],
+      descriptor: inferenceNameDictionary[inferenceID]+ " (observed)", 
+      color: colorsDictionary[inferenceID]
+    }));
+
+    const infos = [...inferencesInfo, ...targetsInfo];
+
+    
+    infos.sort((infoA, infoB) => infoA.descriptor.localeCompare(infoB.descriptor))
+
+    const descriptors = infos.map(info => info.descriptor)
+    const colors = infos.map(info => info.color)
+
+    const predictionLength = props.targets['d'].length + 50
 
     const chartData = []
+    console.log(props.targets)
     for(let i = 0; i < predictionLength; ++i)
     {
-        const data = inferences.map( value => value[i])
-        //console.log(data)
-        chartData.push([i, ...data])
+        const data = [i, ...infos.map(info => info.data[i])]
+        chartData.push(data)
     }
-
-    console.log(chartData)
 
     return (
         <Container>
@@ -50,6 +88,26 @@ export function Plots(props: IProps) {
                         data={[["Giorni", ...descriptors], ...chartData]}
                         width="100%"
                         height="400px"
+                        options={{
+                          colors: [...colors],
+                          title: "Predictions",
+                          vAxis: {
+                            title: "# People"
+                          },
+                          hAxis: {
+                            title: "Date",
+                          }
+                        }}
+                        formatters={[
+                            {
+                              //TODO: fix date formatting
+                              type: 'DateFormat',
+                              column: 0,
+                              options: {
+                                formatType: 'long',
+                              }
+                            }
+                        ]}
                         controls={[
                             {
                                 controlType: 'ChartRangeFilter',
@@ -59,14 +117,14 @@ export function Plots(props: IProps) {
                                     chartType: 'LineChart',
                                     chartOptions: {
                                       chartArea: { width: '90%', height: '50%' },
-                                      hAxis: { baselineColor: 'none' },
+                                      hAxis: { baselineColor: 'none' }
                                     },
                                   },
                                 },
                                 controlPosition: 'bottom',
                                 controlWrapperParams: {
                                   state: {
-                                    range: { start: 0, end: 365 },
+                                    range: { start: 30, end: 130 },
                                   },
                                 },
                             }

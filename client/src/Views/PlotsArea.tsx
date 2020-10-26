@@ -21,6 +21,7 @@ export function PlotsArea() {
 
     const [model, setModel] = useState<IModel>()
     const [inferences, setInferences] = useState<Inferences>()
+    const [targets, setTargets] = useState<any>()
     const [activePlots, setActivePlots] = useState<ActivePlots>(defaultActivePlots)
 
     function handleModelChange(model: IModel)
@@ -41,12 +42,13 @@ export function PlotsArea() {
             const fetchInferences = async () => {
             const request = {
                 method: Method.Get,
-                url: `/api/models/${model.model_name}/inferences/`,
+                url: `api/models/${model.model_name}/data/`,
                 data: {}
             }
     
             const response = await api.callApi(request)
-            setInferences(response.data)
+            setInferences(response.data.inferences)
+            setTargets(response.data.targets)
         }
         
         fetchInferences()
@@ -63,7 +65,7 @@ export function PlotsArea() {
     const plots = inferences ? (
         <Row>
             <Col>
-                <Plots inferences={inferences} activePlots={activePlots}/>
+                <Plots inferences={inferences} targets={targets} activePlots={activePlots}/>
             </Col>
         </Row>
     ) : null;
