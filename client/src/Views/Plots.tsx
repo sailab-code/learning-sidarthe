@@ -53,14 +53,16 @@ export function Plots(props: IProps) {
     const inferencesInfo = activeInferences.map(inferenceID => ({
       data: props.inferences[inferenceID],
       descriptor: inferenceNameDictionary[inferenceID], 
-      color: colorsDictionary[inferenceID]
+      color: colorsDictionary[inferenceID],
+      style: [1, 0]
     }));
 
 
     const targetsInfo = activeTargets.map(inferenceID => ({
       data: props.targets[inferenceID],
       descriptor: inferenceNameDictionary[inferenceID]+ " (observed)", 
-      color: colorsDictionary[inferenceID]
+      color: colorsDictionary[inferenceID],
+      style: [2, 2]
     }));
 
     const infos = [...inferencesInfo, ...targetsInfo];
@@ -74,7 +76,14 @@ export function Plots(props: IProps) {
     const predictionLength = props.targets['d'].length + 50
 
     const chartData = []
-    console.log(props.targets)
+    
+    const series = {}
+
+    for(let i = 0; i < infos.length; ++i)
+    {
+      series[i] = { lineDashStyle: infos[i].style }
+    }
+
     for(let i = 0; i < predictionLength; ++i)
     {
         const data = [i, ...infos.map(info => info.data[i])]
@@ -96,7 +105,8 @@ export function Plots(props: IProps) {
                           },
                           hAxis: {
                             title: "Date",
-                          }
+                          },
+                          series: series
                         }}
                         formatters={[
                             {
