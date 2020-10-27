@@ -20,8 +20,8 @@ for(const inferenceID of inferenceIDs)
 export function PlotsArea() {
 
     const [model, setModel] = useState<IModel>()
-    const [inferences, setInferences] = useState<Inferences>()
-    const [targets, setTargets] = useState<any>()
+    const [inferences, setInferences] = useState<Inferences>();
+    const [targets, setTargets] = useState<any>();
     const [activePlots, setActivePlots] = useState<ActivePlots>(defaultActivePlots)
 
     function handleModelChange(model: IModel)
@@ -65,7 +65,7 @@ export function PlotsArea() {
     const plots = inferences ? (
         <Row>
             <Col>
-                <Plots inferences={inferences} targets={targets} activePlots={activePlots}/>
+                <Plots region={model.region} inferences={inferences} targets={targets} activePlots={activePlots}/>
             </Col>
         </Row>
     ) : null;

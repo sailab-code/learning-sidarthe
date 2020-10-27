@@ -10,6 +10,7 @@ interface IProps {
     activePlots: ActivePlots;
     inferences: Inferences;
     targets: any;
+    region: string;
 }
 
 const inferenceNameDictionary = {
@@ -35,6 +36,11 @@ const colorsDictionary = {
     "h_detected": "Purple",
     "e": "Black",
     "r0": "Teal" 
+}
+
+const initialDates = {
+  "Italy": new Date(2020, 2, 24),
+  "FR": new Date(2020, 3, 17)
 }
 
 
@@ -84,11 +90,24 @@ export function Plots(props: IProps) {
       series[i] = { lineDashStyle: infos[i].style }
     }
 
+    const firstDate = initialDates[props.region];
     for(let i = 0; i < predictionLength; ++i)
     {
-        const data = [i, ...infos.map(info => info.data[i])]
+        const date = new Date(firstDate.valueOf())
+        date.setDate(date.getDate() + i)
+
+        
+        const data = [date, ...infos.map(info => info.data[i])]
         chartData.push(data)
     }
+
+    console.log(chartData)
+
+    const controlStart = new Date(firstDate.valueOf())
+    controlStart.setDate(controlStart.getDate() + 30);
+
+    const controlEnd = new Date(firstDate.valueOf())
+    controlEnd.setDate(controlStart.getDate() + 130)
 
     return (
         <Container>
@@ -99,25 +118,16 @@ export function Plots(props: IProps) {
                         height="400px"
                         options={{
                           colors: [...colors],
-                          title: "Predictions",
+                          title: `Predictions for ${props.region}`,
                           vAxis: {
                             title: "# People"
                           },
                           hAxis: {
                             title: "Date",
+                            format: "MMMM yyyy"
                           },
                           series: series
                         }}
-                        formatters={[
-                            {
-                              //TODO: fix date formatting
-                              type: 'DateFormat',
-                              column: 0,
-                              options: {
-                                formatType: 'long',
-                              }
-                            }
-                        ]}
                         controls={[
                             {
                                 controlType: 'ChartRangeFilter',
@@ -125,16 +135,20 @@ export function Plots(props: IProps) {
                                   filterColumnIndex: 0,
                                   ui: {
                                     chartType: 'LineChart',
+                                    chartView: {
+                                      columns: [0, 10]
+                                    },
                                     chartOptions: {
                                       chartArea: { width: '90%', height: '50%' },
-                                      hAxis: { baselineColor: 'none' }
+                                      hAxis: { baselineColor: 'none', format: "MMMM yyyy", 'textPosition': 'out'},
+
                                     },
                                   },
                                 },
                                 controlPosition: 'bottom',
                                 controlWrapperParams: {
                                   state: {
-                                    range: { start: 30, end: 130 },
+                                    range: { start: controlStart, end: controlEnd },
                                   },
                                 },
                             }
