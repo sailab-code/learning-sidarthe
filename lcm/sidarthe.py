@@ -2,7 +2,10 @@ import copy
 
 import torch
 
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Optional, Sequence, Tuple
+
+from .optimizers import MomentumOptimizer
+
 from .compartmental_model import CompartmentalModel
 
 
@@ -10,13 +13,15 @@ class Sidarthe(CompartmentalModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.EPS = kwargs['EPS']
+        self.EPS = kwargs.get('EPS', 0.)
         self._params = {key: torch.tensor(value, requires_grad=True) for key, value in
                         kwargs["params"].items()}
-        self.tied_parameters = kwargs["tied_parameters"]
         self.loss_fn = kwargs["loss_fn"]
         self.regularization_fn = kwargs["regularization"]
         self.population = kwargs["population"]
+        self.tied_parameters = kwargs.get("tied_parameters", {})
+        self.learning_rates = kwargs.get("learning_rates", {})
+        self.momentum_settings = kwargs.get("momentum_settings", {})
 
     @property
     def params(self) -> Dict:
@@ -44,6 +49,14 @@ class Sidarthe(CompartmentalModel):
         self._params = copy.deepcopy(value)
 
     @property
+    def trainable_params(self) -> Dict:
+        return {
+            key: param
+            for key, param in self._params.items()
+            if key not in self.tied_parameters.values()
+        }
+
+    @property
     def param_groups(self) -> Dict:
         return {
             "infection_rates": ('alpha', 'beta', 'gamma', 'delta'),
@@ -58,20 +71,26 @@ class Sidarthe(CompartmentalModel):
         len_diff = length - value.shape[0]
         ext_tensor = torch.tensor([value[-1] for _ in range(len_diff)], dtype=self.dtype)
         ext_tensor = torch.cat((value, ext_tensor))
-        rectified_param = torch.relu(ext_tensor)
-        return torch.where(rectified_param >= self.EPS, rectified_param, rectified_param + self.EPS)
+        return ext_tensor[:length]
+        # rectified_param = torch.relu(ext_tensor)
+        # return torch.where(rectified_param >= self.EPS, rectified_param, rectified_param + self.EPS)
 
     def rectify_param(self, param):
         rectified = torch.relu(param)
-        return torch.where(rectified >= self.EPS, rectified, self.EPS)
+        return torch.where(rectified >= self.EPS, rectified, torch.full_like(rectified, self.EPS))
 
-    @staticmethod
-    def get_param_at_t(param, _t):
+    def get_param_at_t(self, param_key, _t):
+        param = self.params[param_key]
         _t = _t.long()
         if 0 <= _t < param.shape[0]:
-            return param[_t].unsqueeze()
+            p = param[_t].unsqueeze(0)
         else:
-            return param[_t].unsqueeze().detach()  # TODO: check this detach()
+            p = param[-1].unsqueeze(0).detach()  # TODO: check this detach()
+
+        if param_key in ['alpha', 'beta', 'gamma', 'delta']:  # these params must be divided by population
+            return p / self.population
+        else:
+            return p
 
     def __getattr__(self, item):
         """
@@ -79,11 +98,14 @@ class Sidarthe(CompartmentalModel):
         :param item: name of the parameter
         :return: parameter tensor
         """
-        if item.replace("_", "") in self._params.keys():
+
+        param_key = item.replace("_", "")
+
+        if param_key in self._params.keys():
             if item in self.tied_parameters.keys():
-                param = self._params[self.tied_parameters[item]]
+                param = self._params[self.tied_parameters[param_key]]
             else:
-                param = self._params[item]
+                param = self._params[param_key]
 
             return self.rectify_param(param)
         else:
@@ -130,7 +152,7 @@ class Sidarthe(CompartmentalModel):
         }
 
     def differential_equations(self, t, x):
-        p = {key: self.get_param_at_t(param, t) for key, param in self.params.items()}
+        p = {key: self.get_param_at_t(key, t) for key in self.params.keys()}
 
         S = x[0]
         I = x[1]
@@ -161,6 +183,8 @@ class Sidarthe(CompartmentalModel):
 
     def training_step(self, batch, batch_idx):
         t_grid, targets = batch
+        t_grid = t_grid.squeeze(0)
+        targets = {key: target.squeeze(0) for key, target in targets.items()}
         hats = self.forward(t_grid)
         target_losses = self.loss_fn(hats, targets)
         regularization_loss = self.regularization_fn(self.params)
@@ -168,3 +192,6 @@ class Sidarthe(CompartmentalModel):
         # TODO: add log code
 
         return target_losses["backward"] + regularization_loss["backward"]
+
+    def configure_optimizers(self):
+        return MomentumOptimizer(self.trainable_params, self.learning_rates, self.momentum_settings)

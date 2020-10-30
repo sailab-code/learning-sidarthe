@@ -11,13 +11,13 @@ class CompartmentalModel(pl.LightningModule, metaclass=abc.ABCMeta):
     """
 
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__()
         self.initial_conditions = kwargs["initial_conditions"]
-        self.integrator = kwargs["integrator"]
         self.time_step = kwargs["time_step"]
+        self.integrator = kwargs["integrator"](self.time_step)
 
     def integrate(self, time_grid):
-        return self.integrator(self.differential_equations, self.initial_conditions, time_grid)
+        return self.integrator(self.differential_equations, torch.tensor([self.initial_conditions]), time_grid)
 
     @property
     @abc.abstractmethod
