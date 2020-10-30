@@ -1,6 +1,6 @@
 # An Optimal Control Approach to Learning the SIDARTHE Epidemic model
 
-This repository contains the code used for the paper _"An Optimal Control Approach to Learning the SIDARTHE Epidemic model"_. 
+This repository contains the code used for the paper _"An Optimal Control Approach to Learning in SIDARTHE Epidemic model"_.
 
 [Technical report here](https://arxiv.org/abs/2010.14878) - submitted at TNNLS.
 
