@@ -193,5 +193,20 @@ class Sidarthe(CompartmentalModel):
 
         return target_losses["backward"] + regularization_loss["backward"]
 
+    def validation_step(self, batch, batch_idx):
+        t_grid, targets = batch
+        t_grid = t_grid.squeeze(0)
+        targets = {key: target.squeeze(0) for key, target in targets.items()}
+        hats = self.forward(t_grid)
+        target_losses = self.loss_fn(hats, targets)
+        regularization_loss = self.regularization_fn(self.params)
+
+        # TODO: add log code
+
+        return {
+            "target_loss": target_losses['validation'],
+            "regularization_loss": regularization_loss['validation']
+        }
+
     def configure_optimizers(self):
         return MomentumOptimizer(self.trainable_params, self.learning_rates, self.momentum_settings)
