@@ -140,7 +140,7 @@ class Experiment:
             self.dataset_params["train_size"], self.dataset_params["val_len"],
             self.model_params["der_1st_reg"], self.time_step,
             self.train_params["momentum"], self.train_params["m"], self.train_params["a"], self.model_params["loss_type"],
-            self.model_params["integrator"], self.model_params["bound_reg"], self.model_params["bound_loss_type"]
+            self.model_params["integrator"], self.model_params["bound_reg"], self.model_params["bound_loss_type"], str(self.model_params["model_cls"])
         )
 
         json_description = json.dumps(description, indent=4)
