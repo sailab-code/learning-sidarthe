@@ -123,20 +123,7 @@ class Sidarthe(CompartmentalModel):
         h_detected = sol[:, 7]
         h = self.population - (s + i + d + a + r + t + e)
 
-        extended_params = {key: self.extend_param(value, time_grid.shape[0]) for key, value in self.params.items()}
-
-        # region compute R0
-        c1 = extended_params['epsilon'] + extended_params['zeta'] + extended_params['lambda']
-        c2 = extended_params['eta'] + extended_params['rho']
-        c3 = extended_params['theta'] + extended_params['mu'] + extended_params['kappa']
-        c4 = extended_params['nu'] + extended_params['xi']
-
-        r0 = extended_params['alpha'] + extended_params['beta'] * extended_params['epsilon'] / c2
-        r0 = r0 + extended_params['gamma'] * extended_params['zeta'] / c3
-        r0 = r0 + extended_params['delta'] * (extended_params['eta'] * extended_params['epsilon']) / (c2 * c4)
-        r0 = r0 + extended_params['delta'] * extended_params['zeta'] * extended_params['theta'] / (c3 * c4)
-        r0 = r0 / c1
-        # endregion
+        rt = self.get_rt(time_grid)
 
         return {
             "s": s,
@@ -148,8 +135,24 @@ class Sidarthe(CompartmentalModel):
             "h": h,
             "e": e,
             "h_detected": h_detected,
-            "r0": r0
+            "r0": rt
         }
+
+    def get_rt(self, time_grid):
+        extended_params = {key: self.extend_param(value, time_grid.shape[0]) for key, value in self.params.items()}
+
+        # compute R0
+        c1 = extended_params['epsilon'] + extended_params['zeta'] + extended_params['lambda']
+        c2 = extended_params['eta'] + extended_params['rho']
+        c3 = extended_params['theta'] + extended_params['mu'] + extended_params['kappa'] + extended_params['phi']
+        c4 = extended_params['nu'] + extended_params['xi'] + extended_params['chi']
+
+        rt = extended_params['alpha'] + extended_params['beta'] * extended_params['epsilon'] / c2
+        rt = rt + extended_params['gamma'] * extended_params['zeta'] / c3
+        rt = rt + extended_params['delta'] * (extended_params['eta'] * extended_params['epsilon']) / (c2 * c4)
+        rt = rt + extended_params['delta'] * extended_params['zeta'] * extended_params['theta'] / (c3 * c4)
+
+        return rt / c1
 
     def differential_equations(self, t, x):
         p = {key: self.get_param_at_t(key, t) for key in self.params.keys()}

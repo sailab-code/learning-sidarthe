@@ -32,3 +32,7 @@ class CompartmentalModel(pl.LightningModule, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def differential_equations(self, t, x):
         pass
+
+    @abc.abstractmethod
+    def get_rt(self, time_grid):
+        pass
