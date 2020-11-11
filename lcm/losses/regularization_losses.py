@@ -4,11 +4,18 @@ from lcm.losses import RegularizationLoss
 
 
 class LteZero(RegularizationLoss):
+    """
+    Regularization Term to bound parameters in the positive set (0, inf).
+    """
     def param_loss(self, param):
         return param.abs() * torch.where(param.le(0.), torch.ones(1), torch.zeros(1))
 
 
 class LogVicinity(RegularizationLoss):
+    """
+    Log-based Regularization loss to bound parameters in the positive set (0,inf).
+    The closer to 0, the higher the penalty.
+    """
     def __init__(self, weight, denominator=0.5e3, exponent=10, **kwargs):
         super().__init__(weight, **kwargs)
         self.denominator = denominator
@@ -22,9 +29,14 @@ class LogVicinity(RegularizationLoss):
 
 
 class FirstDerivative(RegularizationLoss):
+    """
+    Regularization loss to enforce smooth parameter functions.
+    In the reference paper, it is indicated as |u_dot(t)|^2.
+    Compute the discrete first derivative of a parameter wrt to time t.
+    """
     def __init__(self, weight, time_step, **kwargs):
         super().__init__(weight, **kwargs)
-        self.time_step= time_step
+        self.time_step = time_step
 
     @staticmethod
     def first_derivative_central(f_x_plus_h, f_x_minus_h, h):

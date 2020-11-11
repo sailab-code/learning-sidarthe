@@ -1,10 +1,28 @@
-from typing import List, Dict
+from typing import Dict
 
 import torch
 from torch.optim.optimizer import Optimizer
 
+
 class MomentumOptimizer(Optimizer):
+    """
+    Optimizer implementing temporal momentum, defined in:
+        Zugarini, Andrea, Enrico Meloni, et al.
+        "An Optimal Control Approach to Learning in SIDARTHE Epidemic model."
+        arXiv preprint arXiv:2010.14878 (2020).
+    """
+
     def __init__(self, params: Dict, learning_rates: Dict, momentum_settings: Dict = {}):
+        """
+        Initialize the optimizer with the learning parameters (params),
+        their learning rates (learning_rates) and
+        the momentum hyperparameters (momentum_settings).
+        :param params: A Dict of parameters
+        :param learning_rates:
+        :param momentum_settings: A Dict with hyperparameters of momentum. Its values are:
+            'a' (defaults to 0.0)
+            'b' (defaults to 0.1)
+        """
 
         self.momentum = momentum_settings.get('active', True)
         self.a = momentum_settings.get('a', 0.)
