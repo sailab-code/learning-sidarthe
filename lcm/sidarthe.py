@@ -10,6 +10,12 @@ from .compartmental_model import CompartmentalModel
 
 
 class Sidarthe(CompartmentalModel):
+    """
+    SIDARTHE Compartmental Model:
+        Giordano, Giulia, et al.
+        "Modelling the COVID-19 epidemic and implementation of population-wide interventions in Italy."
+        Nature Medicine (2020): 1-6.
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -144,8 +150,8 @@ class Sidarthe(CompartmentalModel):
         # compute R0
         c1 = extended_params['epsilon'] + extended_params['zeta'] + extended_params['lambda']
         c2 = extended_params['eta'] + extended_params['rho']
-        c3 = extended_params['theta'] + extended_params['mu'] + extended_params['kappa'] + extended_params['phi']
-        c4 = extended_params['nu'] + extended_params['xi'] + extended_params['chi']
+        c3 = extended_params['theta'] + extended_params['mu'] + extended_params['kappa']
+        c4 = extended_params['nu'] + extended_params['xi']
 
         rt = extended_params['alpha'] + extended_params['beta'] * extended_params['epsilon'] / c2
         rt = rt + extended_params['gamma'] * extended_params['zeta'] / c3
