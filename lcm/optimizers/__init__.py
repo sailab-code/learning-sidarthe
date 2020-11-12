@@ -24,11 +24,11 @@ class MomentumOptimizer(Optimizer):
             'b' (defaults to 0.1)
         """
 
-        self.momentum = momentum_settings.get('active', True)
-        self.a = momentum_settings.get('a', 0.)
-        self.b = momentum_settings.get('b', 0.1)
+        momentum = momentum_settings.get('active', True)
+        a = momentum_settings.get('a', 0.)
+        b = momentum_settings.get('b', 0.1)
 
-        if self.momentum is True and (self.b is None or self.a is None):
+        if momentum is True and (b is None or a is None):
             raise ValueError("Must specify m and a if momentum is True")
 
         params_list = []
@@ -40,21 +40,34 @@ class MomentumOptimizer(Optimizer):
             }
             params_list.append(param_dict)
 
-        defaults = dict()
-        super().__init__(params_list, defaults)
+        defaults = {
+            "momentum": momentum,
+            "a": a,
+            "b": b
+        }
+        super(MomentumOptimizer, self).__init__(params_list, defaults)
 
+    @torch.no_grad()
     def step(self, closure=None):
+        loss = None
+        if closure is not None:
+            with torch.enable_grad():
+                loss = closure()
+
         for group in self.param_groups:
             lr = group["lr"]
-            for idx, parameter in enumerate(group["params"]):
+            momentum = group["momentum"]
+            a = group["a"]
+            b = group["b"]
+            for parameter in group["params"]:
                 if parameter.grad is None:
                     continue
 
                 d_p = parameter.grad
-                if self.momentum:
+                if momentum:
                     times = torch.arange(parameter.shape[0], dtype=parameter.dtype)
-                    mu = torch.sigmoid(self.b * times)
-                    eta = lr / (1 + self.a * times)
+                    mu = torch.sigmoid(b * times)
+                    eta = lr / (1 + a * times)
                     update = [-eta[0] * d_p[0]]
                     for t in range(1, d_p.size(0)):
                         momentum_term = -eta[t] * d_p[t] + mu[t] * update[t - 1]
@@ -64,3 +77,5 @@ class MomentumOptimizer(Optimizer):
                     update = -lr * d_p
 
                 parameter.data.add_(update)
+
+        return loss
