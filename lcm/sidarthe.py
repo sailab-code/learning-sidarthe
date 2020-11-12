@@ -23,7 +23,7 @@ class Sidarthe(CompartmentalModel):
         self._params = {key: torch.tensor(value, requires_grad=True) for key, value in
                         kwargs["params"].items()}
         self.loss_fn = kwargs["loss_fn"]
-        self.regularization_fn = kwargs["regularization"]
+        self.regularization_fn = kwargs["reg_fn"]
         self.population = kwargs["population"]
         self.tied_parameters = kwargs.get("tied_parameters", {})
         self.learning_rates = kwargs.get("learning_rates", {})

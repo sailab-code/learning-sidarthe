@@ -20,7 +20,7 @@ populations = {
         "Umbria": 0.882e6,
         "Valle d'Aosta": 1.257e5,
         "Veneto": 4.9e6,
-        "Italy": 6e7,
+        "ITA": 6e7,
         "FR": 67e6,
         "UK": 66.5e6
 }

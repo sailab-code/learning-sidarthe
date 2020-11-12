@@ -12,6 +12,8 @@ class Loss(metaclass=abc.ABCMeta):
 
 
 class TargetLoss(Loss):
+    type = 'target'
+
     def __init__(self, weights, **kwargs):
         super().__init__(**kwargs)
         self.weights = weights
@@ -34,8 +36,14 @@ class TargetLoss(Loss):
 
         return losses
 
+    def __str__(self):
+        weight_str = ", ".join([f"{key}:{val}" for key, val in self.weights.items()])
+        return self.__class__.__name__ + " " + weight_str
+
 
 class RegularizationLoss(Loss):
+    type = 'regularization'
+
     def __init__(self, weight, **kwargs):
         super().__init__(**kwargs)
         self.weight = weight
@@ -65,7 +73,7 @@ def compose_losses(loss_fns, name=None):
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
 
-            if len({type(loss_fn) for loss_fn in loss_fns}) != 1:
+            if len({loss_fn.type for loss_fn in loss_fns}) != 1:
                 raise ValueError("You can compose only losses of the same type")
             self.loss_fns = loss_fns
 
@@ -75,8 +83,8 @@ def compose_losses(loss_fns, name=None):
             for loss_fn in self.loss_fns:
                 loss = loss_fn(*args)
                 total_losses = {
-                    total_losses.get(key, 0.) + value
-                    for key, value in loss
+                    key: total_losses.get(key, 0.) + value
+                    for key, value in loss.items()
                 }
 
             return total_losses
@@ -89,4 +97,4 @@ def compose_losses(loss_fns, name=None):
             for loss_fn in loss_fns
         ])
 
-    return ComposedLoss
+    return ComposedLoss()
