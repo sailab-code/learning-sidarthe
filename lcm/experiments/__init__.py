@@ -1,5 +1,4 @@
 from pytorch_lightning import Trainer
-from trains import Task
 
 from lcm.compartmental_model import CompartmentalModel
 
@@ -73,7 +72,6 @@ class Experiment:
         self.set_model(model)
 
         print(f"Running experiment {self.uuid}")
-        task = Task.init()
         trainer = Trainer(check_val_every_n_epoch=50)
         trainer.fit(model, self.dataset.train_dataloader(), self.dataset.val_dataloader())
 
