@@ -1,0 +1,79 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Nov 15 13:23:41 2020
+
+@author: HO18971
+"""
+
+import os
+import pandas as pd
+import numpy as np
+from scipy.interpolate import interp1d
+from scipy import interpolate
+import matplotlib.pyplot as pl
+from datetime import datetime as dt
+import datetime
+
+path = 'C:\\Personal\\Sidarthe COVID\\Data'
+
+df_mob_apple = pd.read_csv(os.path.join(path,'applemobilitytrends-2020-11-14.csv'))
+
+
+
+df_mob_apple[df_mob_apple['region']=='Italy']['sub-region']
+
+
+
+#df_mob = pd.read_excel(os.path.join(path,'mobility.xlsx'))
+df_mob = pd.read_csv(os.path.join(path,'Global_Mobility_Report.csv'))
+
+df_mob['date'] = df_mob['date'].dt.date.values
+
+location = 'Lombardy'
+
+df_mob_i = df_mob[((df_mob['country_region'] == location) & (df_mob['sub_region_1'].isnull())) | (df_mob['sub_region_1']== location)]
+df_mob_i['mobility'] = (df_mob_i['retail_and_recreation_percent_change_from_baseline'] + df_mob_i['grocery_and_pharmacy_percent_change_from_baseline'] +df_mob_i['transit_stations_percent_change_from_baseline'] +df_mob_i['workplaces_percent_change_from_baseline'])/4
+
+
+mask = 0.144
+mask_l = 0.09
+mask_u = 0.228
+
+
+pla_mob = np.mean(df_mob_i['mobility'].values[-7:])
+myList = df_mob_i['mobility'].values
+
+mobility_delta_plateau = -pla_mob/100.
+mobility_plateau = 1-mobility_delta_plateau
+measures_plateau = mobility_plateau * mask
+alpha = (1-measures_plateau) / (1 - mobility_plateau)
+measures = 1 + ( myList/100 * alpha)        
+mobility = 1 + ( myList/100)
+
+mean_value = (1 + mobility_plateau) / 2
+ts_dates = df_mob_i['date'].values
+
+#f1 = interp1d(np.arange(ts_dates.shape[0]), mobility, kind='nearest')
+f2 = interp1d(np.arange(ts_dates.shape[0]), mobility, kind='cubic')
+yreduced = np.array(mobility) - mean_value
+freduced = interpolate.UnivariateSpline(np.arange(ts_dates.shape[0]), yreduced, s=0)
+middle_time = freduced.roots()[0]
+start_mobility = dt.combine(ts_dates[0], dt.min.time())
+central_first = start_mobility + datetime.timedelta(days=middle_time)
+
+pl.figure('Mobility-Mask')
+pl.title(location)
+pl.plot(ts_dates, mobility, 'o-')
+pl.plot(central_first, f2(middle_time), 'o', markersize=8, color='g')    
+pl.plot(ts_dates, [mobility_plateau]*df_mob_i['date'].shape[0])
+pl.xticks([], [])
+
+alpha_l = (1-mobility_plateau * mask_l) / (1 - mobility_plateau)
+alpha_u = (1-mobility_plateau * mask_u) / (1 - mobility_plateau)
+
+
+
+
+
+
+
