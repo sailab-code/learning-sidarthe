@@ -9,7 +9,7 @@ class SpatioTemporalSidarthe(SidartheExtended):
         super().__init__(parameters, population, init_cond, integrator, sample_time, **kwargs)
         self.model_name = kwargs.get("name", "spatio_temporal_sidarthe_extended")
 
-        self.batch_size = kwargs.get("batch_size", None) # fixme name not appropriate
+        self.batch_size = kwargs.get("n_areas", None) # fixme name not appropriate
 
 
     def omega(self, t):
