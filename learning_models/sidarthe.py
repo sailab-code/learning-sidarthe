@@ -43,6 +43,7 @@ class Sidarthe(AbstractModel):
 
         self.references = kwargs.get("references", None)
         self.targets = kwargs.get("targets", None)
+
         self.train_size = kwargs.get("train_size", None)
         self.val_size = kwargs.get("val_size", None)
         self.first_date = kwargs.get("first_date", None)

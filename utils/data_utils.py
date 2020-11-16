@@ -34,14 +34,14 @@ def select_column_values(df, col_name="totale_casi", groupby=["data"], group_by_
 def select_data(file, areas, area_col_name, value_col_name, groupby_cols, file_sep=","):
     """
     Function to load any csv file, selecting which rows to get and which column
-    :param file:
-    :param areas: a list of values (strings) of the areas to
-    :param area_col_name:
-    :param value_col_name:
-    :param groupby_cols:
-    :param file_sep:
-    :return: x and w ready, where x is just a range of integers from 1 (day 0) to N (last day), w are the
-    values of the column selected.
+    :param file: location of csv file with the data
+    :param areas: a list of values (strings) of the areas to select
+    :param area_col_name: name (string) of the column related to the 'area' field.
+    :param value_col_name: name (string) of the column with the values of interest
+    :param groupby_cols: columns to groupby
+    :param file_sep: separator of the csv file, (default) ','
+    :return: x,y and dates, where x is just a range of integers from 1 (day 0) to N (last day), y are the
+    values of the column selected, dates are the dates from day 0 to last day.
 
     Example of usage:
         Getting time series of deaths in Toscana:
@@ -52,7 +52,7 @@ def select_data(file, areas, area_col_name, value_col_name, groupby_cols, file_s
             value_col_name = "deceduti"
             x,w = get_data(df_file, areas, area_col_name, value_col_name, file_sep=",")
 
-        Getting time seris of deaths in whole Italy:
+        Getting time series of deaths in whole Italy:
             just the same except for:
             areas = list(df["denominazione_regione"].unique())
     """

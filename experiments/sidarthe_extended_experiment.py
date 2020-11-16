@@ -65,6 +65,7 @@ class ExtendedSidartheExperiment(SidartheExperiment):
             "bound_reg": 1e5,
             "loss_type": "nrmse",
             "verbose": False,
+            "batch_size": self.dataset.batch_size,
             "val_size": self.dataset.val_len,
             "train_size": self.dataset.train_size,
             "references": self.references,
