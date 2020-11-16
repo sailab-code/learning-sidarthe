@@ -62,9 +62,16 @@ def get_model_inferences(model_name):
     dataset = SidartheDataset({"train_size": 52, "val_len": 20, "region": settings['region']})
     dataset.make_dataset()
 
+    def convert(key, val):
+        ret = val.detach().numpy()
+        if key != 'r0':
+            ret = ret.astype(np.uint32)
+
+        return ret.tolist()
+
     return {
         "inferences": {
-            key: value.detach().numpy().astype(np.uint32).tolist() for key, value in inferences.items() if key != "sol"
+            key: convert(key, value) for key, value in inferences.items() if key != "sol"
         },
         "targets": {
             key: value.tolist() for key, value in dataset.targets.items()
@@ -73,4 +80,4 @@ def get_model_inferences(model_name):
 
 
 if __name__ == '__main__':
-    app.run(host="0.0.0.0", port=5556)
+    app.run(host="0.0.0.0", port=5555)
