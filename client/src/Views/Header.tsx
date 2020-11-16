@@ -25,19 +25,7 @@ export function Header() {
     
     return (
         <Navbar color="dark" dark={true}  expand="md">
-            <NavbarBrand href="/">SAILaB COVID-19 Predictor</NavbarBrand>
-            <NavbarToggler onClick={toggle}/>
-            <Collapse isOpen={isOpen} navbar>
-                <Nav className="mr-auto" navbar>
-                <NavItem>
-                        <NavLink href="/why/">A cosa serve</NavLink>
-                    </NavItem>
-                    
-                    <NavItem>
-                        <NavLink href="/about-us/">Chi siamo?</NavLink>
-                    </NavItem>
-                </Nav>
-            </Collapse>
+            <NavbarBrand href="/">SAILab COVID-19 Predictor</NavbarBrand>
       </Navbar>
     )
 }
