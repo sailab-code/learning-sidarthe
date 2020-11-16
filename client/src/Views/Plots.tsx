@@ -39,8 +39,8 @@ const colorsDictionary = {
 }
 
 const initialDates = {
-  "Italy": new Date(2020, 2, 24),
-  "FR": new Date(2020, 3, 17)
+  "Italy": new Date(2020, 1, 24),
+  "FR": new Date(2020, 2, 17)
 }
 
 
@@ -91,6 +91,7 @@ export function Plots(props: IProps) {
     }
 
     const firstDate = initialDates[props.region];
+    console.log(firstDate, "first date");
     for(let i = 0; i < predictionLength; ++i)
     {
         const date = new Date(firstDate.valueOf())
@@ -100,8 +101,6 @@ export function Plots(props: IProps) {
         const data = [date, ...infos.map(info => info.data[i])]
         chartData.push(data)
     }
-
-    console.log(chartData)
 
     const controlStart = new Date(firstDate.valueOf())
     controlStart.setDate(controlStart.getDate() + 30);
