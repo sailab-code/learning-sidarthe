@@ -49,7 +49,7 @@ export function Plots(props: IProps) {
     if(!props.targets || !props.inferences)
       return null;
 
-    const inferenceFilter = id => props.activePlots[id];
+    const inferenceFilter = id => props.activePlots[id] || id == 'r0';
     const targetFilter = id => props.activePlots[id] && ['d', 'r', 't', 'h_detected', 'e'].includes(id);
 
 
@@ -72,6 +72,7 @@ export function Plots(props: IProps) {
     }));
 
     const infos = [...inferencesInfo, ...targetsInfo];
+    console.log(infos.length);
 
     
     infos.sort((infoA, infoB) => infoA.descriptor.localeCompare(infoB.descriptor))
@@ -91,13 +92,11 @@ export function Plots(props: IProps) {
     }
 
     const firstDate = initialDates[props.region];
-    console.log(firstDate, "first date");
     for(let i = 0; i < predictionLength; ++i)
     {
         const date = new Date(firstDate.valueOf())
         date.setDate(date.getDate() + i)
 
-        
         const data = [date, ...infos.map(info => info.data[i])]
         chartData.push(data)
     }
@@ -107,6 +106,9 @@ export function Plots(props: IProps) {
 
     const controlEnd = new Date(firstDate.valueOf())
     controlEnd.setDate(controlStart.getDate() + 130)
+
+    const r0ColumnIndex = infos.map(i => i.descriptor).indexOf("R0") + 1;
+    console.log(r0ColumnIndex);
 
     return (
         <Container>
@@ -135,7 +137,7 @@ export function Plots(props: IProps) {
                                   ui: {
                                     chartType: 'LineChart',
                                     chartView: {
-                                      columns: [0, 10]
+                                      columns: [0, r0ColumnIndex]
                                     },
                                     chartOptions: {
                                       chartArea: { width: '90%', height: '50%' },
