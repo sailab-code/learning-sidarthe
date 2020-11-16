@@ -7,7 +7,7 @@ from utils.data_utils import select_data
 class SpatioTemporalSidartheDataset(SidartheDataset):
     def __init__(self, dataset_params):
         super().__init__(dataset_params)
-        self.batch_size = dataset_params["batch_size"]
+        self.batch_size = dataset_params["n_areas"]
 
         # TODO create load data
         # TODO careful with first dates, must be an array
