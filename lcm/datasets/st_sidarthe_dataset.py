@@ -22,10 +22,13 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
         e_col_name = "deceduti"  # "Fatalities"
 
         x_targets = []
+        all_dates = []
         y_targets, d_targets, r_targets, t_targets, h_targets, e_targets = [], [], [], [], [], []
         df_file, areas, area_col_name = self.data_path, self.region, self.region_column  # > 1 regions in self.region
+
         self.n_areas = len(areas)
         for area in areas:
+            area = [area]
             x_target, d_target, dates = select_data(df_file, area, area_col_name, d_col_name, groupby_cols, file_sep=",")
             _, y_target, _ = select_data(df_file, area, area_col_name, "totale_positivi", groupby_cols, file_sep=",")
             _, r_target, _ = select_data(df_file, area, area_col_name, r_col_name, groupby_cols, file_sep=",")
@@ -39,6 +42,7 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
             t_targets.append(t_target)
             h_targets.append(h_detected_target)
             e_targets.append(e_target)
+            all_dates.append(dates)
 
         targets = {
             "y": y_targets,
@@ -49,21 +53,21 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
             "e": e_targets,
         }
 
-        filtered_targets, first_dates, outbreak_starts = self.select_targets(targets)
-        return x_targets, filtered_targets, first_dates, outbreak_starts
+        filtered_targets, first_dates, outbreak_starts, outbreak_max_len = self.select_targets(targets, all_dates)
+        return x_targets, filtered_targets, first_dates, outbreak_starts, outbreak_max_len
 
     @staticmethod
-    def select_targets(targets):
-        y_target, dates = targets["y"], targets["dates"]
+    def select_targets(targets, dates):
+        y_target = targets["y"]
 
         d_target, r_target = targets["d"], targets["r"]
-        n_regions, initial_len = len(y_target), len(y_target[0])
-        first_dates = []
+        n_regions, outbreak_max_len = len(y_target), len(y_target[0])
 
+        first_dates = []
         # finds WHEN outbreak actually starts in each area
         outbreak_start = []
         for i in range(n_regions):
-            for j in range(initial_len):
+            for j in range(outbreak_max_len):
                 if d_target[i][j] + r_target[i][j] > 0:
                     outbreak_start.append(j)
                     first_dates.append(dates[i][j])
@@ -74,47 +78,56 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
         for target_key, target_val in targets.items():
             region_target = []
             for i in range(n_regions):
-                region_target.append(target_val[i][outbreak_start[i]:])
+                padded_target = np.concatenate((target_val[i][outbreak_start[i]:], np.array([-1]*outbreak_start[i])))
+                region_target.append(padded_target)
 
             filtered_targets[target_key] = np.array(region_target)
 
-        return filtered_targets, first_dates, outbreak_start # outbreak_lengths
+        outbreak_max_len = outbreak_max_len - min(outbreak_start)
+        return filtered_targets, first_dates, np.array(outbreak_start), outbreak_max_len
 
     def setup(self, stage: Optional[str] = None):
-        self.x, self.y, self.first_date, outbreak_starts = self.load_data()
+        self.x, self.y, self.first_date, outbreak_starts, outbreak_max_len = self.load_data()
 
         # Assuring all the regions share the same validation and test intervals
         # This implies that the number of training days may change
         # A bit tricky but it shall work
-        train_outbreak_sizes = self.train_size - outbreak_starts
-        train_range_matrix = np.arange(train_outbreak_sizes).reshape(1, -1).repeat(self.n_areas, axis=0)  # S x train_size ranges
-        repeated_outbreak_sizes = train_outbreak_sizes.reshape(-1, 1).repeat(train_outbreak_sizes)  # S x train_size lengths
-        train_outbreak_len_mask = np.greater_equal(train_range_matrix, repeated_outbreak_sizes) # S x train_size
+        range_matrix = np.arange(outbreak_max_len).reshape(1, -1).repeat(self.n_areas, axis=0)
 
-        val_outbreak_sizes = train_outbreak_sizes + self.val_size
-        val_range_matrix = np.arange(train_outbreak_sizes, val_outbreak_sizes).reshape(1, -1).repeat(self.n_areas, axis=0)  # S x val_size ranges
-        repeated_outbreak_lengths = val_outbreak_sizes.reshape(-1, 1).repeat(self.val_size)  # S x val_slices
-        val_outbreak_len_mask = np.less_equal(val_range_matrix, repeated_outbreak_lengths)  # S x val_size
+        train_breadth = self.train_size - outbreak_starts  # S
+        repeated_train_breadth = train_breadth.reshape(-1, 1).repeat(outbreak_max_len, axis=1)
+        after_train_mask = np.greater_equal(range_matrix, repeated_train_breadth) # S x all_size, elements after train are True
 
-        test_range_matrix = np.arange(val_outbreak_sizes, val_outbreak_sizes + self.test_size).reshape(1, -1).repeat(self.n_areas, axis=0)  # S x val_size ranges
-        repeated_outbreak_lengths = val_outbreak_sizes.reshape(-1, 1).repeat(self.test_size)  # S x test_slices
-        test_outbreak_len_mask = np.greater_equal(test_range_matrix, repeated_outbreak_lengths)  # S x test_size
+        # creates mask for validation elements
+        val_breadth = self.val_size + train_breadth
+        repeated_val_breadth = val_breadth.reshape(-1, 1).repeat(outbreak_max_len, axis=1)
+        after_val_mask = np.greater_equal(range_matrix, repeated_val_breadth)  # elements after validation are True
+        before_val_mask = np.bitwise_not(after_val_mask) # elements before validation are True
+        val_mask = np.bitwise_and(before_val_mask, after_train_mask)  # elements in validation are True
+
+        # create mask for test elements
+        pad_breadth = outbreak_max_len - outbreak_starts  # needed to remove padded elements at the end
+        repeated_pad_breadth = pad_breadth.reshape(-1, 1).repeat(outbreak_max_len, axis=1)
+        before_pad_mask = np.less(range_matrix, repeated_pad_breadth)  # elements before pad are True
+        test_mask = np.bitwise_and(after_val_mask, before_pad_mask) # elements in test are true
+        self.test_size = outbreak_max_len - self.train_size - self.val_size
 
         train_set, val_set, test_set = {}, {}, {}
         for target_key, target_value in self.y.items():
             # creates train data
-            train_y = np.copy(target_value[:self.train_size, :])
-            train_y[train_outbreak_len_mask] = -1
+            train_y = np.copy(target_value)
+            train_y[after_train_mask] = -1  # padding values are needed in train
             train_y = torch.tensor(train_y).transpose(0,1)  # shape becomes T x S (because more compliant for the rest of the code)
-            train_set[target_key] = train_y
+            train_y = train_y[:self.train_size,:]
+            train_set[target_key] = train_y[:self.train_size,:] # keep only up to train size
 
             # creates val data
-            val_y = np.copy(target_value[val_outbreak_len_mask].reshape(self.n_areas, self.val_size))
+            val_y = np.copy(target_value[val_mask].reshape(self.n_areas, self.val_size))
             val_y = torch.tensor(val_y).transpose(0,1)  # shape becomes T x S (because more compliant for the rest of the code)
             val_set[target_key] = val_y
 
             # creates test data
-            test_y = np.copy(target_value[test_outbreak_len_mask].reshape(self.n_areas, self.test_size))
+            test_y = np.copy(target_value[test_mask].reshape(self.n_areas, self.test_size))
             test_y = torch.tensor(test_y).transpose(0,1)  # shape becomes T x S (because more compliant for the rest of the code)
             test_set[target_key] = test_y
 
@@ -129,4 +142,3 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
 
         if stage == 'test' or stage is None:
             self.test_set = DictDataset([(t_grid[test_slice, :], test_set)])
-            self.test_size = len(self.x) - self.train_size - self.val_size

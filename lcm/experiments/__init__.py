@@ -51,7 +51,8 @@ class Experiment:
             region=self.dataset_params['region'],
             data_path=self.dataset_params['data_path'],
             train_size=self.dataset_params['train_size'],
-            val_size=self.dataset_params['val_size']
+            val_size=self.dataset_params['val_size'],
+            region_column=self.dataset_params["region_column"]
         )
         self.dataset.setup()
 

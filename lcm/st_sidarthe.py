@@ -10,7 +10,7 @@ class SpatioTemporalSidarthe(SidartheExtended):
     """
     Spatio-temporal version of SIDARTHE.
     This version generalizes the previous time-dependent formulation, therefore is also
-    a generalization of its initial constant (or step-wise contant) definition.
+    a generalization of its initial constant (or step-wise constant) definition.
 
     Features:
         1. Parallelization of ODE computation to S areas.
@@ -45,19 +45,25 @@ class SpatioTemporalSidarthe(SidartheExtended):
         """
         param = self.params[param_key]
         _t = _t.long()
-        if 0 <= _t < param.shape[0]:
-            rectified_param = torch.relu(param[_t, :].unsqueeze(0))
+        # TODO check if possible to improve here
+        if 0 <= _t[0] < param.shape[0]:
+            p = torch.relu(param[_t, :].unsqueeze(0))
         else:
-            rectified_param = torch.relu(param[-1, :].unsqueeze(0).detach())
+            p = torch.relu(param[-1, :].unsqueeze(0).detach())
 
-        return rectified_param  # shape 1 x s (or 1 it is broadcasted) x
+        if param_key in ['alpha', 'beta', 'gamma', 'delta']:  # these params must be divided by population
+            return p / self.population
+        else:
+            return p
+
+        return p  # shape 1 x s (or 1 it is broadcasted) x
         # return torch.where(rectified_param >= EPS, rectified_param, rectified_param + EPS)  # shape 1 x s (or 1 it is broadcasted) x
 
     def differential_equations(self, t, x):
         """
         Returns the right-hand side of SIDARTHE model
         :param t: time t at which right-hand side is computed
-        :param x: state of model at time t forall the fitted areas.
+        :param x: (Tensor) state of model at time t forall the fitted areas. S x #states (=8)
             x[:,0] = S
             x[:,1] = I
             x[:,2] = D
@@ -95,7 +101,7 @@ class SpatioTemporalSidarthe(SidartheExtended):
             T_dot,
             E_dot,
             H_det_dot
-        ), dim=0)
+        ), dim=0).transpose(0,1)
 
     def forward(self, time_grid) -> Dict:
         sol = self.integrate(time_grid)
@@ -133,13 +139,21 @@ class SpatioTemporalSidarthe(SidartheExtended):
         :return:
         """
 
+        print(value)
+        print(value.shape)
+        print(length)
         t_diff = length - value.shape[0]
         ext_t_tensor = torch.tensor([value[-1,:]] * t_diff)
+        print(ext_t_tensor)
+        print(ext_t_tensor.shape)
+
         ext_t_tensor = torch.cat((value, ext_t_tensor), dim=0) # T x s
 
         s_diff = self.n_areas - value.shape[1]
         ext_s_tensor = torch.tensor([value[:, -1]] * s_diff)
         ext_tensor = torch.cat((ext_t_tensor, ext_s_tensor), dim=1)  # T x S
+        print(ext_s_tensor)
+        print(ext_s_tensor.shape)
 
         rectified_param = torch.relu(ext_tensor)
         return rectified_param

@@ -1,6 +1,5 @@
 from lcm.datasets.sidarthe_dataset import SidartheDataModule
 from lcm.experiments import Experiment
-import pandas as pd
 import os
 
 from lcm.integrators.fixed import Heun
@@ -52,6 +51,7 @@ class SidartheExperiment(Experiment):
             "data_path": os.path.join(os.getcwd(), "data", "COVID-19", "dati-andamento-nazionale", "dpc-covid19-ita-andamento-nazionale.csv"),
             "train_size": 110,
             "val_size": 5,
+            "region_column": "stato"
         }
         _params = kwargs.get("dataset_params", {})
 

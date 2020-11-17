@@ -30,6 +30,7 @@ class Heun(Integrator):
             t_next = time_grid[i + 1]
             y_i = values[i]
             dt = t_next - t_i
+            dt = dt.unsqueeze(1)
             f1 = diff_equations(t_i, y_i)
             f2 = diff_equations(t_next, y_i + dt * f1)
             dy = 0.5 * dt * (f1 + f2)
