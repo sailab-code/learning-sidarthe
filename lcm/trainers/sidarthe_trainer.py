@@ -51,6 +51,7 @@ class SidartheTrainer(CompartmentalTrainer):
             "data_path": os.path.join(os.getcwd(), "data", "COVID-19", "dati-andamento-nazionale", "dpc-covid19-ita-andamento-nazionale.csv"),
             "train_size": 110,
             "val_size": 5,
+            "region_column": "stato"
         }
         _params = kwargs.get("dataset_params", {})
 

@@ -22,7 +22,7 @@ class ODEDataModule(pl.LightningDataModule):
 
     def __init__(self, region, data_path, train_size, val_size, region_column="stato"):
         super().__init__()
-        self.region = [region]
+        self.region = region
         self.region_column = region_column
         self.data_path = data_path
         self.x, self.y = None, None
