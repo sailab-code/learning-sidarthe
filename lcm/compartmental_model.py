@@ -22,7 +22,12 @@ class CompartmentalModel(pl.LightningModule, metaclass=abc.ABCMeta):
         :param time_grid: time interval.
         :return: the solution of the ODE in time_grid.
         """
-        return self.integrator(self.differential_equations, torch.tensor([self.initial_conditions]), time_grid)
+        return self.integrator(self.differential_equations,
+                               torch.tensor([self.initial_conditions],
+                                            device=self.device,
+                                            dtype=self.dtype
+                                            ),
+                               time_grid)
 
     @property
     @abc.abstractmethod
