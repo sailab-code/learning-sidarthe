@@ -1,6 +1,7 @@
 import copy
 
 import torch
+from torch.nn import Parameter
 
 from typing import List, Dict, Union, Optional, Sequence, Tuple
 
@@ -20,8 +21,12 @@ class Sidarthe(CompartmentalModel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.EPS = kwargs.get('EPS', 0.)
-        self._params = {key: torch.tensor(value, requires_grad=True) for key, value in
+        self._params = {key: Parameter(torch.tensor(value, device=self.device)) for key, value in
                         kwargs["params"].items()}
+
+        for key, param in self._params.items():
+            self.register_parameter(key, param)
+
         self.loss_fn = kwargs["loss_fn"]
         self.regularization_fn = kwargs["reg_fn"]
         self.population = kwargs["population"]
@@ -75,7 +80,7 @@ class Sidarthe(CompartmentalModel):
 
     def extend_param(self, value, length):
         len_diff = length - value.shape[0]
-        ext_tensor = torch.tensor([value[-1] for _ in range(len_diff)], dtype=self.dtype)
+        ext_tensor = torch.tensor([value[-1] for _ in range(len_diff)], device=self.device, dtype=self.dtype)
         ext_tensor = torch.cat((value, ext_tensor))
         return ext_tensor[:length]
         # rectified_param = torch.relu(ext_tensor)
@@ -83,7 +88,7 @@ class Sidarthe(CompartmentalModel):
 
     def rectify_param(self, param):
         rectified = torch.relu(param)
-        return torch.where(rectified >= self.EPS, rectified, torch.full_like(rectified, self.EPS))
+        return torch.where(rectified >= self.EPS, rectified, torch.full_like(rectified, self.EPS, device=self.device, dtype=self.dtype))
 
     def get_param_at_t(self, param_key, _t):
         param = self.params[param_key]

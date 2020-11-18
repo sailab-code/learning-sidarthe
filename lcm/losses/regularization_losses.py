@@ -7,8 +7,11 @@ class LteZero(RegularizationLoss):
     """
     Regularization Term to bound parameters in the positive set (0, inf).
     """
-    def param_loss(self, param):
-        return param.abs() * torch.where(param.le(0.), torch.ones(1), torch.zeros(1))
+    def param_loss(self, param: torch.Tensor):
+        return param.abs() * torch.where(param.le(0.),
+                                         torch.ones(1, device=param.device, dtype=param.dtype),
+                                         torch.zeros(1, device=param.device, dtype=param.dtype)
+                                         )
 
 
 class LogVicinity(RegularizationLoss):
