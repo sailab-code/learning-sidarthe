@@ -3,11 +3,11 @@ import copy
 import torch
 from torch.nn import Parameter
 
-from typing import List, Dict, Union, Optional, Sequence, Tuple
+from typing import Dict
 
 from .optimizers import MomentumOptimizer
-
 from .compartmental_model import CompartmentalModel
+
 
 
 class Sidarthe(CompartmentalModel):
@@ -152,7 +152,7 @@ class Sidarthe(CompartmentalModel):
     def get_rt(self, time_grid):
         extended_params = {key: self.extend_param(value, time_grid.shape[0]) for key, value in self.params.items()}
 
-        # compute R0
+        # compute R_t
         c1 = extended_params['epsilon'] + extended_params['zeta'] + extended_params['lambda']
         c2 = extended_params['eta'] + extended_params['rho']
         c3 = extended_params['theta'] + extended_params['mu'] + extended_params['kappa']
@@ -203,7 +203,8 @@ class Sidarthe(CompartmentalModel):
         target_losses = self.loss_fn(hats, targets)
         regularization_loss = self.regularization_fn(self.params)
 
-        # TODO: add log code
+        for k,v in target_losses.items():
+            self.log(k, v, prog_bar=True)
 
         return target_losses["backward"] + regularization_loss["backward"]
 
@@ -215,12 +216,21 @@ class Sidarthe(CompartmentalModel):
         target_losses = self.loss_fn(hats, targets)
         regularization_loss = self.regularization_fn(self.params)
 
-        # TODO: add log code
+        for k, v in target_losses.items():
+            self.log(k, v, prog_bar=True)
 
         return {
             "target_loss": target_losses['validation'],
             "regularization_loss": regularization_loss['validation']
         }
 
+    def test_step(self, batch, batch_idx):
+        metrics = self.validation_step(batch, batch_idx)
+        return metrics
+
     def configure_optimizers(self):
         return MomentumOptimizer(self.trainable_params, self.learning_rates, self.momentum_settings)
+
+    def __str__(self):
+        return self.__class__.__name__
+

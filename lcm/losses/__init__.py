@@ -67,6 +67,9 @@ class RegularizationLoss(Loss):
 
         return losses
 
+    def __str__(self):
+        return f"{self.__class__.__name__}: {self.weight}"
+
 
 def compose_losses(loss_fns, name=None):
     class ComposedLoss(Loss):
@@ -89,6 +92,9 @@ def compose_losses(loss_fns, name=None):
 
             return total_losses
 
+        def __str__(self):
+            return "\n".join([lfn.__str__() for lfn in self.loss_fns])
+
     if name is not None:
         ComposedLoss.__name__ = name
     else:
@@ -98,3 +104,4 @@ def compose_losses(loss_fns, name=None):
         ])
 
     return ComposedLoss()
+

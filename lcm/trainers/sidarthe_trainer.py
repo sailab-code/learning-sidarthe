@@ -1,6 +1,5 @@
 from lcm.datasets.sidarthe_dataset import SidartheDataModule
-from lcm.experiments import Experiment
-import pandas as pd
+from lcm.trainers import CompartmentalTrainer
 import os
 
 from lcm.integrators.fixed import Heun
@@ -11,7 +10,7 @@ from lcm.sidarthe import Sidarthe
 from lcm.utils.populations import populations
 
 
-class SidartheExperiment(Experiment):
+class SidartheTrainer(CompartmentalTrainer):
     def make_initial_params(self, **kwargs):
         # default initial_params
         initial_params = {
@@ -37,7 +36,7 @@ class SidartheExperiment(Experiment):
         return self.fill_missing_params(_params, initial_params)
 
     def make_model(self, **kwargs):
-        return Sidarthe(
+        return self.model_params["model_cls"](
             **self.model_params,
             params=self.initial_params,
             learning_rates=self.learning_rates,
@@ -60,6 +59,8 @@ class SidartheExperiment(Experiment):
     def make_model_params(self, **kwargs):
         # default pretrained_model params
         model_params = {
+            "model_cls": Sidarthe,
+            "name": "sidarthe",
             "population": populations[self.region],
             "initial_conditions": (59999576.0, 94, 94, 101, 101, 26, 7, 1),
             "integrator": Heun,
