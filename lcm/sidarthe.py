@@ -220,6 +220,8 @@ class Sidarthe(CompartmentalModel):
             self.log(k, v, prog_bar=True)
 
         return {
+            "hats": hats,
+            "targets": targets,
             "target_loss": target_losses['validation'],
             "regularization_loss": regularization_loss['validation']
         }

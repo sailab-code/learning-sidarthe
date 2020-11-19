@@ -1,8 +1,5 @@
-import os
 import datetime
 from pytorch_lightning import Callback
-import torch
-from torch.utils.tensorboard import SummaryWriter
 import numpy as np
 
 from utils.visualization_utils import generic_plot, Curve #fixme wrong path
@@ -12,6 +9,7 @@ DATE_FORMATS = [
     "%Y-%m-%dT%H:%M:%S"
 ]
 
+start_date = datetime.date(2020, 2, 24)
 
 class TensorboardLoggingCallback(Callback):
     def __init__(self):
@@ -24,7 +22,6 @@ class TensorboardLoggingCallback(Callback):
         # plot params
         params_plots = self._plot_params_over_time(pl_module)
         for (plot, plot_title) in params_plots:
-            # self.summary.add_figure(f"final/{plot_title}", plot, close=True, global_step=-1)
             trainer.logger.experiment.add_figure(f"final/{plot_title}", plot, close=True, global_step=-1)
 
     def _plot_params_over_time(self, pl_module, n_days=None):
@@ -48,7 +45,7 @@ class TensorboardLoggingCallback(Callback):
                 param_curve = Curve(pl_x, param.detach().numpy(), '-', f"$\\{param_key}$", color=None)
                 curves = [param_curve]
 
-                plot = generic_plot(curves, pl_title, None, formatter=self._format_xtick("2020-02-24"))
+                plot = generic_plot(curves, pl_title, None, formatter=self._format_xtick) #fixme set data from data
                 param_plots.append((plot, pl_title))
 
         return param_plots
@@ -57,39 +54,33 @@ class TensorboardLoggingCallback(Callback):
         pass
     
     def on_test_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
-        self.plot_final_inferences(trainer, pl_module, outputs, batch)
+        self.plot_final_inferences(trainer, pl_module, outputs["hats"], batch)
 
-    def plot_final_inferences(self, trainer, pl_module, hat_t, target_t, prefix="final", collapse=False):
+    def plot_final_inferences(self, trainer, pl_module, hats, batch, prefix="final", collapse=False):
         """
         Plot inferences
-        :param hat_t: a tuple with train val and test hat
-        :param target_t: a tuple with train val and test target_t
+        :param hats: a Tensor with the predictions on the entire data
+        :param batch: a Tensor with the entire batch of data
         :param prefix:
         :return:
         """
 
-        # fixme
-        hat_train, hat_val, hat_test = hat_t
-        target_train, target_val, target_test = target_t
+        inputs = batch[0]
+        targets = {k:v.squeeze() for k,v in batch[1].items()}
 
         # get normalized values
-        population = pl_module["population"]
-        norm_hat_train = self.normalize_values(hat_train, population)
-        norm_hat_val = self.normalize_values(hat_val, population)
-        norm_hat_test = self.normalize_values(hat_test, population)
-        norm_target_train = self.normalize_values(target_train, population)
-        norm_target_val = self.normalize_values(target_val, population)
-        norm_target_test = self.normalize_values(target_test, population)
+        population = pl_module.population
+        norm_hats = self.normalize_values(hats, population)
+        norm_targets = self.normalize_values(targets, population)
 
         # ranges for train/val/test
-        dataset_size = len(target_t.inputs)
+        dataset_size = inputs.shape[1]
         # validation on the next val_len days (or less if we have less data)
-        train_size, val_len = trainer.train_size, trainer.val_size
-        val_size = min(train_size + val_len, dataset_size - 5)
+        train_size, val_size = trainer.dataset.train_size, trainer.dataset.val_size
 
         train_range = range(0, train_size)
-        val_range = range(train_size, val_size)
-        test_range = range(val_size, dataset_size)
+        val_range = range(train_size, train_size+val_size)
+        test_range = range(train_size+val_size, dataset_size)
 
         def get_curves(x_range, hat, target, key, color=None):
             pl_x = list(x_range)
@@ -101,7 +92,7 @@ class TensorboardLoggingCallback(Callback):
                 return [hat_curve]
 
         tot_curves = []
-        for key in hat_t.keys():
+        for key in hats.keys():
 
             # skippable keys
             if key in ["sol"]:
@@ -109,20 +100,19 @@ class TensorboardLoggingCallback(Callback):
 
             # separate keys that should be normalized to 1
             if key not in ["r0"]:
-                curr_hat_train = norm_hat_train[key]
-                curr_hat_val = norm_hat_val[key]
-                curr_hat_test = norm_hat_test[key]
+                curr_hat_train = norm_hats[key][:train_size]
+                curr_hat_val = norm_hats[key][train_size:train_size+val_size]
+                curr_hat_test = norm_hats[key][train_size+val_size:]
             else:
-                curr_hat_train = hat_train[key]
-                curr_hat_val = hat_val[key]
-                curr_hat_test = hat_test[key]
+                curr_hat_train = hats[key][:train_size]
+                curr_hat_val = hats[key][train_size:train_size+val_size]
+                curr_hat_test = hats[key][train_size+val_size:]
 
-            if key in hat_t:
+            if key in targets:
                 # plot inf and target_t
-                target_train = norm_target_train[key]
-                target_val = norm_target_val[key]
-                target_test = norm_target_test[key]
-                pass
+                target_train = norm_targets[key][:train_size]
+                target_val = norm_targets[key][train_size:train_size+val_size]
+                target_test = norm_targets[key][train_size+val_size:]
             else:
                 target_train = None
                 target_val = None
@@ -138,8 +128,8 @@ class TensorboardLoggingCallback(Callback):
             else:
                 tot_curves = train_curves + val_curves + test_curves
 
-            pl_title = f"{key.upper()} - train/validation/test/reference"
-            fig = generic_plot(tot_curves, pl_title, None, formatter=self._format_xtick)
+            pl_title = f"{key.upper()} - train/validation/test"
+            fig = generic_plot(tot_curves, pl_title, None) #fixme set data from data #, formatter=self._format_xtick
             trainer.logger.experiment.add_figure(f"{prefix}/{key}_global", fig)
 
     @staticmethod
@@ -157,10 +147,11 @@ class TensorboardLoggingCallback(Callback):
 
         raise ValueError("No date formats were able to parse date")
 
-    def _format_xtick(self, start_date):
-        start_date = self._parse_date(start_date)
+    @staticmethod
+    def _format_xtick(n,v):
+        # start_date = TensorboardLoggingCallback._parse_date(start_date)
 
-        def custom_xtick(n, v):
-            return (start_date + datetime.timedelta(int(n))).strftime("%d %b")
+        # def custom_xtick(n, v):
+        return (start_date + datetime.timedelta(int(n))).strftime("%d %b")
 
-        return custom_xtick
+        # return custom_xtick

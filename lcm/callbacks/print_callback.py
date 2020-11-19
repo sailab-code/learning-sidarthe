@@ -2,6 +2,9 @@ from pytorch_lightning import Callback
 
 
 class PrintCallback(Callback):
+    """
+    Callback for printing verbose experiment progresses.
+    """
     def on_init_start(self, trainer):
         print('Starting to init trainer!')
 

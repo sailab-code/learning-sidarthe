@@ -53,7 +53,7 @@ class CompartmentalModel(pl.LightningModule, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def get_rt(self, time_grid):
         """
-        Computation of reproduction number R_t at each
+        Computation of basic reproduction number R_t at each
         time step of a given time interval.
         :param time_grid: A torch tensor of shape T
         with the time interval where to compute R_t.
