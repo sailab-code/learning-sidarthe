@@ -19,11 +19,11 @@ class TargetLoss(Loss):
         self.weights = weights
 
     @abc.abstractmethod
-    def target_loss(self, hat, target):
+    def target_loss(self, hat, target, mask):
         pass
 
-    def __call__(self, hats, targets, **kwargs):
-        losses = {key: self.target_loss(hats[key], targets[key]) for key in targets.keys()}
+    def __call__(self, hats, targets, mask, **kwargs):
+        losses = {key: self.target_loss(hats[key], targets[key], mask) for key in targets.keys()}
 
         backward = 0.
         validation = 0.

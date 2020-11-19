@@ -18,7 +18,7 @@ class DictDataset(Dataset):
         return len(self.target_dicts)
 
 
-class DataModule(pl.LightningDataModule):
+class ODEDataModule(pl.LightningDataModule):
 
     def __init__(self, region, data_path, train_size, val_size, region_column="stato"):
         super().__init__()
@@ -48,24 +48,35 @@ class DataModule(pl.LightningDataModule):
         self.x, self.y, self.first_date = self.load_data()
 
         train_slice = slice(0, self.train_size, 1)
+        train_val_slice = slice(0, self.train_size+self.val_size)
         val_slice = slice(self.train_size, self.train_size + self.val_size)
         test_slice = slice(self.train_size + self.val_size, len(self.x))
+        all_slice = slice(0, len(self.x))
 
         t_grid = torch.tensor(self.x)
 
         if stage == 'fit' or stage is None:
-            self.train_set = DictDataset([(t_grid[train_slice], self.slice_targets(self.y, train_slice))])
-            self.val_set = DictDataset([(t_grid[val_slice], self.slice_targets(self.y, val_slice))])
+            train_mask = torch.ones_like(t_grid[train_slice]).type(torch.bool)
+            self.train_set = DictDataset([(t_grid[train_slice], self.slice_targets(self.y, train_slice), train_mask)])
+
+            val_mask = torch.zeros_like(t_grid[train_val_slice])
+            val_mask[val_slice] = 1.0
+            val_mask = val_mask.type(torch.bool)
+
+            self.val_set = DictDataset([(t_grid[train_val_slice], self.slice_targets(self.y, train_val_slice), val_mask)])
 
         if stage == 'test' or stage is None:
-            self.test_set = DictDataset([(t_grid[test_slice], self.slice_targets(self.y, test_slice))])
+            test_mask = torch.zeros_like(t_grid[all_slice])
+            test_mask[test_slice] = 1.0
+            test_mask = test_mask.type(torch.bool)
+            self.test_set = DictDataset([(t_grid[all_slice], self.slice_targets(self.y, all_slice), test_mask)])
             self.test_size = len(self.x) - self.train_size - self.val_size
 
     def train_dataloader(self) -> DataLoader:
-        return DataLoader(self.train_set, batch_size=self.train_size)
+        return DataLoader(self.train_set, batch_size=1)
 
     def val_dataloader(self) -> Union[DataLoader, List[DataLoader]]:
-        return DataLoader(self.val_set, batch_size=self.val_size)
+        return DataLoader(self.val_set, batch_size=1)
 
     def test_dataloader(self) -> Union[DataLoader, List[DataLoader]]:
-        return DataLoader(self.test_set, batch_size=self.test_size)
+        return DataLoader(self.test_set, batch_size=1)

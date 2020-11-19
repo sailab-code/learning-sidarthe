@@ -1,8 +1,8 @@
-from lcm.datasets import DataModule
+from lcm.datasets import ODEDataModule
 from ..utils.data import select_data
 
 
-class SidartheDataModule(DataModule):
+class SidartheDataModule(ODEDataModule):
     def load_data(self):
         groupby_cols = ["data"]  # ["Date"]
 

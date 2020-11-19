@@ -196,11 +196,11 @@ class Sidarthe(CompartmentalModel):
         ), dim=0)
 
     def training_step(self, batch, batch_idx):
-        t_grid, targets = batch
+        t_grid, targets, train_mask = batch
         t_grid = t_grid.squeeze(0)
         targets = {key: target.squeeze(0) for key, target in targets.items()}
         hats = self.forward(t_grid)
-        target_losses = self.loss_fn(hats, targets)
+        target_losses = self.loss_fn(hats, targets, train_mask)
         regularization_loss = self.regularization_fn(self.params)
 
         for k,v in target_losses.items():
@@ -209,11 +209,11 @@ class Sidarthe(CompartmentalModel):
         return target_losses["backward"] + regularization_loss["backward"]
 
     def validation_step(self, batch, batch_idx):
-        t_grid, targets = batch
+        t_grid, targets, validation_mask = batch
         t_grid = t_grid.squeeze(0)
         targets = {key: target.squeeze(0) for key, target in targets.items()}
         hats = self.forward(t_grid)
-        target_losses = self.loss_fn(hats, targets)
+        target_losses = self.loss_fn(hats, targets, validation_mask)
         regularization_loss = self.regularization_fn(self.params)
 
         for k, v in target_losses.items():
