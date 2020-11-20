@@ -19,7 +19,7 @@ class JsonLoggingCallback(Callback):
             trainer.dataset_params["train_size"], trainer.dataset_params["val_size"],
             trainer.model_params["reg_fn"], trainer.time_step,
             trainer.train_params["momentum_settings"]["active"],
-            trainer.train_params["momentum_settings"]["m"], trainer.train_params["momentum_settings"]["a"],
+            trainer.train_params["momentum_settings"]["b"], trainer.train_params["momentum_settings"]["a"],
             trainer.model_params["integrator"],
             trainer.model_params["model_cls"]
         )
@@ -48,7 +48,7 @@ class JsonLoggingCallback(Callback):
             "t_inc": t_inc,
             "momentum_settings": {
                 "active": momentum,
-                "m": m if momentum else None,
+                "b": m if momentum else None,
                 "a": a if momentum else None
             },
             "initial_values": initial_params

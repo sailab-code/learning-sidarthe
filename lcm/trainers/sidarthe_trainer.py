@@ -92,7 +92,7 @@ class SidartheTrainer(CompartmentalTrainer):
             "val_size": self.dataset.val_size,
             "time_step": self.time_step,
             "momentum_settings": {
-                "m": 0.125,
+                "b": 0.125,
                 "a": 0.0,
                 "active": True
             }

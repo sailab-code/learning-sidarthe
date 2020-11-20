@@ -29,7 +29,7 @@ class MomentumOptimizer(Optimizer):
         b = momentum_settings.get('b', 0.1)
 
         if momentum is True and (b is None or a is None):
-            raise ValueError("Must specify m and a if momentum is True")
+            raise ValueError("Must specify b and a if momentum is True")
 
         params_list = []
         for key, value in params.items():
@@ -64,6 +64,9 @@ class MomentumOptimizer(Optimizer):
                     continue
 
                 d_p = parameter.grad
+                print(momentum)
+                print(b)
+                print(a)
                 if momentum:
                     times = torch.arange(parameter.shape[0], dtype=parameter.dtype)
                     mu = torch.sigmoid(b * times)
