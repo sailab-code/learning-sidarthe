@@ -18,7 +18,7 @@ class JsonLoggingCallback(Callback):
             trainer.region, trainer.initial_params, trainer.learning_rates, trainer.model_params["loss_fn"],
             trainer.dataset_params["train_size"], trainer.dataset_params["val_size"],
             trainer.model_params["reg_fn"], trainer.time_step,
-            trainer.train_params["momentum_settings"]["momentum"],
+            trainer.train_params["momentum_settings"]["active"],
             trainer.train_params["momentum_settings"]["m"], trainer.train_params["momentum_settings"]["a"],
             trainer.model_params["integrator"],
             trainer.model_params["model_cls"]
@@ -47,7 +47,7 @@ class JsonLoggingCallback(Callback):
             "integrator": integrator.__name__,
             "t_inc": t_inc,
             "momentum_settings": {
-                "momentum": momentum,
+                "active": momentum,
                 "m": m if momentum else None,
                 "a": a if momentum else None
             },

@@ -94,7 +94,7 @@ class SidartheTrainer(CompartmentalTrainer):
             "momentum_settings": {
                 "m": 0.125,
                 "a": 0.0,
-                "momentum": True
+                "active": True
             }
         }
         _params = kwargs.get("train_params", {})

@@ -7,9 +7,12 @@ from lcm.callbacks.tensorboard_logging import TensorboardLoggingCallback
 from lcm.callbacks.print_callback import PrintCallback
 
 exps_path = os.path.join(os.getcwd(), "prova")
+if not os.path.exists(exps_path):
+    os.mkdir(exps_path)
+
 tb_logger = TensorBoardLogger(exps_path, name="tb_logs")
 exp = SidartheTrainer("ITA", 1., "prova", "",
-                      max_steps=2,
+                      max_steps=5,
                       default_root_dir=exps_path,
                       check_val_every_n_epoch=10,
                       gradient_clip_val=20.0,
@@ -17,6 +20,6 @@ exp = SidartheTrainer("ITA", 1., "prova", "",
                       callbacks=[JsonLoggingCallback(), PrintCallback(), TensorboardLoggingCallback()])
 exp.run_exp(
     dataset_params={
-        "train_size": 20
+        "train_size": 80
     }
 )
