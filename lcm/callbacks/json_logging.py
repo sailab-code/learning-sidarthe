@@ -2,7 +2,9 @@ import os
 from datetime import datetime
 import json
 
-from pytorch_lightning import Callback
+from pytorch_lightning import Callback, Trainer
+
+from lcm.trainers import CompartmentalTrainer
 
 
 class JsonLoggingCallback(Callback):
@@ -12,7 +14,7 @@ class JsonLoggingCallback(Callback):
         """
         pass
 
-    def on_fit_start(self, trainer, pl_module):
+    def on_fit_start(self, trainer: CompartmentalTrainer, pl_module):
         # creates the json description file with all trainer settings
         description = self._get_description(
             trainer.region, trainer.initial_params, trainer.learning_rates, trainer.model_params["loss_fn"],
@@ -26,8 +28,12 @@ class JsonLoggingCallback(Callback):
 
         json_description = json.dumps(description, indent=4)
 
+
+
         json_file = "settings.json"
-        with open(os.path.join(trainer.exp_path, json_file), "a") as f:
+        settings_path = os.path.join(trainer.exp_path, trainer.logger.name, f"version_{trainer.logger.version}",  json_file)
+        os.makedirs(os.path.dirname(settings_path), exist_ok=True)
+        with open(settings_path, "a") as f:
             f.write(json_description)
 
     @staticmethod
