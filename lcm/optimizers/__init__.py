@@ -64,9 +64,6 @@ class MomentumOptimizer(Optimizer):
                     continue
 
                 d_p = parameter.grad
-                print(momentum)
-                print(b)
-                print(a)
                 if momentum:
                     times = torch.arange(parameter.shape[0], dtype=parameter.dtype)
                     mu = torch.sigmoid(b * times)

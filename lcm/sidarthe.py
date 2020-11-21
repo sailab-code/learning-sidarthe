@@ -1,13 +1,12 @@
 import copy
 
+from torch import optim
 import torch
 from torch.nn import Parameter
 
 from typing import Dict
 
-from .optimizers import MomentumOptimizer
 from .compartmental_model import CompartmentalModel
-
 
 
 class Sidarthe(CompartmentalModel):
@@ -194,45 +193,3 @@ class Sidarthe(CompartmentalModel):
             E_dot,
             H_det_dot
         ), dim=0)
-
-    def training_step(self, batch, batch_idx):
-        t_grid, targets, train_mask = batch
-        t_grid = t_grid.squeeze(0)
-        targets = {key: target.squeeze(0) for key, target in targets.items()}
-        hats = self.forward(t_grid)
-        target_losses = self.loss_fn(hats, targets, train_mask)
-        regularization_loss = self.regularization_fn(self.params)
-
-        for k,v in target_losses.items():
-            self.log(k, v, prog_bar=True)
-
-        return target_losses["backward"] + regularization_loss["backward"]
-
-    def validation_step(self, batch, batch_idx):
-        t_grid, targets, validation_mask = batch
-        t_grid = t_grid.squeeze(0)
-        targets = {key: target.squeeze(0) for key, target in targets.items()}
-        hats = self.forward(t_grid)
-        target_losses = self.loss_fn(hats, targets, validation_mask)
-        regularization_loss = self.regularization_fn(self.params)
-
-        for k, v in target_losses.items():
-            self.log(k, v, prog_bar=True)
-
-        return {
-            "hats": hats,
-            "targets": targets,
-            "target_loss": target_losses['validation'],
-            "regularization_loss": regularization_loss['validation']
-        }
-
-    def test_step(self, batch, batch_idx):
-        metrics = self.validation_step(batch, batch_idx)
-        return metrics
-
-    def configure_optimizers(self):
-        return MomentumOptimizer(self.trainable_params, self.learning_rates, self.momentum_settings)
-
-    def __str__(self):
-        return self.__class__.__name__
-
