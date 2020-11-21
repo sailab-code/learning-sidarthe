@@ -9,7 +9,7 @@ DATE_FORMATS = [
     "%Y-%m-%dT%H:%M:%S"
 ]
 
-start_date = datetime.date(2020, 2, 24)
+DEFAULT_START_DATE = "2020-2-24"
 
 class TensorboardLoggingCallback(Callback):
     def __init__(self):
@@ -17,6 +17,11 @@ class TensorboardLoggingCallback(Callback):
         Callback handling tensorboard visualizations of parameters
         and losses trends.
         """
+        super().__init__()
+        self.first_date = DEFAULT_START_DATE
+
+    def on_fit_start(self, trainer, pl_module):
+        self.first_date = trainer.dataset.first_date  # setting the actual start date of the outbreak
 
     def on_train_epoch_end(self, trainer, pl_module, outputs):
         # plot params
@@ -129,7 +134,7 @@ class TensorboardLoggingCallback(Callback):
                 tot_curves = train_curves + val_curves + test_curves
 
             pl_title = f"{key.upper()} - train/validation/test"
-            fig = generic_plot(tot_curves, pl_title, None) #fixme set data from data #, formatter=self._format_xtick
+            fig = generic_plot(tot_curves, pl_title, None, formatter=self._format_xtick) #fixme set data from data
             trainer.logger.experiment.add_figure(f"{prefix}/{key}_global", fig)
 
     @staticmethod
@@ -147,10 +152,8 @@ class TensorboardLoggingCallback(Callback):
 
         raise ValueError("No date formats were able to parse date")
 
-    @staticmethod
-    def _format_xtick(n,v):
-        # start_date = TensorboardLoggingCallback._parse_date(start_date)
-
+    def _format_xtick(self, n,v):
+        start_date = self._parse_date(self.first_date)
         # def custom_xtick(n, v):
         return (start_date + datetime.timedelta(int(n))).strftime("%d %b")
 
