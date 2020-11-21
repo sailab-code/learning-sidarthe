@@ -100,5 +100,22 @@ class CompartmentalModel(pl.LightningModule, metaclass=abc.ABCMeta):
     def configure_optimizers(self):
         return MomentumOptimizer(self.trainable_params, self.learning_rates, self.momentum_settings)
 
+    def extend_param(self, value, length):
+        len_diff = length - value.shape[0]
+        ext_tensor = torch.tensor([value[-1] for _ in range(len_diff)], device=self.device, dtype=self.dtype)
+        ext_tensor = torch.cat((value, ext_tensor))
+        return ext_tensor[:length]
+
+    def rectify_param(self, param):
+        rectified = torch.relu(param)
+        # noinspection PyTypeChecker
+        return torch.where(rectified >= self.EPS,
+                           rectified,
+                           torch.full_like(rectified, self.EPS,
+                                           device=self.device,
+                                           dtype=self.dtype
+                                           )
+                           )
+
     def __str__(self):
         return self.__class__.__name__

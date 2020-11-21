@@ -77,18 +77,6 @@ class Sidarthe(CompartmentalModel):
             "death_rates": tuple(['tau'])
         }
 
-    def extend_param(self, value, length):
-        len_diff = length - value.shape[0]
-        ext_tensor = torch.tensor([value[-1] for _ in range(len_diff)], device=self.device, dtype=self.dtype)
-        ext_tensor = torch.cat((value, ext_tensor))
-        return ext_tensor[:length]
-        # rectified_param = torch.relu(ext_tensor)
-        # return torch.where(rectified_param >= self.EPS, rectified_param, rectified_param + self.EPS)
-
-    def rectify_param(self, param):
-        rectified = torch.relu(param)
-        return torch.where(rectified >= self.EPS, rectified, torch.full_like(rectified, self.EPS, device=self.device, dtype=self.dtype))
-
     def get_param_at_t(self, param_key, _t):
         param = self.params[param_key]
         _t = _t.long()
