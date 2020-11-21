@@ -99,7 +99,7 @@ class SIR(CompartmentalModel):
         S = x[0]
         I = x[1]
 
-        S_dot = - p['beta']*(S * I)/self.population
+        S_dot = - p['beta'] * (S * I) / self.population
         I_dot = -S_dot - (p['gamma'] * I)
         R_dot = p['gamma'] * I
 
