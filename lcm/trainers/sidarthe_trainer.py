@@ -1,5 +1,6 @@
 from lcm.datasets.sidarthe_dataset import SidartheDataModule
 from lcm.trainers import CompartmentalTrainer
+
 import os
 
 from lcm.integrators.fixed import Heun

@@ -92,6 +92,7 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
         # Assuring all the regions share the same validation and test intervals
         # This implies that the number of training days may change and it must be PADDED in the end
         # A bit tricky
+
         range_matrix = np.arange(outbreak_max_len).reshape(1, -1).repeat(self.n_areas, axis=0)
 
         train_breadth = self.train_size - outbreak_starts  # S
@@ -153,3 +154,4 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
             test_mask = test_mask.type(torch.bool)
             self.test_set = DictDataset([(t_grid[test_slice, :], test_set, test_mask)])
             self.test_size = outbreak_max_len - self.train_size - self.val_size
+
