@@ -1,7 +1,7 @@
 import os
 
 from lcm.datasets.st_sidarthe_dataset import SpatioTemporalSidartheDataset
-from lcm.trainers.sidarthe_extended_experiment import SidartheExtendedExperiment
+from lcm.trainers.sidarthe_extended_trainer import SidartheExtendedExperiment
 from lcm.integrators.fixed import Heun
 from lcm.losses import compose_losses
 from lcm.losses.regularization_losses import LteZero, FirstDerivative
@@ -10,7 +10,7 @@ from lcm.st_sidarthe import SpatioTemporalSidarthe
 # from lcm.utils.populations import populations
 
 
-class SpatioTemporalSidartheExperiment(SidartheExtendedExperiment):
+class SpatioTemporalSidartheTrainer(SidartheExtendedExperiment):
     def make_initial_params(self, **kwargs):
         # default initial_params
         initial_params = {
