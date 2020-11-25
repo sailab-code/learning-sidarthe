@@ -2,7 +2,7 @@ import datetime
 from pytorch_lightning import Callback
 import numpy as np
 
-from utils.visualization_utils import generic_plot, Curve #fixme wrong path
+from lcm.utils.visualization import generic_plot, Curve
 
 DATE_FORMATS = [
     "%Y-%m-%d",

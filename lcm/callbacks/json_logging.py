@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 import json
 
-from pytorch_lightning import Callback, Trainer
+from pytorch_lightning import Callback
 
 from lcm.trainers import CompartmentalTrainer
 
