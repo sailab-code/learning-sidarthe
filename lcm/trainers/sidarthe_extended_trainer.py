@@ -1,7 +1,7 @@
 from lcm.trainers.sidarthe_trainer import SidartheTrainer
 
 
-class SidartheExtendedExperiment(SidartheTrainer):
+class SidartheExtendedTrainer(SidartheTrainer):
     def make_initial_params(self, **kwargs):
         # default initial_params
         initial_params = {

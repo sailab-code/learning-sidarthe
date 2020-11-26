@@ -1,7 +1,7 @@
 import os
 
 from lcm.datasets.st_sidarthe_dataset import SpatioTemporalSidartheDataset
-from lcm.trainers.sidarthe_extended_trainer import SidartheExtendedExperiment
+from lcm.trainers.sidarthe_extended_trainer import SidartheExtendedTrainer
 from lcm.integrators.fixed import Heun
 from lcm.losses import compose_losses
 from lcm.losses.regularization_losses import LteZero, FirstDerivative
@@ -10,7 +10,7 @@ from lcm.st_sidarthe import SpatioTemporalSidarthe
 # from lcm.utils.populations import populations
 
 
-class SpatioTemporalSidartheTrainer(SidartheExtendedExperiment):
+class SpatioTemporalSidartheTrainer(SidartheExtendedTrainer):
     def make_initial_params(self, **kwargs):
         # default initial_params
         initial_params = {
@@ -40,7 +40,7 @@ class SpatioTemporalSidartheTrainer(SidartheExtendedExperiment):
         return self.fill_missing_params(_params, initial_params)
 
     def make_model(self, **kwargs):
-        return SpatioTemporalSidarthe(
+        return self.model_params["model_cls"](
             **self.model_params,
             params=self.initial_params,
             learning_rates=self.learning_rates,
@@ -64,6 +64,7 @@ class SpatioTemporalSidartheTrainer(SidartheExtendedExperiment):
     def make_model_params(self, **kwargs):
         # default pretrained_model params
         model_params = {
+            "model_cls": SpatioTemporalSidarthe,
             "population": 59999576.0, # populations[self.region], fixme
             "initial_conditions": [(59999576.0, 94, 94, 101, 101, 26, 7, 1)]*3,
             "integrator": Heun,
