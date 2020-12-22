@@ -49,7 +49,7 @@ class SpatioTemporalSidarthe(SidartheExtended):
         if 0 <= _t[0] < param.shape[0]:
             p = torch.relu(param[_t, :].unsqueeze(0))
         else:
-            p = torch.relu(param[-1, :].unsqueeze(0).detach())
+            p = torch.relu(param[torch.tensor([-1]).long(), :].unsqueeze(0))
 
         if param_key in ['alpha', 'beta', 'gamma', 'delta']:  # these params must be divided by population
             return p / self.population
@@ -101,7 +101,7 @@ class SpatioTemporalSidarthe(SidartheExtended):
             T_dot,
             E_dot,
             H_det_dot
-        ), dim=0).transpose(0,1)
+        ), dim=1).transpose(1,2).squeeze(0)
 
     def forward(self, time_grid) -> Dict:
         sol = self.integrate(time_grid)
@@ -139,22 +139,21 @@ class SpatioTemporalSidarthe(SidartheExtended):
         :return:
         """
 
-        print(value)
-        print(value.shape)
-        print(length)
         t_diff = length - value.shape[0]
-        ext_t_tensor = torch.tensor([value[-1,:]] * t_diff)
-        print(ext_t_tensor)
-        print(ext_t_tensor.shape)
+        s_diff = self.n_areas - value.shape[1]
+
+
+        ext_t_tensor = value[-1, :].reshape(1,-1).repeat((t_diff, 1))
+
 
         ext_t_tensor = torch.cat((value, ext_t_tensor), dim=0) # T x s
 
-        s_diff = self.n_areas - value.shape[1]
-        ext_s_tensor = torch.tensor([value[:, -1]] * s_diff)
+        # print(ext_t_tensor[:, -1].shape)
+        ext_s_tensor = ext_t_tensor[:, -1].reshape(-1,1).repeat((1,s_diff))
+        # print(ext_t_tensor.shape)
+        # print(ext_s_tensor.shape)
         ext_tensor = torch.cat((ext_t_tensor, ext_s_tensor), dim=1)  # T x S
-        print(ext_s_tensor)
-        print(ext_s_tensor.shape)
-
+        # print(ext_tensor)
         rectified_param = torch.relu(ext_tensor)
         return rectified_param
         # return torch.where(rectified_param >= EPS, rectified_param, rectified_param + EPS)

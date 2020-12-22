@@ -82,6 +82,7 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
                 region_target.append(padded_target)
 
             filtered_targets[target_key] = np.array(region_target)
+        filtered_targets.pop("y", None) # removes unused key
 
         outbreak_max_len = outbreak_max_len - min(outbreak_start)
         return filtered_targets, first_dates, np.array(outbreak_start), outbreak_max_len
@@ -124,13 +125,16 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
 
             # creates val data
             val_y = np.copy(target_value[val_mask].reshape(self.n_areas, self.val_size))
-            val_y = torch.tensor(val_y).transpose(0,1)  # shape becomes T x S (because more compliant for the rest of the code)
-            val_set[target_key] = val_y
+            val_y = torch.tensor(val_y, dtype=torch.float32).transpose(0,1)  # shape becomes T x S (because more compliant for the rest of the code)
+
+            masked_train_y = -torch.ones(self.train_size, self.n_areas)
+            val_set[target_key] = torch.cat((masked_train_y, val_y), dim=0)  # make target train+val shaped filled with -1 in train
 
             # creates test data
             test_y = np.copy(target_value[test_mask].reshape(self.n_areas, self.test_size))
-            test_y = torch.tensor(test_y).transpose(0,1)  # shape becomes T x S (because more compliant for the rest of the code)
-            test_set[target_key] = test_y
+            test_y = torch.tensor(test_y, dtype=torch.float32).transpose(0,1)  # shape becomes T x S (because more compliant for the rest of the code)
+            masked_train_val_y = -torch.ones(self.train_size+self.val_size, self.n_areas)
+            test_set[target_key] = torch.cat((masked_train_val_y, test_y), dim=0) # make target train+val+test shaped filled with -1 in train+val
 
         train_slice = slice(0, self.train_size, 1)
         train_val_slice = slice(0, self.train_size + self.val_size)
@@ -138,20 +142,21 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
         test_slice = slice(self.train_size + self.val_size, outbreak_max_len)
         all_slice = slice(0, outbreak_max_len)
 
-        t_grid = torch.tensor(self.x).transpose(0,1) # shape becomes T x S (because more compliant for the rest of the code)
+        # t_grid = torch.tensor(self.x).transpose(0,1) # shape becomes T x S (because more compliant for the rest of the code)
+        t_grid = torch.range(0, outbreak_max_len).reshape(-1,1) # shape becomes T x S (because more compliant for the rest of the code)
         if stage == 'fit' or stage is None:
             train_mask = torch.ones_like(t_grid[train_slice, :]).type(torch.bool)
             self.train_set = DictDataset([(t_grid[train_slice, :], train_set, train_mask)])
 
-            val_mask = torch.zeros_like(t_grid[train_val_slice])
+            val_mask = torch.zeros_like(t_grid[train_val_slice,:])
             val_mask[val_slice] = 1.0
             val_mask = val_mask.type(torch.bool)
-            self.val_set = DictDataset([(t_grid[val_slice, :], val_set, val_mask)])
+            self.val_set = DictDataset([(t_grid[train_val_slice, :], val_set, val_mask)])
 
         if stage == 'test' or stage is None:
-            test_mask = torch.zeros_like(t_grid[all_slice])
+            test_mask = torch.zeros_like(t_grid[all_slice, :])
             test_mask[test_slice] = 1.0
             test_mask = test_mask.type(torch.bool)
-            self.test_set = DictDataset([(t_grid[test_slice, :], test_set, test_mask)])
+            self.test_set = DictDataset([(t_grid[all_slice, :], test_set, test_mask)])
             self.test_size = outbreak_max_len - self.train_size - self.val_size
 

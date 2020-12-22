@@ -23,11 +23,9 @@ class RMSE(TargetLoss):
         """
 
         missing_data_mask = torch.ge(target, 0.)
-        print(mask)
         mask = mask * missing_data_mask
         mask = mask.squeeze()
-        print(mask.shape)
-        print(target.shape)
+
         return torch.sqrt(
             0.5 * torch.sum(torch.pow(target[mask] - hat[mask], 2))/torch.sum(mask)
         )

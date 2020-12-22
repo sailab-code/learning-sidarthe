@@ -31,7 +31,7 @@ class SpatioTemporalSidartheTrainer(SidartheExtendedTrainer):
             "rho": [[0.01]],
             "sigma": [[0.01]],
             "phi": [[0.01]],
-            "chi": [[0.01]],
+            "chi": [[0.01, 0.03, 0.014]]*100,
         }  # fixme is temporary
 
 
