@@ -72,7 +72,10 @@ class MomentumOptimizer(Optimizer):
                     for t in range(1, d_p.size(0)):
                         momentum_term = -eta[t] * d_p[t] + mu[t] * update[t - 1]
                         update.append(momentum_term)
-                    update = torch.tensor(update, device=parameter.device, dtype=parameter.dtype)
+                    # update = torch.tensor(update, device=parameter.device, dtype=parameter.dtype)
+
+                    # update can be a list of multi-valued tensors
+                    update = torch.cat(update, dim=0).reshape(d_p.size(0), -1)
                 else:
                     update = -lr * d_p
 
