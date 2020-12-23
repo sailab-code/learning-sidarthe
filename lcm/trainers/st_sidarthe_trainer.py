@@ -7,7 +7,7 @@ from lcm.losses import compose_losses
 from lcm.losses.regularization_losses import LteZero, FirstDerivative
 from lcm.losses.target_losses import RMSE
 from lcm.st_sidarthe import SpatioTemporalSidarthe
-# from lcm.utils.populations import populations
+from lcm.utils.populations import populations
 
 
 class SpatioTemporalSidartheTrainer(SidartheExtendedTrainer):
@@ -30,7 +30,7 @@ class SpatioTemporalSidartheTrainer(SidartheExtendedTrainer):
             "xi": [[0.01]],
             "rho": [[0.01]],
             "sigma": [[0.01]],
-            "phi": [[0.01]],
+            "phi": [[0.01]]*100,
             "chi": [[0.01, 0.03, 0.014]]*100,
         }  # fixme is temporary
 
@@ -63,10 +63,12 @@ class SpatioTemporalSidartheTrainer(SidartheExtendedTrainer):
 
     def make_model_params(self, **kwargs):
         # default pretrained_model params
+        model_cls = SpatioTemporalSidarthe
+
         model_params = {
-            "model_cls": SpatioTemporalSidarthe,
-            "population": 59999576.0, # populations[self.region], fixme
-            "initial_conditions": [(59999576.0, 94, 94, 101, 101, 26, 7, 1)]*3,
+            "model_cls": model_cls,
+            "population": [populations[area] for area in self.dataset.region], # tensor of size S
+            "initial_conditions": [(59999576.0, 94, 94, 101, 101, 26, 7, 1)]*3, # model_cls.get_initial_cond_from_data()  # S x 8
             "integrator": Heun,
             "n_areas": self.dataset.n_areas,
             "time_step": self.time_step,
