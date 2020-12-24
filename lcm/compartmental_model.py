@@ -13,6 +13,7 @@ class CompartmentalModel(pl.LightningModule, metaclass=abc.ABCMeta):
 
     def __init__(self, **kwargs):
         super().__init__()
+        # self.initial_conditions = torch.tensor([kwargs["initial_conditions"]], device=self.device, dtype=self.dtype)
         self.initial_conditions = kwargs["initial_conditions"]
         self.time_step = kwargs["time_step"]
         self.integrator = kwargs["integrator"](self.time_step)
@@ -24,10 +25,7 @@ class CompartmentalModel(pl.LightningModule, metaclass=abc.ABCMeta):
         :return: the solution of the ODE in time_grid.
         """
         return self.integrator(self.differential_equations,
-                               torch.tensor([self.initial_conditions],
-                                            device=self.device,
-                                            dtype=self.dtype
-                                            ),
+                               self.initial_conditions,
                                time_grid)
 
     @property

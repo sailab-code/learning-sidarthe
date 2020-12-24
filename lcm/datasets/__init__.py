@@ -80,3 +80,15 @@ class ODEDataModule(pl.LightningDataModule):
 
     def test_dataloader(self) -> Union[DataLoader, List[DataLoader]]:
         return DataLoader(self.test_set, batch_size=1)
+
+    @abc.abstractmethod
+    def get_initial_conditions(self, population):
+        """
+        Returns initial conditions for the compartmental model
+        :param population: number of individuals in the population.
+        It can be a scalar or a list, depending on the number of populations
+        considered.
+        :return: A tensor with the initial state.
+        """
+        pass
+

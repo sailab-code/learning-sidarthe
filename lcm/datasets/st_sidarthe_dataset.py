@@ -88,6 +88,14 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
         return filtered_targets, first_dates, np.array(outbreak_start), outbreak_max_len
 
     def setup(self, stage: Optional[str] = None):
+        """
+        Setup train/val/test data accordingly to the current stage.
+        Each set contains a tuple (x, y, mask), where mask is necessary to isolate the correct samples.
+
+        :param stage: training stage: 'fit' | 'test' | None. 
+        :return:
+        """
+
         self.x, self.y, self.first_date, outbreak_starts, outbreak_max_len = self.load_data()
 
         # Assuring all the regions share the same validation and test intervals
@@ -160,3 +168,42 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
             self.test_set = DictDataset([(t_grid[all_slice, :], test_set, test_mask)])
             self.test_size = outbreak_max_len - self.train_size - self.val_size
 
+
+
+    def get_initial_conditions(self, population):
+        """
+        Compute initial conditions from initial target values (S x 8)
+        targets = {
+            "d": "isolamento_domiciliare",
+            "r": "ricoverati_con_sintomi",
+            "t": "terapia_intensiva",
+            "h_detected": "dimessi_guariti",
+            "e": "deceduti"
+        }
+        """
+        targets = self.train_set.target_dicts[0][1]
+        D0 = targets["d"][0, :]  # isolamento
+        R0 = targets["r"][0, :]  # ricoverati con sintomi
+        T0 = targets["t"][0, :]  # terapia intensiva
+        H0_detected = targets["h_detected"][0, :]  # dimessi guariti
+        E0 = targets["e"][0, :]  # deceduti
+
+        # for now we assume that the number of undetected is equal to the number of detected
+        # meaning that half of the infectious were not detected
+        I0 = D0  # isolamento domiciliare
+        A0 = R0  # ricoverati con sintomi
+        population = torch.tensor(population)
+        S0 = population - (I0 + D0 + A0 + R0 + T0 + H0_detected + E0)
+
+        initial_states = (
+            S0,
+            I0,
+            D0,
+            A0,
+            R0,
+            T0,
+            E0,
+            H0_detected
+        )
+
+        return torch.cat(initial_states, dim=0).reshape(1, -1, len(initial_states))

@@ -64,11 +64,13 @@ class SpatioTemporalSidartheTrainer(SidartheExtendedTrainer):
     def make_model_params(self, **kwargs):
         # default pretrained_model params
         model_cls = SpatioTemporalSidarthe
+        ppls = [populations[area] for area in self.dataset.region]
 
         model_params = {
             "model_cls": model_cls,
-            "population": [populations[area] for area in self.dataset.region], # tensor of size S
-            "initial_conditions": [(59999576.0, 94, 94, 101, 101, 26, 7, 1)]*3, # model_cls.get_initial_cond_from_data()  # S x 8
+            "population": ppls, # tensor of size S
+            "initial_conditions": self.dataset.get_initial_conditions(ppls), # S x 8
+            # "initial_conditions": [(59999576.0, 94, 94, 101, 101, 26, 7, 1)]*3, # S x 8
             "integrator": Heun,
             "n_areas": self.dataset.n_areas,
             "time_step": self.time_step,
