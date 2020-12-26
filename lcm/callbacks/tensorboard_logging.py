@@ -25,14 +25,15 @@ class TensorboardLoggingCallback(Callback):
 
     def on_train_epoch_end(self, trainer, pl_module, outputs):
         # plot params
-        params_plots = self._plot_params_over_time(pl_module)
+        params_plots = self._plot_params_over_time(pl_module, trainer.dataset.region)
         for (plot, plot_title) in params_plots:
             trainer.logger.experiment.add_figure(f"final/{plot_title}", plot, close=True, global_step=-1)
 
-    def _plot_params_over_time(self, pl_module, n_days=None):
+    def _plot_params_over_time(self, pl_module, region, n_days=None):
         """
         Plots the model params
         :param pl_module: lightning module, the model
+        :param region: list of regions
         :param n_days: (optional) number of days
         :return: a list of plots
         """
@@ -43,15 +44,16 @@ class TensorboardLoggingCallback(Callback):
         # create the plots for the params over time, in groups of related rates
         for param_group, param_keys in pl_module.param_groups.items():
             params_subdict = {param_key: pl_module.params[param_key] for param_key in param_keys}
-            for param_key, param in params_subdict.items():
-                param = pl_module.extend_param(param, n_days)
-                pl_x = list(range(n_days))
-                pl_title = f"{param_group}/$\\{param_key}$ over time"
-                param_curve = Curve(pl_x, param.detach().numpy(), '-', f"$\\{param_key}$", color=None)
-                curves = [param_curve]
+            for j in range(len(region)):
+                for param_key, param in params_subdict.items():
+                    param = pl_module.extend_param(param, n_days)
+                    pl_x = list(range(n_days))
+                    pl_title = f"{region[j]}/{param_group}/$\\{param_key}$ over time"
+                    param_curve = Curve(pl_x, param[:,j].detach().numpy(), '-', f"$\\{param_key}$", color=None)
+                    curves = [param_curve]
 
-                plot = generic_plot(curves, pl_title, None, formatter=self._format_xtick) #fixme set data from data
-                param_plots.append((plot, pl_title))
+                    plot = generic_plot(curves, pl_title, None, formatter=self._format_xtick) #fixme set data from data
+                    param_plots.append((plot, pl_title))
 
         return param_plots
 
@@ -153,7 +155,7 @@ class TensorboardLoggingCallback(Callback):
         raise ValueError("No date formats were able to parse date")
 
     def _format_xtick(self, n,v):
-        start_date = self._parse_date(self.first_date)
+        start_date = self._parse_date(self.first_date[0]) # fixme first date [0]
         # def custom_xtick(n, v):
         return (start_date + datetime.timedelta(int(n))).strftime("%d %b")
 
