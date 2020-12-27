@@ -27,7 +27,7 @@ class TensorboardLoggingCallback(Callback):
         # plot params
         params_plots = self._plot_params_over_time(pl_module, trainer.dataset.region)
         for (plot, plot_title) in params_plots:
-            trainer.logger.experiment.add_figure(f"final/{plot_title}", plot, close=True, global_step=-1)
+            trainer.logger.experiment.add_figure(f"{plot_title}", plot, close=True, global_step=-1)
 
     def _plot_params_over_time(self, pl_module, region, n_days=None):
         """
@@ -63,17 +63,21 @@ class TensorboardLoggingCallback(Callback):
     def on_test_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
         self.plot_final_inferences(trainer, pl_module, outputs["hats"], batch)
 
-    def plot_final_inferences(self, trainer, pl_module, hats, batch, prefix="final", collapse=False):
+    def plot_final_inferences(self, trainer, pl_module, hats, batch, prefix="forecast", collapse=False):
         """
         Plot inferences
+        :param trainer:
+        :param pl_module:
         :param hats: a Tensor with the predictions on the entire data
         :param batch: a Tensor with the entire batch of data
         :param prefix:
+        :param collapse:
         :return:
         """
 
         inputs = batch[0]
         targets = {k:v.squeeze() for k,v in batch[1].items()}
+        region = trainer.dataset.region
 
         # get normalized values
         population = pl_module.population
@@ -105,39 +109,40 @@ class TensorboardLoggingCallback(Callback):
             if key in ["sol"]:
                 continue
 
-            # separate keys that should be normalized to 1
-            if key not in ["r0"]:
-                curr_hat_train = norm_hats[key][:train_size]
-                curr_hat_val = norm_hats[key][train_size:train_size+val_size]
-                curr_hat_test = norm_hats[key][train_size+val_size:]
-            else:
-                curr_hat_train = hats[key][:train_size]
-                curr_hat_val = hats[key][train_size:train_size+val_size]
-                curr_hat_test = hats[key][train_size+val_size:]
+            for j in range(len(region)):
+                # separate keys that should be normalized to 1
+                if key not in ["r0"]:
+                    curr_hat_train = norm_hats[key][:train_size, j]
+                    curr_hat_val = norm_hats[key][train_size:train_size+val_size, j]
+                    curr_hat_test = norm_hats[key][train_size+val_size:, j]
+                else:
+                    curr_hat_train = hats[key][:train_size, j]
+                    curr_hat_val = hats[key][train_size:train_size+val_size, j]
+                    curr_hat_test = hats[key][train_size+val_size:, j]
 
-            if key in targets:
-                # plot inf and target_t
-                target_train = norm_targets[key][:train_size]
-                target_val = norm_targets[key][train_size:train_size+val_size]
-                target_test = norm_targets[key][train_size+val_size:]
-            else:
-                target_train = None
-                target_val = None
-                target_test = None
-                pass
+                if key in targets:
+                    # plot inf and target_t
+                    target_train = norm_targets[key][:train_size, j]
+                    target_val = norm_targets[key][train_size:train_size+val_size, j]
+                    target_test = norm_targets[key][train_size+val_size:, j]
+                else:
+                    target_train = None
+                    target_val = None
+                    target_test = None
+                    pass
 
-            train_curves = get_curves(train_range, curr_hat_train, target_train, key, 'r')
-            val_curves = get_curves(val_range, curr_hat_val, target_val, key, 'b')
-            test_curves = get_curves(test_range, curr_hat_test, target_test, key, 'g')
+                train_curves = get_curves(train_range, curr_hat_train, target_train, key, 'r')
+                val_curves = get_curves(val_range, curr_hat_val, target_val, key, 'b')
+                test_curves = get_curves(test_range, curr_hat_test, target_test, key, 'g')
 
-            if collapse:
-                tot_curves += train_curves + val_curves + test_curves
-            else:
-                tot_curves = train_curves + val_curves + test_curves
+                if collapse:
+                    tot_curves += train_curves + val_curves + test_curves
+                else:
+                    tot_curves = train_curves + val_curves + test_curves
 
-            pl_title = f"{key.upper()} - train/validation/test"
-            fig = generic_plot(tot_curves, pl_title, None, formatter=self._format_xtick) #fixme set data from data
-            trainer.logger.experiment.add_figure(f"{prefix}/{key}_global", fig)
+                pl_title = f"{key.upper()} - train/validation/test"
+                fig = generic_plot(tot_curves, pl_title, None, formatter=self._format_xtick) #fixme set data from data
+                trainer.logger.experiment.add_figure(f"{prefix}/{region[j]}/{key}", fig)
 
     @staticmethod
     def normalize_values(values, norm):

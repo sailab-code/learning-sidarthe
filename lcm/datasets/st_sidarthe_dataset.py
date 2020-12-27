@@ -127,7 +127,7 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
             # creates train data
             train_y = np.copy(target_value)
             train_y[after_train_mask] = -1  # padding values are needed in train
-            train_y = torch.tensor(train_y).transpose(0,1)  # shape becomes T x S (because more compliant for the rest of the code)
+            train_y = torch.tensor(train_y, dtype=torch.float32).transpose(0,1)  # shape becomes T x S (because more compliant for the rest of the code)
             train_y = train_y[:self.train_size,:]
             train_set[target_key] = train_y[:self.train_size,:] # keep only up to train size
 
@@ -135,14 +135,14 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
             val_y = np.copy(target_value[val_mask].reshape(self.n_areas, self.val_size))
             val_y = torch.tensor(val_y, dtype=torch.float32).transpose(0,1)  # shape becomes T x S (because more compliant for the rest of the code)
 
-            masked_train_y = -torch.ones(self.train_size, self.n_areas)
-            val_set[target_key] = torch.cat((masked_train_y, val_y), dim=0)  # make target train+val shaped filled with -1 in train
+            # masked_train_y = -torch.ones(self.train_size, self.n_areas)
+            val_set[target_key] = torch.cat((train_set[target_key], val_y), dim=0)  # make target train+val shaped filled with -1 in train
 
             # creates test data
             test_y = np.copy(target_value[test_mask].reshape(self.n_areas, self.test_size))
             test_y = torch.tensor(test_y, dtype=torch.float32).transpose(0,1)  # shape becomes T x S (because more compliant for the rest of the code)
-            masked_train_val_y = -torch.ones(self.train_size+self.val_size, self.n_areas)
-            test_set[target_key] = torch.cat((masked_train_val_y, test_y), dim=0) # make target train+val+test shaped filled with -1 in train+val
+            # masked_train_val_y = -torch.ones(self.train_size+self.val_size, self.n_areas)
+            test_set[target_key] = torch.cat((val_set[target_key], test_y), dim=0) # make target train+val+test shaped filled with -1 in train+val
 
         train_slice = slice(0, self.train_size, 1)
         train_val_slice = slice(0, self.train_size + self.val_size)
