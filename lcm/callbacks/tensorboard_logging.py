@@ -23,7 +23,7 @@ class TensorboardLoggingCallback(Callback):
     def on_fit_start(self, trainer, pl_module):
         self.first_date = trainer.dataset.first_date  # setting the actual start date of the outbreak
 
-    def on_train_epoch_end(self, trainer, pl_module, outputs):
+    def on_validation_epoch_end(self, trainer, pl_module):
         # plot params
         params_plots = self._plot_params_over_time(pl_module, trainer.dataset.region)
         for (plot, plot_title) in params_plots:
