@@ -182,6 +182,7 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
         }
         """
         targets = self.train_set.target_dicts[0][1]
+        print(targets["d"].shape)
         D0 = targets["d"][0, :]  # isolamento
         R0 = targets["r"][0, :]  # ricoverati con sintomi
         T0 = targets["t"][0, :]  # terapia intensiva
@@ -196,14 +197,15 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
         S0 = population - (I0 + D0 + A0 + R0 + T0 + H0_detected + E0)
 
         initial_states = (
-            S0,
-            I0,
-            D0,
-            A0,
-            R0,
-            T0,
-            E0,
-            H0_detected
+            S0.reshape(1,-1),
+            I0.reshape(1,-1),
+            D0.reshape(1,-1),
+            A0.reshape(1,-1),
+            R0.reshape(1,-1),
+            T0.reshape(1,-1),
+            E0.reshape(1,-1),
+            H0_detected.reshape(1,-1)
         )
+        # todo is there a way to avoid reshapes?
 
-        return torch.cat(initial_states, dim=0).reshape(1, -1, len(initial_states))
+        return torch.cat(initial_states, dim=0).transpose(0,1).reshape(1, -1, len(initial_states))
