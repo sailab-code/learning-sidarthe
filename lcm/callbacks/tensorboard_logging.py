@@ -27,7 +27,7 @@ class TensorboardLoggingCallback(Callback):
         # plot params
         params_plots = self._plot_params_over_time(pl_module, trainer.dataset.region)
         for (plot, plot_title) in params_plots:
-            trainer.logger.experiment.add_figure(f"{plot_title}", plot, close=True, global_step=-1)
+            trainer.logger.experiment.add_figure(f"{plot_title}", plot, close=True, global_step=trainer.global_step)
 
     def _plot_params_over_time(self, pl_module, region, n_days=None):
         """
@@ -58,12 +58,13 @@ class TensorboardLoggingCallback(Callback):
         return param_plots
 
     def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
-        pass
+        self.plot_inferences(trainer, pl_module, outputs["hats"], batch)
+
     
     def on_test_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
-        self.plot_final_inferences(trainer, pl_module, outputs["hats"], batch)
+        self.plot_inferences(trainer, pl_module, outputs["hats"], batch)
 
-    def plot_final_inferences(self, trainer, pl_module, hats, batch, prefix="forecast", collapse=False):
+    def plot_inferences(self, trainer, pl_module, hats, batch, prefix="forecast", collapse=False):
         """
         Plot inferences
         :param trainer:
@@ -142,7 +143,7 @@ class TensorboardLoggingCallback(Callback):
 
                 pl_title = f"{key.upper()} - train/validation/test"
                 fig = generic_plot(tot_curves, pl_title, None, formatter=self._format_xtick) #fixme set data from data
-                trainer.logger.experiment.add_figure(f"{prefix}/{region[j]}/{key}", fig)
+                trainer.logger.experiment.add_figure(f"{prefix}/{region[j]}/{key}", fig, global_step=trainer.global_step)
 
     @staticmethod
     def normalize_values(values, norm):
