@@ -61,4 +61,5 @@ class FirstDerivative(RegularizationLoss):
         central = self.first_derivative_central(param[2:], param[:-2], self.time_step)
         backward = self.first_derivative_backward(param[-1], param[-2], self.time_step).unsqueeze(0)
 
-        return torch.cat((forward, central, backward), dim=0)
+        first_derivative = torch.cat((forward, central, backward), dim=0)
+        return  0.5 * torch.pow(first_derivative, 2)
