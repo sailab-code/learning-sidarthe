@@ -49,7 +49,7 @@ class TensorboardLoggingCallback(Callback):
                     param = pl_module.extend_param(param, n_days)
                     pl_x = list(range(n_days))
                     pl_title = f"{region[j]}/{param_group}/$\\{param_key}$ over time"
-                    param_curve = Curve(pl_x, param[:,j].detach().numpy(), '-', f"$\\{param_key}$", color=None)
+                    param_curve = Curve(pl_x, param[:,j].detach().cpu().numpy(), '-', f"$\\{param_key}$", color=None)
                     curves = [param_curve]
 
                     plot = generic_plot(curves, pl_title, None, formatter=self._format_xtick) #fixme set data from data
@@ -110,6 +110,7 @@ class TensorboardLoggingCallback(Callback):
             if key in ["sol"]:
                 continue
 
+            np_hats = hats[key].cpu()
             for j in range(len(region)):
                 # separate keys that should be normalized to 1
                 if key not in ["r0"]:
@@ -117,9 +118,9 @@ class TensorboardLoggingCallback(Callback):
                     curr_hat_val = norm_hats[key][train_size:train_size+val_size, j]
                     curr_hat_test = norm_hats[key][train_size+val_size:, j]
                 else:
-                    curr_hat_train = hats[key][:train_size, j]
-                    curr_hat_val = hats[key][train_size:train_size+val_size, j]
-                    curr_hat_test = hats[key][train_size+val_size:, j]
+                    curr_hat_train = np_hats[:train_size, j]
+                    curr_hat_val = np_hats[train_size:train_size+val_size, j]
+                    curr_hat_test = np_hats[train_size+val_size:, j]
 
                 if key in targets:
                     # plot inf and target_t
@@ -148,7 +149,7 @@ class TensorboardLoggingCallback(Callback):
     @staticmethod
     def normalize_values(values, norm):
         """normalize values by a norm, e.g. population"""
-        return {key: np.array(value) / norm for key, value in values.items()}
+        return {key: np.array(value.cpu()) / norm.cpu() for key, value in values.items()}
 
     @staticmethod
     def _parse_date(date):

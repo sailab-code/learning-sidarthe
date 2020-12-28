@@ -19,7 +19,7 @@ class Sidarthe(CompartmentalModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.EPS = kwargs.get('EPS', 0.)
+        self.EPS = kwargs.get('EPS', 1e-4)
         self._params = {key: Parameter(torch.tensor(value, device=self.device)) for key, value in
                         kwargs["params"].items()}
 
@@ -28,10 +28,25 @@ class Sidarthe(CompartmentalModel):
 
         self.loss_fn = kwargs["loss_fn"]
         self.regularization_fn = kwargs["reg_fn"]
-        self.population = torch.tensor(kwargs["population"], device=self.device)
+        self.population = torch.tensor(kwargs["population"], requires_grad=False)
         self.tied_parameters = kwargs.get("tied_parameters", {})
         self.learning_rates = kwargs.get("learning_rates", {})
         self.momentum_settings = kwargs.get("momentum_settings", {})
+
+    def to(self, device):
+        super().to(device)
+        self.population.to(device)
+
+    def cuda(self, device):
+        super().cuda(device)
+        self.population = self.population.cuda(device)
+        self.initial_conditions = self.initial_conditions.cuda(device)
+
+    def cpu(self):
+        super().cpu()
+        self.population = self.population.cpu()
+        self.initial_conditions = self.initial_conditions.cpu()
+
 
     @property
     def params(self) -> Dict:

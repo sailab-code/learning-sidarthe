@@ -182,7 +182,6 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
         }
         """
         targets = self.train_set.target_dicts[0][1]
-        print(targets["d"].shape)
         D0 = targets["d"][0, :]  # isolamento
         R0 = targets["r"][0, :]  # ricoverati con sintomi
         T0 = targets["t"][0, :]  # terapia intensiva
