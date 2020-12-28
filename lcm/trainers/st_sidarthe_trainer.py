@@ -2,7 +2,7 @@ import os
 
 from lcm.datasets.st_sidarthe_dataset import SpatioTemporalSidartheDataset
 from lcm.trainers.sidarthe_extended_trainer import SidartheExtendedTrainer
-from lcm.integrators.fixed import Heun
+from lcm.integrators.fixed_step import Heun
 from lcm.losses import compose_losses
 from lcm.losses.regularization_losses import LteZero, FirstDerivative
 from lcm.losses.target_losses import RMSE
@@ -14,24 +14,25 @@ class SpatioTemporalSidartheTrainer(SidartheExtendedTrainer):
     def make_initial_params(self, **kwargs):
         # default initial_params
         initial_params = {
-            "alpha": [[0.03]],
-            "beta": [[0.01]],
-            "gamma": [[0.12]],
-            "delta": [[0.01]],
-            "epsilon": [[0.14]],
-            "theta": [[0.371]],
-            "zeta": [[0.08]],
-            "eta": [[0.08]],
-            "mu": [[0.01]],
-            "nu": [[0.01]],
-            "tau": [[0.01]],
-            "lambda": [[0.01]],
-            "kappa": [[0.01]],
-            "xi": [[0.01]],
-            "rho": [[0.01]],
-            "sigma": [[0.01]],
+            "alpha": [[0.03]]*100,
+            "beta": [[0.01]]*100,
+            "gamma": [[0.12]]*100,
+            "delta": [[0.01]]*100,
+            "epsilon": [[0.14]]*100,
+            "theta": [[0.371]]*100,
+            "zeta": [[0.08]]*100,
+            "eta": [[0.08]]*100,
+            "mu": [[0.01]]*100,
+            "nu": [[0.01]]*100,
+            "tau": [[0.01]]*100,
+            "lambda": [[0.01]]*100,
+            "kappa": [[0.01]]*100,
+            "xi": [[0.01]]*100,
+            "rho": [[0.01]]*100,
+            "sigma": [[0.01]]*100,
             "phi": [[0.01]]*100,
-            "chi": [[0.01, 0.03, 0.014]]*100,
+            # "chi": [[0.01, 0.03, 0.014]]*100,
+            "chi": [[0.01]]*100,
         }  # fixme is temporary
 
 
@@ -75,16 +76,16 @@ class SpatioTemporalSidartheTrainer(SidartheExtendedTrainer):
             "n_areas": self.dataset.n_areas,
             "time_step": self.time_step,
             "loss_fn": RMSE({
-                "d": 1.,
-                "r": 1.,
-                "t": 1.,
-                "h": 1.,
-                "e": 1.,
+                "d": 0.02,
+                "r": 0.02,
+                "t": 0.02,
+                "h": 0.02,
+                "e": 0.02,
             }),
             "reg_fn": compose_losses(
                 [
-                    LteZero(1.),
-                    FirstDerivative(1., self.time_step)
+                    LteZero(1e6),
+                    FirstDerivative(1e6, self.time_step)
                 ]
             )
         }

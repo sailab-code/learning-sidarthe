@@ -3,7 +3,7 @@ from lcm.trainers import CompartmentalTrainer
 
 import os
 
-from lcm.integrators.fixed import Heun
+from lcm.integrators.fixed_step import Heun
 from lcm.losses import compose_losses
 from lcm.losses.regularization_losses import LteZero, FirstDerivative
 from lcm.losses.target_losses import RMSE
