@@ -157,7 +157,7 @@ def generic_plot(xy_curves, title, save_path, x_label=None, y_label=None, format
 
     ax.margins(0.05)
     if use_legend:
-        ax.legend()
+        ax.legend(fontsize='xx-small')
 
     if yaxis_sci:
         ax.ticklabel_format(axis='y', style='sci', scilimits=(0,0), useOffset=None)

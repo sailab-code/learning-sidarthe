@@ -57,15 +57,24 @@ class TensorboardLoggingCallback(Callback):
                     param_plots.append((plot, pl_title))
 
                 else:
+                    all_curves = []
                     for j in range(len(region)):
                         pl_title = f"{region[j]}/{param_group}/$\\{param_key}$"
                         param = pl_module.extend_param(param, n_days)
                         pl_x = list(range(n_days))
                         param_curve = Curve(pl_x, param[:,j].detach().cpu().numpy(), '-', f"$\\{param_key}$", color=None)
                         curves = [param_curve]
+                        region_labeled_param_curve = Curve(pl_x, param[:,j].detach().cpu().numpy(), '-', label=f"{region[j]}", color=None)
+
+                        all_curves.append(region_labeled_param_curve)
 
                         plot = generic_plot(curves, pl_title, None, formatter=self._format_xtick) #fixme set data from data
                         param_plots.append((plot, pl_title))
+
+                    # unshared params
+                    pl_title = f"unshared/{param_group}/$\\{param_key}$"
+                    plot = generic_plot(all_curves, pl_title, None, formatter=self._format_xtick)  # fixme set data from data
+                    param_plots.append((plot, pl_title))
 
         return param_plots
 
