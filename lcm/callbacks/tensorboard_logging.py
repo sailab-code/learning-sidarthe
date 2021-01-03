@@ -44,16 +44,28 @@ class TensorboardLoggingCallback(Callback):
         # create the plots for the params over time, in groups of related rates
         for param_group, param_keys in pl_module.param_groups.items():
             params_subdict = {param_key: pl_module.params[param_key] for param_key in param_keys}
-            for j in range(len(region)):
-                for param_key, param in params_subdict.items():
+
+            for param_key, param in params_subdict.items():
+                if  param.shape[1] == 1:
+                    pl_title = f"shared/{param_group}/$\\{param_key}$"
                     param = pl_module.extend_param(param, n_days)
                     pl_x = list(range(n_days))
-                    pl_title = f"{region[j]}/{param_group}/$\\{param_key}$ over time"
-                    param_curve = Curve(pl_x, param[:,j].detach().cpu().numpy(), '-', f"$\\{param_key}$", color=None)
+                    param_curve = Curve(pl_x, param[:, 0].detach().cpu().numpy(), '-', f"$\\{param_key}$", color=None)
                     curves = [param_curve]
 
-                    plot = generic_plot(curves, pl_title, None, formatter=self._format_xtick) #fixme set data from data
+                    plot = generic_plot(curves, pl_title, None, formatter=self._format_xtick)  # fixme set data from data
                     param_plots.append((plot, pl_title))
+
+                else:
+                    for j in range(len(region)):
+                        pl_title = f"{region[j]}/{param_group}/$\\{param_key}$"
+                        param = pl_module.extend_param(param, n_days)
+                        pl_x = list(range(n_days))
+                        param_curve = Curve(pl_x, param[:,j].detach().cpu().numpy(), '-', f"$\\{param_key}$", color=None)
+                        curves = [param_curve]
+
+                        plot = generic_plot(curves, pl_title, None, formatter=self._format_xtick) #fixme set data from data
+                        param_plots.append((plot, pl_title))
 
         return param_plots
 
