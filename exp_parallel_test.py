@@ -19,15 +19,16 @@ checkpoint_callback = ModelCheckpoint(
     filepath=os.path.join(exps_path,'checkpoints/weights.ckpt'),
     save_top_k=1,
     verbose=True,
-    monitor='validation',
+    monitor='val_loss_weighted',
     mode='min'
 )
 
 tb_logger = TensorBoardLogger(exps_path, name="tb_logs")
 exp = SpatioTemporalSidartheTrainer(
     "ITA", 1., "st_alpha", "",
-    max_steps=4000,
-    max_epochs=4000,
+    max_steps=200,
+    log_every_n_steps = 50,
+    max_epochs=200,
     default_root_dir=exps_path,
     check_val_every_n_epoch=50,
     gradient_clip_val=20.0,
