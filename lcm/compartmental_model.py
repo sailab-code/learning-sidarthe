@@ -65,19 +65,13 @@ class CompartmentalModel(pl.LightningModule, metaclass=abc.ABCMeta):
         t_grid = t_grid.squeeze(0)
         targets = {key: target.squeeze(0) for key, target in targets.items()}
         hats = self.forward(t_grid)
-
         target_losses = self.loss_fn(hats, targets, train_mask)
-        target_losses["train_loss_weighted"] = target_losses.pop("weighted")
-        target_losses["train_loss_unweighted"] = target_losses.pop("unweighted")
-
         regularization_loss = self.regularization_fn(self.params)
-        regularization_loss["train_loss_weighted"] = regularization_loss.pop("weighted")
-        regularization_loss["train_loss_unweighted"] = regularization_loss.pop("unweighted")
 
         for k,v in target_losses.items():
-            self.log(k, v, prog_bar=True)
+            self.log(f"train_loss_{k}", v, prog_bar=True)
 
-        return target_losses["train_loss_weighted"] + regularization_loss["train_loss_weighted"]
+        return target_losses["weighted"] + regularization_loss["weighted"]
 
     def validation_step(self, batch, batch_idx):
         t_grid, targets, validation_mask = batch
@@ -85,21 +79,16 @@ class CompartmentalModel(pl.LightningModule, metaclass=abc.ABCMeta):
         targets = {key: target.squeeze(0) for key, target in targets.items()}
         hats = self.forward(t_grid)
         target_losses = self.loss_fn(hats, targets, validation_mask)
-        target_losses["val_loss_weighted"] = target_losses.pop("weighted")
-        target_losses["val_loss_unweighted"] = target_losses.pop("unweighted")
-
         regularization_loss = self.regularization_fn(self.params)
-        regularization_loss["val_loss_weighted"] = regularization_loss.pop("weighted")
-        regularization_loss["val_loss_unweighted"] = regularization_loss.pop("unweighted")
 
         for k, v in target_losses.items():
-            self.log(k, v, prog_bar=True)
+            self.log(f"val_loss_{k}", v, prog_bar=True)
 
         return {
             "hats": hats,
             "targets": targets,
-            "target_loss": target_losses['val_loss_unweighted'],
-            "regularization_loss": regularization_loss['val_loss_unweighted']
+            "target_loss": target_losses['unweighted'],
+            "regularization_loss": regularization_loss['unweighted']
         }
 
     def test_step(self, batch, batch_idx):
