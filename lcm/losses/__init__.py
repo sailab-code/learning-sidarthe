@@ -31,8 +31,8 @@ class TargetLoss(Loss):
             backward = backward + self.weights[key[0]] * loss
             validation = validation + loss
 
-        losses["backward"] = backward
-        losses["validation"] = validation
+        losses["weighted"] = backward
+        losses["unweighted"] = validation
 
         return losses
 
@@ -62,8 +62,8 @@ class RegularizationLoss(Loss):
             backward = backward + self.weight * loss
             validation = validation + loss
 
-        losses["backward"] = torch.mean(backward)
-        losses["validation"] = torch.mean(validation)
+        losses["weighted"] = torch.mean(backward)
+        losses["unweighted"] = torch.mean(validation)
 
         return losses
 
