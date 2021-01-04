@@ -78,7 +78,7 @@ class CompartmentalTrainer(Trainer):
         print(f"Running experiment {self.uuid}")
         # trainer = Trainer(check_val_every_n_epoch=50)
         self.fit(model, self.dataset.train_dataloader(), self.dataset.val_dataloader())
-        self.test(model, self.dataset.test_dataloader())
+        self.test(model, self.dataset.test_dataloader(), ckpt_path="best")
 
 
     @staticmethod
