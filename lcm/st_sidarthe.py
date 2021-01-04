@@ -3,7 +3,7 @@ from typing import Dict
 import torch
 from lcm.sidarthe_extended import SidartheExtended
 
-EPS = 0
+EPS = 1e-3
 
 
 class SpatioTemporalSidarthe(SidartheExtended):
@@ -32,9 +32,9 @@ class SpatioTemporalSidarthe(SidartheExtended):
 
     def omega(self, t):
         if t >= 0:
-            return torch.tensor([self.init_cond[:, :8]], dtype=self.dtype)  # 1 x s x p, p=8 number of states in sidarthe
+            return torch.tensor([self.init_cond[:, :8]], dtype=self.dtype, device=self.device)  # 1 x s x p, p=8 number of states in sidarthe
         else:
-            return torch.tensor([[[1.] + [0.] * 7]], dtype=self.dtype)
+            return torch.tensor([[[1.] + [0.] * 7]], dtype=self.dtype, device=self.device)
 
     def get_param_at_t(self, param_key, _t):
         """
@@ -52,12 +52,9 @@ class SpatioTemporalSidarthe(SidartheExtended):
             p = torch.relu(param[torch.tensor([-1]).long(), :].unsqueeze(0))
 
         if param_key in ['alpha', 'beta', 'gamma', 'delta']:  # these params must be divided by population
-            return p / self.population
-        else:
-            return p
+            p = p / self.population
 
         return p  # shape 1 x s (or 1 it is broadcasted) x
-        # return torch.where(rectified_param >= EPS, rectified_param, rectified_param + EPS)  # shape 1 x s (or 1 it is broadcasted) x
 
     def differential_equations(self, t, x):
         """
@@ -148,12 +145,9 @@ class SpatioTemporalSidarthe(SidartheExtended):
 
         ext_t_tensor = torch.cat((value, ext_t_tensor), dim=0) # T x s
 
-        # print(ext_t_tensor[:, -1].shape)
         ext_s_tensor = ext_t_tensor[:, -1].reshape(-1,1).repeat((1,s_diff))
-        # print(ext_t_tensor.shape)
-        # print(ext_s_tensor.shape)
         ext_tensor = torch.cat((ext_t_tensor, ext_s_tensor), dim=1)  # T x S
-        # print(ext_tensor)
+
         rectified_param = torch.relu(ext_tensor)
         return rectified_param
         # return torch.where(rectified_param >= EPS, rectified_param, rectified_param + EPS)
