@@ -500,6 +500,7 @@ class Sidarthe(AbstractModel):
         time_step = model_params["time_step"]
         population = model_params["population"]
         integrator = model_params["integrator"]
+        mobility = model_params.get("mobility")
 
         d_weight = model_params.get("d_weight", 1.)
         r_weight = model_params.get("r_weight", 1.)
@@ -536,7 +537,8 @@ class Sidarthe(AbstractModel):
                    train_size=train_size,
                    val_size=val_size,
                    first_date=first_date,
-                   bound_loss_type=bound_loss_type
+                   bound_loss_type=bound_loss_type,
+                   mobility=mobility
                    )
 
     @classmethod
