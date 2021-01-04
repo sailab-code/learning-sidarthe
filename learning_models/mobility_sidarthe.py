@@ -11,7 +11,9 @@ class SidartheMobility(Sidarthe):
     def __init__(self, parameters: Dict, population, init_cond, integrator, sample_time, **kwargs):
         super().__init__(parameters, population, init_cond, integrator, sample_time, **kwargs)
         self.model_name = kwargs.get("name", "sidarthe_mobility")
-        self.mobility = kwargs["mobility"]
+
+        # filter mobility from first date onward
+        self.mobility = kwargs["mobility"][self.first_date.split("T")[0]:]
 
     @property
     def params(self) -> Dict:
