@@ -19,7 +19,7 @@ checkpoint_callback = ModelCheckpoint(
     filepath=os.path.join(exps_path,'checkpoints/weights.ckpt'),
     save_top_k=1,
     verbose=True,
-    monitor='val_loss_weighted',
+    monitor='val_loss_unweighted',
     mode='min'
 )
 
