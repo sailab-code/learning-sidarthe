@@ -17,20 +17,23 @@ def get_exp_prefix(area, initial_params, learning_rates, train_size, val_len, de
 
 
 def get_description(area, initial_params, learning_rates, target_weights, train_size, val_len, der_1st_reg,
-                    t_inc, momentum, m, a, loss_type, integrator, bound_reg, bound_loss_type):
+                    t_inc, momentum, m, a, loss_type, integrator, bound_reg, bound_loss_type,
+                    model_cls
+                    ):
     return {
         "started": datetime.now().strftime('%d/%B/%Y %H:%M:%S'),
+        "model_cls": model_cls,
         "region": area,
         "learning_rates": learning_rates,
         "target_weights": target_weights,
         "train_size": train_size,
         "val_len": val_len,
         "der_1st_reg": der_1st_reg,
+        "integrator": integrator.__name__,
         "t_inc": t_inc,
         "momentum": momentum,
         "m": m if momentum else None,
         "a": a if momentum else None,
-        "integrator": integrator.__name__,
         "loss_type": loss_type,
         "bound_reg": bound_reg,
         "bound_loss_type": bound_loss_type,

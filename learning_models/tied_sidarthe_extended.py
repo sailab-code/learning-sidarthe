@@ -86,6 +86,7 @@ class TiedSidartheExtended(SidartheExtended):
     def lambda_(self) -> torch.Tensor:
         return self._params["rho"]
 
+    #tied to xi
     @property
     def kappa(self) -> torch.Tensor:
         return self._params["xi"]

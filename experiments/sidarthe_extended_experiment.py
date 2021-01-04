@@ -7,7 +7,7 @@ from learning_models.sidarthe_extended import SidartheExtended
 from experiments.sidarthe_experiment import SidartheExperiment
 
 
-class ExtendedSidartheExperiment(SidartheExperiment):
+class SidartheExtendedExperiment(SidartheExperiment):
     """
     Class to run experiments of Extended Sidarthe. In principle this class is not
     needed to run experiments using ExtendedSidarthe pretrained_model, however it provides already
@@ -65,6 +65,7 @@ class ExtendedSidartheExperiment(SidartheExperiment):
             "bound_reg": 1e5,
             "loss_type": "nrmse",
             "verbose": False,
+            "n_areas": self.dataset.batch_size,
             "val_size": self.dataset.val_len,
             "train_size": self.dataset.train_size,
             "references": self.references,
