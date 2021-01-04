@@ -78,7 +78,7 @@ class Sidarthe(CompartmentalModel):
         return {
             key: param
             for key, param in self._params.items()
-            if key not in self.tied_parameters.values()
+            if key not in self.tied_parameters.keys()
         }
 
     @property
