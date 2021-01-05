@@ -7,6 +7,7 @@ import torch
 #######
 
 mobility_map = {
+    "Italia": "Italy",
     "Lombardia": "Lombardy",
     "Toscana": "Tuscany"
 }
