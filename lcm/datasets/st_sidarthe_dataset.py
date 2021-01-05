@@ -4,7 +4,8 @@ from typing import Optional
 
 from lcm.datasets.sidarthe_dataset import SidartheDataModule
 from lcm.datasets import DictDataset
-from utils.data_utils import select_data
+from lcm.utils.data import select_data
+from lcm.utils.mobility import get_google_mobility
 
 
 class SpatioTemporalSidartheDataset(SidartheDataModule):
@@ -107,7 +108,7 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
         repeated_train_breadth = train_breadth.reshape(-1, 1).repeat(outbreak_max_len, axis=1)
         after_train_mask = np.greater_equal(range_matrix, repeated_train_breadth) # S x all_size, elements after train are True
         '''
-        E.g after_train_mask = [
+        E.g. after_train_mask = [
                             [0 0 0 0 1], 
                             [0 0 1 1 1], 
                             [0 0 0 0 1], 
@@ -211,3 +212,8 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
         # todo is there a way to avoid reshapes?
 
         return torch.cat(initial_states, dim=0).transpose(0,1).reshape(1, -1, len(initial_states))
+
+
+    def get_mobility(self):
+        return get_google_mobility(self.region, self.first_date)
+
