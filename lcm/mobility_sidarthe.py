@@ -35,6 +35,12 @@ class SidartheMobility(SpatioTemporalSidarthe):
             "mobility0": self.mobility0
         }
 
+    @property
+    def param_groups(self) -> Dict:
+        base_groups = super().param_groups
+        base_groups['initial_mobility'] = ('mobility0',)
+        return base_groups
+
     def differential_equations(self, t, x):
         """
         Returns the right-hand side of SIDARTHE model enriched with Mobility
@@ -59,7 +65,6 @@ class SidartheMobility(SpatioTemporalSidarthe):
         A = x[:,3]
         R = x[:,4]
         T = x[:,5]
-
 
         mobility = self.mobility[t.item(), :]
 
