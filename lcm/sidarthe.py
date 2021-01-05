@@ -20,16 +20,19 @@ class Sidarthe(CompartmentalModel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.EPS = kwargs.get('EPS', 1e-4)
-        self._params = {key: Parameter(torch.tensor(value, device=self.device)) for key, value in
-                        kwargs["params"].items()}
 
-        for key, param in self._params.items():
-            self.register_parameter(key, param)
+        self.tied_parameters = kwargs.get("tied_parameters", {})
+
+        self._params = {}
+        for key, param_val in kwargs["params"].items():
+            if key not in self.tied_parameters.keys():
+                param = Parameter(torch.tensor(param_val, device=self.device))
+                self.register_parameter(key, param)
+                self._params[key] = param
 
         self.loss_fn = kwargs["loss_fn"]
         self.regularization_fn = kwargs["reg_fn"]
         self.population = torch.tensor(kwargs["population"], requires_grad=False)
-        self.tied_parameters = kwargs.get("tied_parameters", {})
         self.learning_rates = kwargs.get("learning_rates", {})
         self.momentum_settings = kwargs.get("momentum_settings", {})
 
@@ -112,17 +115,20 @@ class Sidarthe(CompartmentalModel):
         :return: parameter tensor
         """
 
-        param_key = item.replace("_", "")
+        if item == "params":
+            raise RuntimeError("ERROR: Error in calling self.params")
 
-        if param_key in self._params.keys():
-            if item in self.tied_parameters.keys():
+        param_key = item.replace("lambda_", "lambda")
+
+        if param_key in self._params.keys() or param_key in self.tied_parameters.keys():
+            if param_key in self.tied_parameters.keys():
                 param = self._params[self.tied_parameters[param_key]]
             else:
                 param = self._params[param_key]
 
             return self.rectify_param(param)
         else:
-            raise AttributeError
+            super().__getattr__(item)
 
     def forward(self, time_grid):
         sol = self.integrate(time_grid)
