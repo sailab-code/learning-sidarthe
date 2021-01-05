@@ -46,11 +46,12 @@ class TensorboardLoggingCallback(Callback):
             params_subdict = {param_key: pl_module.params[param_key] for param_key in param_keys}
 
             for param_key, param in params_subdict.items():
+                param_key = f"$\\{param_key}$" if param_key != "mobility0" else param_key
                 if  param.shape[1] == 1:
-                    pl_title = f"shared/{param_group}/$\\{param_key}$"
+                    pl_title = f"shared/{param_group}/{param_key}"
                     param = pl_module.extend_param(param, n_days)
                     pl_x = list(range(n_days))
-                    param_curve = Curve(pl_x, param[:, 0].detach().cpu().numpy(), '-', f"$\\{param_key}$", color=None)
+                    param_curve = Curve(pl_x, param[:, 0].detach().cpu().numpy(), '-', f"{param_key}", color=None)
                     curves = [param_curve]
 
                     plot = generic_plot(curves, pl_title, None, formatter=self._format_xtick)  # fixme set data from data
@@ -59,10 +60,10 @@ class TensorboardLoggingCallback(Callback):
                 else:
                     all_curves = []
                     for j in range(len(region)):
-                        pl_title = f"{region[j]}/{param_group}/$\\{param_key}$"
+                        pl_title = f"{region[j]}/{param_group}/{param_key}"
                         param = pl_module.extend_param(param, n_days)
                         pl_x = list(range(n_days))
-                        param_curve = Curve(pl_x, param[:,j].detach().cpu().numpy(), '-', f"$\\{param_key}$", color=None)
+                        param_curve = Curve(pl_x, param[:,j].detach().cpu().numpy(), '-', f"{param_key}", color=None)
                         curves = [param_curve]
                         region_labeled_param_curve = Curve(pl_x, param[:,j].detach().cpu().numpy(), '-', label=f"{region[j]}", color=None)
 
@@ -72,7 +73,7 @@ class TensorboardLoggingCallback(Callback):
                         param_plots.append((plot, pl_title))
 
                     # unshared params
-                    pl_title = f"unshared/{param_group}/$\\{param_key}$"
+                    pl_title = f"unshared/{param_group}/{param_key}"
                     plot = generic_plot(all_curves, pl_title, None, formatter=self._format_xtick)  # fixme set data from data
                     param_plots.append((plot, pl_title))
 

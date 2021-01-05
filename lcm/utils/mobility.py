@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-
+import torch
 #######
 # GOOGLE
 #######
@@ -32,8 +32,6 @@ def get_google_mobility(locations, first_date):
     df_google = 1 + df_google/100.
 
     # df_google = df_google['Italy']
-    print(df_google)
-    print(df_google.info())
-    print(first_date)
     df_google = df_google.loc[first_date[0].split("T")[0]:, :]
+    df_google = torch.tensor(df_google.values, requires_grad=False, dtype=torch.float32)
     return df_google # fixme va sistemato per regione
