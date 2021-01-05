@@ -38,7 +38,7 @@ exp = MobilitySpatioTemporalSidartheTrainer(
     # gpus=1,
 )
 
-regions = ["Umbria"]
+regions = ["Lombardia", "Toscana"]
 
 train_size = 150
 initial_params = {

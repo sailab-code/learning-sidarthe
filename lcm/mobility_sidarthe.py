@@ -1,10 +1,11 @@
 from typing import Dict
 import torch
+import copy
 
-from lcm.sidarthe_extended import SidartheExtended
+from lcm.st_sidarthe import SpatioTemporalSidarthe
 
 
-class SidartheMobility(SidartheExtended):
+class SidartheMobility(SpatioTemporalSidarthe):
     #    dtype = torch.float32
 
     def __init__(self, **kwargs):
@@ -16,14 +17,31 @@ class SidartheMobility(SidartheExtended):
 
     @property
     def params(self) -> Dict:
-        params = super().params
-        params["mobility_0"] = self.mobility_0
+        return {
+            "alpha": self.alpha,
+            "beta": self.beta,
+            "gamma": self.gamma,
+            "delta": self.delta,
+            "epsilon": self.epsilon,
+            "theta": self.theta,
+            "xi": self.xi,
+            "eta": self.eta,
+            "mu": self.mu,
+            "nu": self.nu,
+            "tau": self.tau,
+            "lambda": self.lambda_,
+            "kappa": self.kappa,
+            "zeta": self.zeta,
+            "rho": self.rho,
+            "sigma": self.sigma,
+            "phi": self.phi,
+            "chi": self.chi,
+            "mobility0": self.mobility0
+        }
 
-        return params
-
-    @property
-    def mobility_0(self) -> torch.Tensor:
-        return self._params["mobility_0"]
+    @params.setter
+    def params(self, value: Dict):
+        self._params = copy.deepcopy(value)
 
     def differential_equations(self, t, x):
         """
@@ -51,9 +69,9 @@ class SidartheMobility(SidartheExtended):
         T = x[:,5]
 
 
-        mobility = self.mobility.iloc[int(t)]  # t.item()
+        mobility = self.mobility.iloc[int(t), :]  # t.item()
 
-        S_dot = -S * (p['mobility_0'] * mobility * (p['alpha'] * I + p['beta'] * D) + p['gamma'] * A + p['delta'] * R)
+        S_dot = -S * (p['mobility0'] * mobility * (p['alpha'] * I + p['beta'] * D) + p['gamma'] * A + p['delta'] * R)
         I_dot = -S_dot - (p['epsilon'] + p['zeta'] + p['lambda']) * I
         D_dot = p['epsilon'] * I - (p['eta'] + p['rho']) * D
         A_dot = p['zeta'] * I - (p['theta'] + p['mu'] + p['kappa']) * A

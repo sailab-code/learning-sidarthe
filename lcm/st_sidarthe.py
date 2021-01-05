@@ -29,13 +29,6 @@ class SpatioTemporalSidarthe(SidartheExtended):
         # self.model_name = kwargs.get("name", "spatio_temporal_sidarthe_extended")
         self.n_areas = kwargs.get("n_areas", None)
 
-
-    def omega(self, t):
-        if t >= 0:
-            return torch.tensor([self.init_cond[:, :8]], dtype=self.dtype, device=self.device)  # 1 x s x p, p=8 number of states in sidarthe
-        else:
-            return torch.tensor([[[1.] + [0.] * 7]], dtype=self.dtype, device=self.device)
-
     def get_param_at_t(self, param_key, _t):
         """
         Retrieves the value of a param at time t for all s.
@@ -43,6 +36,7 @@ class SpatioTemporalSidarthe(SidartheExtended):
         :param _t: int representing the current time step t
         :return: the value of the param at time t for all s.
         """
+
         param = self.params[param_key]
         _t = _t.long()
         # TODO check if possible to improve here

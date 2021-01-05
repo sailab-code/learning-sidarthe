@@ -40,14 +40,6 @@ class SpatioTemporalSidartheTrainer(SidartheExtendedTrainer):
 
         return self.fill_missing_params(_params, initial_params)
 
-    def make_model(self, **kwargs):
-        return self.model_params["model_cls"](
-            **self.model_params,
-            params=self.initial_params,
-            learning_rates=self.learning_rates,
-            momentum_settings=self.train_params['momentum_settings']
-        )
-
     def make_dataset_params(self, **kwargs):
         # default dataset params
         dataset_params = {
@@ -76,11 +68,11 @@ class SpatioTemporalSidartheTrainer(SidartheExtendedTrainer):
             "n_areas": self.dataset.n_areas,
             "time_step": self.time_step,
             "loss_fn": RMSE({
-                "d": 0.02,
+                "d": 0.03,
                 "r": 0.02,
                 "t": 0.02,
                 "h": 0.02,
-                "e": 0.02,
+                "e": 0.03,
             }),
             "reg_fn": compose_losses(
                 [

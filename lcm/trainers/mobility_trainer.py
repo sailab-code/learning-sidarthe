@@ -3,7 +3,7 @@ from lcm.integrators.fixed_step import Heun
 from lcm.losses import compose_losses
 from lcm.losses.regularization_losses import LteZero, FirstDerivative
 from lcm.losses.target_losses import RMSE
-from lcm.st_sidarthe import SpatioTemporalSidarthe
+from lcm.mobility_sidarthe import SidartheMobility
 from lcm.utils.populations import populations
 
 
@@ -38,9 +38,18 @@ class MobilitySpatioTemporalSidartheTrainer(SpatioTemporalSidartheTrainer):
 
         return self.fill_missing_params(_params, initial_params)
 
+    def make_learning_rates(self, **kwargs):
+        # default learning rates
+        learning_rates = super().make_learning_rates(**kwargs)
+        learning_rates["mobility_0"] = 1e-5
+
+        _params = kwargs.get("learning_rates", {})
+
+        return self.fill_missing_params(_params, learning_rates)
+
     def make_model_params(self, **kwargs):
         # default pretrained_model params
-        model_cls = SpatioTemporalSidarthe
+        model_cls = SidartheMobility
         ppls = [populations[area] for area in self.dataset.region]
 
         model_params = {

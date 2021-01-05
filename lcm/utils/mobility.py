@@ -4,6 +4,13 @@ import pandas as pd
 #######
 # GOOGLE
 #######
+
+mobility_map = {
+    "Lombardia": "Lombardy",
+    "Toscana": "Tuscany"
+}
+
+
 def get_google_mobility(locations, first_date):
     """
 
@@ -11,6 +18,8 @@ def get_google_mobility(locations, first_date):
     :param first_date: a string with the first date
     :return: a dataframe containing such locations
     """
+
+    locations = [mobility_map[location] if location in mobility_map else location for location in locations]
 
     df_google = pd.read_csv(os.path.join(os.getcwd(), 'data', 'Global_Mobility_Report.csv'))
     df_google['mobility'] = (df_google['retail_and_recreation_percent_change_from_baseline'] + df_google['grocery_and_pharmacy_percent_change_from_baseline'] +df_google['transit_stations_percent_change_from_baseline'] +df_google['workplaces_percent_change_from_baseline'])/4
@@ -23,4 +32,8 @@ def get_google_mobility(locations, first_date):
     df_google = 1 + df_google/100.
 
     # df_google = df_google['Italy']
-    return df_google[first_date.split("T")[0]:] # fixme va sistemato per regione
+    print(df_google)
+    print(df_google.info())
+    print(first_date)
+    df_google = df_google.loc[first_date[0].split("T")[0]:, :]
+    return df_google # fixme va sistemato per regione
