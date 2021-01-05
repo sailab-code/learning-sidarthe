@@ -99,7 +99,7 @@ class TensorboardLoggingCallback(Callback):
         """
 
         inputs = batch[0]
-        targets = {k:v.squeeze() for k,v in batch[1].items()}
+        targets = {k:v.squeeze(0) for k,v in batch[1].items()}
         region = trainer.dataset.region
 
         # get normalized values
