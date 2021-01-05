@@ -123,6 +123,9 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
         after_val_mask = np.greater_equal(range_matrix, repeated_val_breadth)  # elements after validation are True
         before_val_mask = np.bitwise_not(after_val_mask) # elements before validation are True
         val_mask = np.bitwise_and(before_val_mask, after_train_mask)  # elements in validation are True
+        # adjusting validation mask
+        val_mask = torch.tensor(val_mask).transpose(0, 1)  # becomes T x S
+        val_mask = val_mask[: (self.train_size + self.val_size), :]
 
         # create mask for test elements
         pad_breadth = outbreak_max_len - outbreak_starts  # needed to remove padded elements at the end
@@ -130,6 +133,8 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
         before_pad_mask = np.less(range_matrix, repeated_pad_breadth)  # elements before pad are True
         after_pad_mask = np.bitwise_not(before_pad_mask)
         test_mask = np.bitwise_and(after_val_mask, before_pad_mask) # elements in test are true
+        # adjusting test mask
+        test_mask = torch.tensor(test_mask).transpose(0, 1)  # becomes T x S
         self.test_size = outbreak_max_len - self.train_size - self.val_size
 
         train_set, val_set, test_set = {}, {}, {}
@@ -146,16 +151,11 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
             val_y[after_val_mask] = -1
             val_y = torch.tensor(val_y, dtype=torch.float32).transpose(0, 1) # becomes T x S
             val_set[target_key] = val_y[:(self.train_size + self.val_size), :]  # make target train+val shaped filled with -1 at the end
-            # adjusting validation mask
-            val_mask = torch.tensor(val_mask).transpose(0, 1) # becomes T x S
-            val_mask = val_mask[: (self.train_size + self.val_size),:]
 
             # creates test data
             test_y = np.copy(target_value)
             test_y[after_pad_mask] = -1
             test_set[target_key] = torch.tensor(test_y, dtype=torch.float32).transpose(0, 1)
-            # adjusting test mask
-            test_mask = torch.tensor(test_mask).transpose(0, 1)  # becomes T x S
 
         train_slice = slice(0, self.train_size, 1)
         train_val_slice = slice(0, self.train_size + self.val_size)
