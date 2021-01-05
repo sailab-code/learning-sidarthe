@@ -60,7 +60,7 @@ initial_params = {
         "sigma": [[0.017]] * train_size,
         "phi": [[0.02]] * train_size,
         "chi": [[0.02]] * train_size,
-        "mobility_0": [[2.]]
+        "mobility0": [[2.]]
     }
 
 

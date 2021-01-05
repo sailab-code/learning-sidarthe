@@ -30,7 +30,7 @@ class MobilitySpatioTemporalSidartheTrainer(SpatioTemporalSidartheTrainer):
             "phi": [[0.01]]*100,
             # "chi": [[0.01, 0.03, 0.014]]*100,
             "chi": [[0.01]]*100,
-            "mobility_0": [[2.]]
+            "mobility0": [[2.]]
         }  # fixme is temporary
 
 
@@ -41,7 +41,7 @@ class MobilitySpatioTemporalSidartheTrainer(SpatioTemporalSidartheTrainer):
     def make_learning_rates(self, **kwargs):
         # default learning rates
         learning_rates = super().make_learning_rates(**kwargs)
-        learning_rates["mobility_0"] = 1e-5
+        learning_rates["mobility0"] = 1e-5
 
         _params = kwargs.get("learning_rates", {})
 

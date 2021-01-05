@@ -1,16 +1,12 @@
 from typing import Dict
 import torch
-import copy
 
 from lcm.st_sidarthe import SpatioTemporalSidarthe
 
 
 class SidartheMobility(SpatioTemporalSidarthe):
-    #    dtype = torch.float32
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.model_name = kwargs.get("name", "sidarthe_mobility")
 
         # filter mobility from first date onward
         self.mobility = kwargs["mobility"]
@@ -38,10 +34,6 @@ class SidartheMobility(SpatioTemporalSidarthe):
             "chi": self.chi,
             "mobility0": self.mobility0
         }
-
-    @params.setter
-    def params(self, value: Dict):
-        self._params = copy.deepcopy(value)
 
     def differential_equations(self, t, x):
         """
