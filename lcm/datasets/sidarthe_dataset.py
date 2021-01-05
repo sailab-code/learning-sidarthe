@@ -1,5 +1,5 @@
 from lcm.datasets import ODEDataModule
-from ..utils.data import select_data
+from lcm.utils.data import select_data
 
 
 class SidartheDataModule(ODEDataModule):

@@ -10,7 +10,7 @@ from pytorch_lightning.callbacks import ModelCheckpoint
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'  # CHOOSE GPU HERE
 
 
-exps_path = os.path.join(os.getcwd(), "prova")
+exps_path = os.path.join(os.getcwd(), "mobility")
 if not os.path.exists(exps_path):
     os.mkdir(exps_path)
 

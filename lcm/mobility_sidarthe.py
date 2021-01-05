@@ -61,7 +61,7 @@ class SidartheMobility(SpatioTemporalSidarthe):
         T = x[:,5]
 
 
-        mobility = self.mobility.iloc[int(t), :]  # t.item()
+        mobility = self.mobility[t.item(), :]
 
         S_dot = -S * (p['mobility0'] * mobility * (p['alpha'] * I + p['beta'] * D) + p['gamma'] * A + p['delta'] * R)
         I_dot = -S_dot - (p['epsilon'] + p['zeta'] + p['lambda']) * I
