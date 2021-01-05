@@ -38,11 +38,16 @@ exp = MobilitySpatioTemporalSidartheTrainer(
     # gpus=1,
 )
 
-regions = ["Lombardia", "Toscana"]
+regions = ["Lombardia"]
 
 train_size = 150
+
 initial_params = {
-        "alpha": [[0.422]*len(regions)] * train_size,
+        # param: [[initial_value]* number_of_regions]*number_of_train_days -> param is a function of time and space
+        # param: [[initial_value]* number_of_regions] -> param is a function of space
+        # param: [[initial_value]] * number_of_train_days -> param is a function of time
+        # param: [[initial_value]] -> param is a (learnable) scalar value.
+        "alpha": [[0.422]] * train_size,  # perhaps it could be set as a scalar now with mobility
         "beta": [[0.0057]] * train_size,
         "gamma": [[0.285]] * train_size,
         "delta": [[0.0057]] * train_size,
@@ -60,7 +65,7 @@ initial_params = {
         "sigma": [[0.017]] * train_size,
         "phi": [[0.02]] * train_size,
         "chi": [[0.02]] * train_size,
-        "mobility0": [[2.]]
+        "mobility0": [[2.]*len(regions)]
     }
 
 
