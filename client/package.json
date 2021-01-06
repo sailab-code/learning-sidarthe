@@ -21,7 +21,7 @@
     "@types/redux-actions": "^2.6.1",
     "@types/redux-logger": "^3.0.7",
     "@types/redux-promise-middleware": "^6.0.0",
-    "axios": "^0.19.2",
+    "axios": "^0.21.1",
     "bootstrap": "^4.4.1",
     "classnames": "^2.2.6",
     "esri-loader": "^2.13.0",
