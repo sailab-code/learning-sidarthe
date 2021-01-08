@@ -62,7 +62,7 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
         y_target = targets["y"]
 
         d_target, r_target = targets["d"], targets["r"]
-        n_regions, outbreak_max_len = len(y_target), len(y_target[0])  # fixme outbreak max len not right
+        n_regions, outbreak_max_len = len(y_target), max([len(y_target[i]) for i in range(len(y_target))])
 
         first_dates = []
         # finds WHEN outbreak actually starts in each area
@@ -74,18 +74,21 @@ class SpatioTemporalSidartheDataset(SidartheDataModule):
                     first_dates.append(dates[i][j])
                     break
 
+        min_outbreak_start = min(outbreak_start)
+        outbreak_max_len = outbreak_max_len - min_outbreak_start
+
         filtered_targets = {}
         # filter out initial empty days
         for target_key, target_val in targets.items():
             region_target = []
             for i in range(n_regions):
                 padded_target = np.concatenate((target_val[i][outbreak_start[i]:], np.array([-1]*outbreak_start[i])))
-                region_target.append(padded_target)
+                region_target.append(padded_target[:outbreak_max_len])
 
             filtered_targets[target_key] = np.array(region_target)
         filtered_targets.pop("y", None) # removes unused key
 
-        outbreak_max_len = outbreak_max_len - min(outbreak_start)
+        outbreak_start = [o_start - min_outbreak_start for o_start in outbreak_start]
         return filtered_targets, first_dates, np.array(outbreak_start), outbreak_max_len
 
     def setup(self, stage: Optional[str] = None):
