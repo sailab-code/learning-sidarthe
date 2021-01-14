@@ -17,18 +17,15 @@ class JsonLoggingCallback(Callback):
     def on_fit_start(self, trainer: CompartmentalTrainer, pl_module):
         # creates the json description file with all trainer settings
         description = self._get_description(
-            trainer.region, trainer.initial_params, trainer.learning_rates, trainer.model_params["loss_fn"],
-            trainer.dataset_params["train_size"], trainer.dataset_params["val_size"],
-            trainer.model_params["reg_fn"], trainer.time_step,
-            trainer.train_params["momentum_settings"]["active"],
-            trainer.train_params["momentum_settings"]["b"], trainer.train_params["momentum_settings"]["a"],
-            trainer.model_params["integrator"],
-            trainer.model_params["model_cls"]
+            trainer.dataset.region, trainer.model.params, trainer.model.learning_rates, trainer.model.loss_fn,
+            trainer.dataset.train_size, trainer.dataset.val_size,
+            trainer.model.regularization_fn, trainer.model.time_step,
+            trainer.model.momentum_settings["active"],
+            trainer.model.momentum_settings["b"], trainer.model.momentum_settings["a"],
+            trainer.model.integrator
         )
 
         json_description = json.dumps(description, indent=4)
-
-
 
         json_file = "settings.json"
         settings_path = os.path.join(trainer.exp_path, trainer.logger.name, f"version_{trainer.logger.version}",  json_file)
@@ -38,24 +35,22 @@ class JsonLoggingCallback(Callback):
 
     @staticmethod
     def _get_description(area, initial_params, learning_rates, loss_fn, train_size, val_size, reg_fn,
-                         t_inc, momentum, m, a, integrator,
-                         model_cls
-                         ):
+                         t_inc, momentum, m, a, integrator):
+
         return {
             "started": datetime.now().strftime('%d/%B/%Y %H:%M:%S'),
-            "model_cls": str(model_cls),
             "region": area,
             "learning_rates": learning_rates,
             "loss_fn": str(loss_fn),
             "train_size": train_size,
             "val_size": val_size,
             "reg_fn": str(reg_fn),
-            "integrator": integrator.__name__,
+            "integrator": str(integrator),
             "t_inc": t_inc,
             "momentum_settings": {
                 "active": momentum,
                 "b": m if momentum else None,
                 "a": a if momentum else None
             },
-            "initial_values": initial_params
+            "initial_values": {k: v.detach().tolist() for k,v in initial_params.items()}
         }

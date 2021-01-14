@@ -8,6 +8,25 @@ from typing import Dict
 
 from .compartmental_model import CompartmentalModel
 
+DEFAULT_LR = 1e-5
+DEFAULT_INITIAL_PARAMS = {
+        "alpha": [0.570] * 4 + [0.422] * 18 + [0.360] * 6 + [0.210] * 10 + [0.210] * 64,
+        "beta": [0.011] * 4 + [0.0057] * 18 + [0.005] * (17 + 63),
+        "gamma": [0.456] * 4 + [0.285] * 18 + [0.2] * 6 + [0.11] * 10 + [0.11] * 64,
+        "delta": [0.011] * 4 + [0.0057] * 18 + [0.005] * (17 + 63),
+        "epsilon": [0.171] * 12 + [0.143] * 26 + [0.2] * 64,
+        "theta": [0.371],
+        "zeta": [0.125] * 22 + [0.034] * 16 + [0.025] * 64,
+        "eta": [0.125] * 22 + [0.034] * 16 + [0.025] * 64,
+        "mu": [0.017] * 22 + [0.008] * (17 + 63),
+        "nu": [0.027] * 22 + [0.015] * (17 + 63),
+        "tau": [0.15] * 102,
+        "lambda": [0.034] * 22 + [0.08] * (17 + 63),
+        "kappa": [0.017] * 22 + [0.017] * 16 + [0.02] * 64,
+        "xi": [0.017] * 22 + [0.017] * 16 + [0.02] * 64,
+        "rho": [0.034] * 22 + [0.017] * 16 + [0.02] * 64,
+        "sigma": [0.017] * 22 + [0.017] * 16 + [0.01] * 64,
+    }
 
 class Sidarthe(CompartmentalModel):
     """
@@ -24,7 +43,8 @@ class Sidarthe(CompartmentalModel):
         self.tied_parameters = kwargs.get("tied_parameters", {})
 
         self._params = {}
-        for key, param_val in kwargs["params"].items():
+        initial_params = kwargs.get("params", self.get_default_initial_params())
+        for key, param_val in initial_params.items():
             if key not in self.tied_parameters.keys():
                 param = Parameter(torch.tensor(param_val, device=self.device))
                 self.register_parameter(key, param)
@@ -33,7 +53,7 @@ class Sidarthe(CompartmentalModel):
         self.loss_fn = kwargs["loss_fn"]
         self.regularization_fn = kwargs["reg_fn"]
         self.population = torch.tensor(kwargs["population"], requires_grad=False)
-        self.learning_rates = kwargs.get("learning_rates", {})
+        self.learning_rates = kwargs.get("learning_rates", self.get_default_learning_rates())
         self.momentum_settings = kwargs.get("momentum_settings", {})
 
     def to(self, device):
@@ -202,3 +222,14 @@ class Sidarthe(CompartmentalModel):
             E_dot,
             H_det_dot
         ), dim=0)
+
+    def get_default_learning_rates(self):
+        """
+        Setting all the params to the same learning rate value
+        :return:
+        """
+        return {k: DEFAULT_LR for k,v in self._params.items()}
+
+    @staticmethod
+    def get_default_initial_params():
+        return DEFAULT_INITIAL_PARAMS
