@@ -38,7 +38,7 @@ class Sidarthe(CompartmentalModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.EPS = kwargs.get('EPS', 1e-4)
+        self.EPS = kwargs.get('EPS', 1e-3)
 
         self.tied_parameters = kwargs.get("tied_parameters", {})
 

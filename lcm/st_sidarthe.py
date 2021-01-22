@@ -3,8 +3,6 @@ from typing import Dict
 import torch
 from lcm.sidarthe_extended import SidartheExtended
 
-EPS = 1e-3
-
 
 class SpatioTemporalSidarthe(SidartheExtended):
     """
@@ -41,9 +39,9 @@ class SpatioTemporalSidarthe(SidartheExtended):
         _t = _t.long()
         # TODO check if possible to improve here
         if 0 <= _t[0] < param.shape[0]:
-            p = torch.relu(param[_t, :].unsqueeze(0))
+            p = param[_t, :].unsqueeze(0)
         else:
-            p = torch.relu(param[torch.tensor([-1]).long(), :].unsqueeze(0))
+            p = param[torch.tensor([-1]).long(), :].unsqueeze(0)
 
         if param_key in ['alpha', 'beta', 'gamma', 'delta']:  # these params must be divided by population
             p = p / self.population
@@ -142,6 +140,6 @@ class SpatioTemporalSidarthe(SidartheExtended):
         ext_s_tensor = ext_t_tensor[:, -1].reshape(-1,1).repeat((1,s_diff))
         ext_tensor = torch.cat((ext_t_tensor, ext_s_tensor), dim=1)  # T x S
 
-        rectified_param = torch.relu(ext_tensor)
+        rectified_param = ext_tensor
         return rectified_param
         # return torch.where(rectified_param >= EPS, rectified_param, rectified_param + EPS)

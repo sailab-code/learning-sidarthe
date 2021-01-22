@@ -31,6 +31,31 @@ class RMSE(TargetLoss):
         )
 
 
+class NRMSE(RMSE):
+    """
+
+    """
+    def __call__(self, hats, targets, mask, **kwargs):
+        losses = {key: self.target_loss(hats[key], targets[key], mask) for key in targets.keys()}
+
+        # normalization wrt compartment values
+        norm_weights = {key: torch.mean(targets[key]) for key in targets.keys()}
+        max_average = torch.max(torch.tensor([value for value in norm_weights.values()]))
+        norm_weights = {
+            key: max_average / avg if avg > 0.0 else 0.0 for key, avg in norm_weights.items()
+        }
+
+        backward = 0.
+        validation = 0.
+        for key, loss in losses.items():
+            backward = backward + norm_weights[key] * self.weights[key[0]] * loss
+            validation = validation + loss
+
+        losses["weighted"] = backward
+        losses["unweighted"] = validation
+
+        return losses
+
 class MAE(TargetLoss):
     """
     Mean Absolute Error.
