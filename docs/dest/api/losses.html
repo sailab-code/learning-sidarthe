@@ -1,0 +1,238 @@
+
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Losses &#8212; Learning Compartmental Models 1.0 documentation</title>
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Citing" href="../citing.html" />
+    <link rel="prev" title="Integrators" href="integrators.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="losses">
+<h1>Losses<a class="headerlink" href="#losses" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="target">
+<h2>Target<a class="headerlink" href="#target" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="lcm.losses.TargetLoss">
+<em class="property">class </em><code class="sig-prename descclassname">lcm.losses.</code><code class="sig-name descname">TargetLoss</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">weights</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#lcm.losses.TargetLoss" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt id="lcm.losses.target_losses.RMSE">
+<em class="property">class </em><code class="sig-prename descclassname">lcm.losses.target_losses.</code><code class="sig-name descname">RMSE</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">weights</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#lcm.losses.target_losses.RMSE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Root Mean Square Error.</p>
+<dl class="py method">
+<dt id="lcm.losses.target_losses.RMSE.target_loss">
+<code class="sig-name descname">target_loss</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">hat</span></em>, <em class="sig-param"><span class="n">target</span></em>, <em class="sig-param"><span class="n">mask</span></em><span class="sig-paren">)</span><a class="headerlink" href="#lcm.losses.target_losses.RMSE.target_loss" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the RMSE loss on target values
+greater or equal than 0.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>hat</strong> – A tensor of predictions.</p></li>
+<li><p><strong>target</strong> – A tensor with targets.</p></li>
+<li><p><strong>mask</strong> – An tensor for masking elements</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A scalar value (still tensor) corresponding</p>
+</dd>
+</dl>
+<p>to the RMSE between inferences and targets.
+Values of the target lower or equal than 0 are NOT
+accounted in the computation.</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="lcm.losses.target_losses.NRMSE">
+<em class="property">class </em><code class="sig-prename descclassname">lcm.losses.target_losses.</code><code class="sig-name descname">NRMSE</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">weights</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#lcm.losses.target_losses.NRMSE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Normalized Root Mean Square Error.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="lcm.losses.target_losses.MAE">
+<em class="property">class </em><code class="sig-prename descclassname">lcm.losses.target_losses.</code><code class="sig-name descname">MAE</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">weights</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#lcm.losses.target_losses.MAE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mean Absolute Error.</p>
+<dl class="py method">
+<dt id="lcm.losses.target_losses.MAE.target_loss">
+<code class="sig-name descname">target_loss</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">hat</span></em>, <em class="sig-param"><span class="n">target</span></em>, <em class="sig-param"><span class="n">mask</span></em><span class="sig-paren">)</span><a class="headerlink" href="#lcm.losses.target_losses.MAE.target_loss" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the MAE loss on positive targets.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>hat</strong> – A tensor of predictions.</p></li>
+<li><p><strong>target</strong> – A tensor with targets.</p></li>
+<li><p><strong>mask</strong> – An tensor for masking elements</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A scalar value (still tensor) corresponding to the MAE between inferences and targets. Values of the target lower or equal than 0 are NOT accounted in the computation.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="lcm.losses.target_losses.MAPE">
+<em class="property">class </em><code class="sig-prename descclassname">lcm.losses.target_losses.</code><code class="sig-name descname">MAPE</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">weights</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#lcm.losses.target_losses.MAPE" title="Permalink to this definition">¶</a></dt>
+<dd><p>Mean Absolute Percentage Error.</p>
+<dl class="py method">
+<dt id="lcm.losses.target_losses.MAPE.target_loss">
+<code class="sig-name descname">target_loss</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">hat</span></em>, <em class="sig-param"><span class="n">target</span></em>, <em class="sig-param"><span class="n">mask</span></em><span class="sig-paren">)</span><a class="headerlink" href="#lcm.losses.target_losses.MAPE.target_loss" title="Permalink to this definition">¶</a></dt>
+<dd><p>Computes the MAPE loss on positive targets.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>hat</strong> – A tensor of predictions.</p></li>
+<li><p><strong>target</strong> – A tensor with targets.</p></li>
+<li><p><strong>mask</strong> – An tensor for masking elements</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A scalar value (still tensor) corresponding to the MAPE between inferences and targets. Values of the target lower or equal than 0 are NOT accounted in the computation.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="regularization">
+<h2>Regularization<a class="headerlink" href="#regularization" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="lcm.losses.RegularizationLoss">
+<em class="property">class </em><code class="sig-prename descclassname">lcm.losses.</code><code class="sig-name descname">RegularizationLoss</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">weight</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#lcm.losses.RegularizationLoss" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py class">
+<dt id="lcm.losses.regularization_losses.LteZero">
+<em class="property">class </em><code class="sig-prename descclassname">lcm.losses.regularization_losses.</code><code class="sig-name descname">LteZero</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">weight</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#lcm.losses.regularization_losses.LteZero" title="Permalink to this definition">¶</a></dt>
+<dd><p>Regularization Term to bound parameters in the positive set (0, inf).</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="lcm.losses.regularization_losses.LogVicinity">
+<em class="property">class </em><code class="sig-prename descclassname">lcm.losses.regularization_losses.</code><code class="sig-name descname">LogVicinity</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">weight</span></em>, <em class="sig-param"><span class="n">denominator</span><span class="o">=</span><span class="default_value">500.0</span></em>, <em class="sig-param"><span class="n">exponent</span><span class="o">=</span><span class="default_value">10</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#lcm.losses.regularization_losses.LogVicinity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Log-based Regularization loss to bound parameters in the positive set (0,inf).
+The closer to 0, the higher the penalty.</p>
+</dd></dl>
+
+<dl class="py class">
+<dt id="lcm.losses.regularization_losses.FirstDerivative">
+<em class="property">class </em><code class="sig-prename descclassname">lcm.losses.regularization_losses.</code><code class="sig-name descname">FirstDerivative</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">weight</span></em>, <em class="sig-param"><span class="n">time_step</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#lcm.losses.regularization_losses.FirstDerivative" title="Permalink to this definition">¶</a></dt>
+<dd><p>Regularization loss to enforce smooth parameter functions.
+In the reference paper, it is indicated as <a href="#id1"><span class="problematic" id="id2">|</span></a>u_dot(t)|^2.
+Compute the discrete first derivative of a parameter wrt to time t.</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">Learning Compartmental Models</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../Install%20and%20Import.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials.html">Tutorials</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../lcm%20API.html">Lcm API</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="compartmental_models.html">Compartmental Models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="datasets.html">Datasets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="trainers.html">Trainer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="integrators.html">Integrators</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Losses</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../citing.html">Citing</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="../lcm%20API.html">Lcm API</a><ul>
+      <li>Previous: <a href="integrators.html" title="previous chapter">Integrators</a></li>
+      <li>Next: <a href="../citing.html" title="next chapter">Citing</a></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" />
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2021, Andrea Zugarini, Enrico Meloni et al..
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 3.4.3</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="../_sources/api/losses.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
