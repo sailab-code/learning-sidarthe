@@ -4,6 +4,10 @@ from lcm.integrators import Integrator
 
 
 class Euler(Integrator):
+    """
+    Euler integration method.
+    """
+
     def __call__(self, diff_equations, initial_conditions, time_grid):
         values = initial_conditions
 
@@ -22,6 +26,10 @@ class Euler(Integrator):
 
 
 class Heun(Integrator):
+    """
+    Heun integration method.
+    """
+
     def __call__(self, diff_equations, initial_conditions, time_grid):
         values = initial_conditions
 
@@ -42,6 +50,10 @@ class Heun(Integrator):
 
 
 class RK4(Integrator):
+    """
+    RK4 integration method.
+    """
+
     def __call__(self, diff_equations, initial_conditions, time_grid):
         values = initial_conditions
 

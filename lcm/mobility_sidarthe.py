@@ -44,16 +44,10 @@ class SidartheMobility(SpatioTemporalSidarthe):
     def differential_equations(self, t, x):
         """
         Returns the right-hand side of SIDARTHE model enriched with Mobility
+
         :param t: time t at which right-hand side is computed
-        :param x: (Tensor) state of model at time t forall the fitted areas. S x #states (=8)
-            x[:,0] = S
-            x[:,1] = I
-            x[:,2] = D
-            x[:,3] = A
-            x[:,4] = R
-            x[:,5] = T
-            x[:,6] = H
-            x[:,7] = E
+        :param x: (Tensor) state of model at time t forall the fitted areas. S x #states (=8). States are x[:,0] = S, x[:,1] = I, x[:,2] = D, x[:,3] = A, x[:,4] = R,  x[:,5] = T, x[:,6] = H, x[:,7] = E
+
         :return: right-hand side of Mobility SIDARTHE model, i.e. f(t,:,x(t)), the second dimension corresponds to the areas to fit.
         """
 

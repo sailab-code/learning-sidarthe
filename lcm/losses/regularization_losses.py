@@ -7,6 +7,7 @@ class LteZero(RegularizationLoss):
     """
     Regularization Term to bound parameters in the positive set (0, inf).
     """
+
     def param_loss(self, param: torch.Tensor):
         return param.abs() * torch.where(param.le(0.),
                                          torch.ones(1, device=param.device, dtype=param.dtype),
@@ -19,6 +20,7 @@ class LogVicinity(RegularizationLoss):
     Log-based Regularization loss to bound parameters in the positive set (0,inf).
     The closer to 0, the higher the penalty.
     """
+
     def __init__(self, weight, denominator=0.5e3, exponent=10, **kwargs):
         super().__init__(weight, **kwargs)
         self.denominator = denominator
@@ -37,6 +39,7 @@ class FirstDerivative(RegularizationLoss):
     In the reference paper, it is indicated as |u_dot(t)|^2.
     Compute the discrete first derivative of a parameter wrt to time t.
     """
+
     def __init__(self, weight, time_step, **kwargs):
         super().__init__(weight, **kwargs)
         self.time_step = time_step

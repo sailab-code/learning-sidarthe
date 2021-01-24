@@ -61,7 +61,9 @@ class SIR(CompartmentalModel):
     def __getattr__(self, item):
         """
         Used to quickly obtain a single parameter
+
         :param item: name of the parameter
+
         :return: parameter tensor
         """
 
@@ -89,6 +91,21 @@ class SIR(CompartmentalModel):
         }
 
     def get_rt(self, time_grid):
+        r"""
+        Computation of basic reproduction number R_t at each
+        time step of a given time interval.
+
+        :param time_grid: A torch tensor of shape T with the time interval where to compute R_t.
+
+        :return: A tensor with R(t), with t in [0,...,T].
+
+        Code:
+
+            .. code-block:: python
+
+                r_t = extended_params['beta'] / extended_params['gamma']
+        """
+
         extended_params = {key: self.extend_param(value, time_grid.shape[0]) for key, value in self.params.items()}
 
         return extended_params["beta"] / extended_params["gamma"]

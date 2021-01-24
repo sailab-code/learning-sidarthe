@@ -5,7 +5,7 @@ from lcm.losses import TargetLoss
 
 class RMSE(TargetLoss):
     """
-    Root Mean Square Error loss.
+    Root Mean Square Error.
     """
 
     def target_loss(self, hat, target, mask):
@@ -16,6 +16,7 @@ class RMSE(TargetLoss):
         :param hat: A tensor of predictions.
         :param target: A tensor with targets.
         :param mask: An tensor for masking elements
+
         :return: A scalar value (still tensor) corresponding
         to the RMSE between inferences and targets.
         Values of the target lower or equal than 0 are NOT
@@ -33,8 +34,9 @@ class RMSE(TargetLoss):
 
 class NRMSE(RMSE):
     """
-
+    Normalized Root Mean Square Error.
     """
+
     def __call__(self, hats, targets, mask, **kwargs):
         losses = {key: self.target_loss(hats[key], targets[key], mask) for key in targets.keys()}
 
@@ -68,10 +70,8 @@ class MAE(TargetLoss):
         :param hat: A tensor of predictions.
         :param target: A tensor with targets.
         :param mask: An tensor for masking elements
-        :return: A scalar value (still tensor) corresponding
-        to the MAE between inferences and targets.
-        Values of the target lower or equal than 0 are NOT
-        accounted in the computation.
+
+        :return: A scalar value (still tensor) corresponding to the MAE between inferences and targets. Values of the target lower or equal than 0 are NOT accounted in the computation.
         """
 
         missing_data_mask = torch.ge(target, 0.)
@@ -93,10 +93,8 @@ class MAPE(TargetLoss):
         :param hat: A tensor of predictions.
         :param target: A tensor with targets.
         :param mask: An tensor for masking elements
-        :return: A scalar value (still tensor) corresponding
-        to the MAPE between inferences and targets.
-        Values of the target lower or equal than 0 are NOT
-        accounted in the computation.
+
+        :return: A scalar value (still tensor) corresponding to the MAPE between inferences and targets. Values of the target lower or equal than 0 are NOT accounted in the computation.
         """
 
         missing_data_mask = torch.ge(target, 0.)

@@ -38,7 +38,7 @@ class Sidarthe(CompartmentalModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.EPS = kwargs.get('EPS', 1e-3)
+        self.EPS = kwargs.get('EPS', 1e-6)
 
         self.tied_parameters = kwargs.get("tied_parameters", {})
 
@@ -131,7 +131,9 @@ class Sidarthe(CompartmentalModel):
     def __getattr__(self, item):
         """
         Used to quickly obtain a single parameter
+
         :param item: name of the parameter
+
         :return: parameter tensor
         """
 
@@ -178,6 +180,14 @@ class Sidarthe(CompartmentalModel):
         }
 
     def get_rt(self, time_grid):
+        """
+        Computation of basic reproduction number R_t at each
+        time step of a given time interval.
+
+        :param time_grid: A torch tensor of shape T with the time interval where to compute R_t.
+
+        :return: A tensor with R(t), with t in [0,...,T].
+        """
         extended_params = {key: self.extend_param(value, time_grid.shape[0]) for key, value in self.params.items()}
 
         # compute R_t
@@ -226,6 +236,7 @@ class Sidarthe(CompartmentalModel):
     def get_default_learning_rates(self):
         """
         Setting all the params to the same learning rate value
+
         :return:
         """
         return {k: DEFAULT_LR for k,v in self._params.items()}
