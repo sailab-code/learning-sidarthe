@@ -1,5 +1,7 @@
 import json
 import os
+
+import torch
 from pytorch_lightning.loggers import TensorBoardLogger
 
 from lcm.st_sidarthe import SpatioTemporalSidarthe
@@ -62,15 +64,35 @@ if __name__ == '__main__':
 
     ppls = [populations[area] for area in st_sidarthe_dataset.region]
 
+    # taken from giordano paper
+    initial_conditions = []
+    for ppl in ppls:
+        i0 = 200
+        d0 = 20
+        a0 = 1
+        r0 = 2
+        t0 = 0
+        h0 = 0
+        e0 = 0
+        s0 = ppl - i0 - d0 - a0 - r0 - t0 - h0 - e0
+        initial_conditions.append(torch.tensor([[
+            s0, i0, d0, a0, r0, t0, e0, h0
+        ]]))
+
+    initial_conditions = torch.cat(initial_conditions, dim=0).unsqueeze(0)
+    x = st_sidarthe_dataset.get_initial_conditions(ppls)
+
+
     model_params = {
         "params": initial_params,
         "learning_rates": lrates,
+        "EPS": 1e-12,
         "tied_parameters": {"delta": "beta",
                             "kappa": "xi",
                             "zeta": "eta",
                             },
         "population": ppls,  # tensor of size S
-        "initial_conditions": st_sidarthe_dataset.get_initial_conditions(ppls),  # S x 8
+        "initial_conditions": initial_conditions,  # S x 8
         "integrator": Heun,
         "n_areas": st_sidarthe_dataset.n_areas,
         "loss_fn": NRMSE({
