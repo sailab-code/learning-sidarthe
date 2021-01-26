@@ -12,6 +12,7 @@ class Loss(metaclass=abc.ABCMeta):
 
 
 class TargetLoss(Loss):
+
     type = 'target'
 
     def __init__(self, weights, **kwargs):
@@ -42,6 +43,7 @@ class TargetLoss(Loss):
 
 
 class RegularizationLoss(Loss):
+
     type = 'regularization'
 
     def __init__(self, weight, **kwargs):

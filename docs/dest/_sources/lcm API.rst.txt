@@ -10,3 +10,4 @@ Lcm API
    api/trainers
    api/integrators
    api/losses
+   api/optimizers

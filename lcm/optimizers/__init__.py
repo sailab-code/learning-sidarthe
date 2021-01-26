@@ -49,6 +49,7 @@ class MomentumOptimizer(Optimizer):
 
     @torch.no_grad()
     def step(self, closure=None):
+
         loss = None
         if closure is not None:
             with torch.enable_grad():
@@ -76,9 +77,9 @@ class MomentumOptimizer(Optimizer):
 
                     # update can be a list of multi-valued tensors
                     update = torch.cat(update, dim=0).reshape(d_p.size(0), -1)
+
                 else:
                     update = -lr * d_p
-
                 parameter.data.add_(update)
 
         return loss

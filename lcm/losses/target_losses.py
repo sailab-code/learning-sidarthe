@@ -17,10 +17,7 @@ class RMSE(TargetLoss):
         :param target: A tensor with targets.
         :param mask: An tensor for masking elements
 
-        :return: A scalar value (still tensor) corresponding
-        to the RMSE between inferences and targets.
-        Values of the target lower or equal than 0 are NOT
-        accounted in the computation.
+        :return: A scalar value (still tensor) corresponding to the RMSE between inferences and targets. Values of the target lower or equal than 0 are NOT accounted in the computation.
         """
 
         missing_data_mask = torch.ge(target, 0.)

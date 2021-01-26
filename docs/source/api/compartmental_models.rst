@@ -36,3 +36,18 @@ Mobility SIDARTHE
 
 Create a Custom Model
 ----------------------
+
+Creating a custom compartmental model is easy. It is enough to extend the :class:`~lcm.compartmental_model.CompartmentalModel` class.
+
+ .. code-block:: python
+ 
+	from lcm.compartmental_model import CompartmentalModel 
+	
+	...
+	
+	class MyCustomCompartmentalModel(CompartmentalModel):
+		def __init__():
+			pass
+		
+		def differential_equations():
+			pass

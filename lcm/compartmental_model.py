@@ -85,6 +85,13 @@ class CompartmentalModel(pl.LightningModule, metaclass=abc.ABCMeta):
         return target_losses["weighted"] + regularization_loss["weighted"]
 
     def validation_step(self, batch, batch_idx):
+        """
+
+        :param batch:
+        :param batch_idx:
+
+        :return:
+        """
         t_grid, targets, validation_mask = batch
         t_grid = t_grid.squeeze(0)
         targets = {key: target.squeeze(0) for key, target in targets.items()}
@@ -103,10 +110,24 @@ class CompartmentalModel(pl.LightningModule, metaclass=abc.ABCMeta):
         }
 
     def test_step(self, batch, batch_idx):
+        """
+
+        :param batch:
+        :param batch_idx:
+
+        :return:
+        """
         metrics = self.validation_step(batch, batch_idx)
         return metrics
 
     def configure_optimizers(self):
+        """
+        Choose what optimizers and learning-rate schedulers to use in your optimization. We set the :class:`~lcm.optimizers.MomentumOptimizer` as default.
+        Override this to change it.
+
+        :return: The :class:`~lcm.optimizers.MomentumOptimizer` instance.
+        """
+
         return MomentumOptimizer(self.trainable_params, self.learning_rates, self.momentum_settings)
 
     def extend_param(self, value, length):
