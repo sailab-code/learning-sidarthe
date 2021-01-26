@@ -36,7 +36,6 @@ class LogVicinity(RegularizationLoss):
 class FirstDerivative(RegularizationLoss):
     """
     Regularization loss to enforce smooth parameter functions.
-    In the reference paper, it is indicated as |u_dot(t)|^2.
     Compute the discrete first derivative of a parameter wrt to time t.
     """
 

@@ -57,15 +57,33 @@ class Sidarthe(CompartmentalModel):
         self.momentum_settings = kwargs.get("momentum_settings", {})
 
     def to(self, device):
+        """
+        Moves and/or casts all model parameters to the device in-place.
+
+        :param device: the device
+
+        :return: self
+        """
+
         super().to(device)
         self.population.to(device)
 
     def cuda(self, device):
+        """
+        Moves all model parameters and buffers to the GPU.
+        :param device: if specified, all parameters will be copied to that device
+        :return: self
+        """
+
         super().cuda(device)
         self.population = self.population.cuda(device)
         self.initial_conditions = self.initial_conditions.cuda(device)
 
     def cpu(self):
+        """
+        Moves parameters and buffers to CPU
+        """
+
         super().cpu()
         self.population = self.population.cpu()
         self.initial_conditions = self.initial_conditions.cpu()
@@ -153,6 +171,14 @@ class Sidarthe(CompartmentalModel):
             super().__getattr__(item)
 
     def forward(self, time_grid):
+        """
+        Implements the predictions of SIDARTHE model for the input time_grid.
+
+        :param time_grid: (Tensor) the input time grid.
+
+        :return: A dictionary containing all the states of SIDARTHE and the r0 calculated during all the time period.
+        """
+
         sol = self.integrate(time_grid)
         s = sol[:, 0]
         i = sol[:, 1]

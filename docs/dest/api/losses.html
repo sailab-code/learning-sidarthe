@@ -59,12 +59,9 @@ greater or equal than 0.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns</dt>
-<dd class="field-even"><p>A scalar value (still tensor) corresponding</p>
+<dd class="field-even"><p>A scalar value (still tensor) corresponding to the RMSE between inferences and targets. Values of the target lower or equal than 0 are NOT accounted in the computation.</p>
 </dd>
 </dl>
-<p>to the RMSE between inferences and targets.
-Values of the target lower or equal than 0 are NOT
-accounted in the computation.</p>
 </dd></dl>
 
 </dd></dl>
@@ -148,7 +145,6 @@ The closer to 0, the higher the penalty.</p>
 <dt id="lcm.losses.regularization_losses.FirstDerivative">
 <em class="property">class </em><code class="sig-prename descclassname">lcm.losses.regularization_losses.</code><code class="sig-name descname">FirstDerivative</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">weight</span></em>, <em class="sig-param"><span class="n">time_step</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#lcm.losses.regularization_losses.FirstDerivative" title="Permalink to this definition">¶</a></dt>
 <dd><p>Regularization loss to enforce smooth parameter functions.
-In the reference paper, it is indicated as <a href="#id1"><span class="problematic" id="id2">|</span></a>u_dot(t)|^2.
 Compute the discrete first derivative of a parameter wrt to time t.</p>
 </dd></dl>
 

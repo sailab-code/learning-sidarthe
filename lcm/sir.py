@@ -76,6 +76,14 @@ class SIR(CompartmentalModel):
             raise AttributeError
 
     def forward(self, time_grid):
+        """
+        Implements the predictions of SIR for the input time_grid.
+
+        :param time_grid: (Tensor) the input time grid.
+
+        :return: A dictionary containing all the states of SIR and the r0 calculated during all the time period.
+        """
+
         sol = self.integrate(time_grid)
         s = sol[:, 0]
         i = sol[:, 1]

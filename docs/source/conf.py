@@ -14,7 +14,7 @@
 #
 import os
 import sys
-code_path = os.path.join(os.path.abspath(os.path.join('..','..')), 'PycharmProjects', 'covid-tools')
+code_path = os.path.join(os.path.abspath(os.path.join('..','..')))
 sys.path.insert(0, code_path)
 
 
