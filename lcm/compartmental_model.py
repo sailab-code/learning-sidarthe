@@ -80,7 +80,7 @@ class CompartmentalModel(pl.LightningModule, metaclass=abc.ABCMeta):
         regularization_loss = self.regularization_fn(self.params)
 
         for k,v in target_losses.items():
-            self.log(f"train_loss_{k}", v, prog_bar=True)
+            self.log(f"train_loss_{k}", v, prog_bar=("weighted" in k))
 
         return target_losses["weighted"] + regularization_loss["weighted"]
 

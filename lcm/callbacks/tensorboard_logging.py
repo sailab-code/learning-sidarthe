@@ -1,7 +1,10 @@
 import datetime
+import json
+
 from pytorch_lightning import Callback
 import numpy as np
 
+from lcm.trainers import CompartmentalTrainer
 from lcm.utils.visualization import generic_plot, Curve
 
 DATE_FORMATS = [
@@ -19,6 +22,15 @@ class TensorboardLoggingCallback(Callback):
         """
         super().__init__()
         self.first_date = DEFAULT_START_DATE
+
+    def on_train_start(self, trainer: CompartmentalTrainer, pl_module):
+        description = trainer.get_description()
+        json_description = json.dumps(description, indent=4)
+
+        md_description = f"## Experiment {trainer.logger.name}/{trainer.logger.version}<br><br>\n\n"
+        md_description += json_description.replace("\n", "<br>").replace(" ", "&nbsp;")
+
+        trainer.logger.experiment.add_text("settings", md_description, global_step=0)
 
     def on_fit_start(self, trainer, pl_module):
         self.first_date = trainer.dataset.first_date  # setting the actual start date of the outbreak
@@ -81,7 +93,6 @@ class TensorboardLoggingCallback(Callback):
 
     def on_validation_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
         self.plot_inferences(trainer, pl_module, outputs["hats"], batch)
-
     
     def on_test_batch_end(self, trainer, pl_module, outputs, batch, batch_idx, dataloader_idx):
         self.plot_inferences(trainer, pl_module, outputs["hats"], batch)

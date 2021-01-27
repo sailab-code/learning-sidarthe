@@ -24,3 +24,6 @@ class Integrator(metaclass=abc.ABCMeta):
         :return:
         """
         pass
+
+    def __str__(self):
+        return f"{self.__class__.__name__}:{self.time_step}"
