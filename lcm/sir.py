@@ -51,10 +51,11 @@ class SIR(CompartmentalModel):
     def get_param_at_t(self, param_key, _t):
         param = self.params[param_key]
         _t = _t.long()
-        if 0 <= _t < param.shape[0]:
-            p = param[_t].unsqueeze(0)
+        # TODO check if possible to improve here
+        if 0 <= _t[0] < param.shape[0]:
+            p = torch.relu(param[_t, :].unsqueeze(0))
         else:
-            p = param[-1].unsqueeze(0).detach()  # TODO: check this detach()
+            p = torch.relu(param[torch.tensor([-1]).long(), :].unsqueeze(0))
 
         return p
 
@@ -85,8 +86,8 @@ class SIR(CompartmentalModel):
         """
 
         sol = self.integrate(time_grid)
-        s = sol[:, 0]
-        i = sol[:, 1]
+        s = sol[:, :, 0]
+        i = sol[:, :, 1]
         r = self.population - (s + i)
 
         rt = self.get_rt(time_grid)
@@ -121,8 +122,8 @@ class SIR(CompartmentalModel):
     def differential_equations(self, t, x):
         p = {key: self.get_param_at_t(key, t) for key in self.params.keys()}
 
-        S = x[0]
-        I = x[1]
+        S = x[:, 0]
+        I = x[:, 1]
 
         S_dot = - p['beta'] * (S * I) / self.population
         I_dot = -S_dot - (p['gamma'] * I)
