@@ -40,4 +40,4 @@ class CompartmentalTrainer(Trainer):
 
         print(f"Running experiment {self.uuid}")
         self.fit(self.model, self.dataset.train_dataloader(), self.dataset.val_dataloader())
-        self.test(self.model, self.dataset.test_dataloader(), ckpt_path="best")
+        return self.test(None, self.dataset.test_dataloader(), ckpt_path="best", verbose=False)
