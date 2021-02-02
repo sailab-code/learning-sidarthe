@@ -41,7 +41,7 @@ class JsonLoggingCallback(Callback):
             "settings": trainer.get_description()
         }
 
-        json_file = "final_params.json"
+        json_file = "checkpoint.json"
         settings_path = os.path.join(trainer.exp_path, trainer.logger.name, f"version_{trainer.logger.version}", json_file)
         with open(settings_path, "w+") as f:
             json.dump(json_checkpoint, f, indent=4)
