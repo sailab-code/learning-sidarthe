@@ -47,6 +47,8 @@ class NRMSE(RMSE):
         backward = 0.
         validation = 0.
         for key, loss in losses.items():
+            if key in self.ignore_targets:
+                continue
             backward = backward + norm_weights[key] * self.weights[key[0]] * loss
             validation = validation + loss
 

@@ -15,9 +15,10 @@ class TargetLoss(Loss):
 
     type = 'target'
 
-    def __init__(self, weights, **kwargs):
+    def __init__(self, weights, ignore_targets=None, **kwargs):
         super().__init__(**kwargs)
         self.weights = weights
+        self.ignore_targets = ignore_targets if ignore_targets is not None else []
 
     @abc.abstractmethod
     def target_loss(self, hat, target, mask):
@@ -29,6 +30,8 @@ class TargetLoss(Loss):
         backward = 0.
         validation = 0.
         for key, loss in losses.items():
+            if key in self.ignore_targets:
+                continue
             backward = backward + self.weights[key[0]] * loss
             validation = validation + loss
 
@@ -39,7 +42,7 @@ class TargetLoss(Loss):
 
     def __str__(self):
         weight_str = ", ".join([f"{key}:{val}" for key, val in self.weights.items()])
-        return self.__class__.__name__ + " " + weight_str
+        return self.__class__.__name__ + " " + weight_str + f"; ignored: [{','.join(self.ignore_targets)}]"
 
 
 class RegularizationLoss(Loss):
