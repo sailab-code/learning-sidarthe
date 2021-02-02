@@ -129,7 +129,7 @@ model_params={
         "t": 0.01,
         "h": 0.01,
         "e": 0.01,
-    }),
+    }, ignore_targets=None),  # ignore_targets=["d"] if you want to ignore target d
     "reg_fn": compose_losses(
         [
             LogVicinity(1.0),
@@ -145,9 +145,10 @@ model_params={
 }
 sidarthe_model = SpatioTemporalSidarthe(**model_params)
 
-ckpt_path = os.path.join(exps_path,'checkpoints/weights.ckpt')
-checkpoint_callback = ModelCheckpoint(filepath=ckpt_path, save_top_k=1, verbose=True, monitor='val_loss_unweighted', mode='min')
 tb_logger = TensorBoardLogger(exps_path, name="tb_logs")
+ckpt_path = os.path.join(exps_path, f'checkpoints/weights_{tb_logger.version}')
+checkpoint_callback = ModelCheckpoint(filepath=ckpt_path, save_top_k=1, verbose=True, monitor='val_loss_unweighted', mode='min')
+
 exp = CompartmentalTrainer(
     dataset=st_sidarthe_dataset,
     model=sidarthe_model,
