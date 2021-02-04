@@ -27,6 +27,13 @@ class SpatioTemporalSidarthe(SidartheExtended):
         # self.model_name = kwargs.get("name", "spatio_temporal_sidarthe_extended")
         self.n_areas = kwargs.get("n_areas", None)
 
+    def get_description(self):
+        base_description = super().get_description()
+        return {
+            **base_description,
+            "n_areas": self.n_areas
+        }
+
     def get_param_at_t(self, param_key, _t):
         """
         Retrieves the value of a param at time t for all s.

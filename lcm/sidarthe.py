@@ -38,8 +38,6 @@ class Sidarthe(CompartmentalModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.EPS = kwargs.get('EPS', 1e-6)
-
         self.tied_parameters = kwargs.get("tied_parameters", {})
 
         self._params = {}
@@ -55,6 +53,19 @@ class Sidarthe(CompartmentalModel):
         self.population = torch.tensor(kwargs["population"], requires_grad=False)
         self.learning_rates = kwargs.get("learning_rates", self.get_default_learning_rates())
         self.momentum_settings = kwargs.get("momentum_settings", {})
+
+
+    def get_description(self):
+        base_description = super().get_description()
+        return {
+            **base_description,
+            "learning_rates": self.learning_rates,
+            "momentum_settings": self.momentum_settings,
+            "population": self.population.tolist(),
+            "loss_fn": self.loss_fn.to_dict(),
+            "reg_fn": self.regularization_fn.to_dict(),
+            "tied_parameters": self.tied_parameters
+        }
 
     def to(self, device):
         """

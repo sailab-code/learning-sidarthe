@@ -92,3 +92,13 @@ class ODEDataModule(pl.LightningDataModule):
         """
         pass
 
+    def to_dict(self):
+        return {
+            "class": self.__class__.__name__,
+            "first_date": self.first_date,
+            "data_path": self.data_path,
+            "region": self.region,
+            "train_size": self.train_size,
+            "val_size": self.val_size,
+            "test_size": self.test_size
+        }

@@ -65,3 +65,11 @@ class FirstDerivative(RegularizationLoss):
 
         first_derivative = torch.cat((forward, central, backward), dim=0)
         return  0.5 * torch.pow(first_derivative, 2)
+
+
+    def to_dict(self):
+        base_dict = super().to_dict()
+        return {
+            **base_dict,
+            "time_step": self.time_step
+        }

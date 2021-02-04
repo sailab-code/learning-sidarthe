@@ -27,3 +27,9 @@ class Integrator(metaclass=abc.ABCMeta):
 
     def __str__(self):
         return f"{self.__class__.__name__}:{self.time_step}"
+
+    def to_dict(self):
+        return {
+            "class": self.__class__.__name__,
+            "time_step": self.time_step
+        }

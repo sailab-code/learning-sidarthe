@@ -31,7 +31,7 @@ class JsonLoggingCallback(Callback):
         checkpoint_params = pl_module.params
 
         np_params = {
-            p_name: p_value.detach().cpu().flatten().tolist()
+            p_name: p_value.detach().cpu().tolist()
             for p_name, p_value in checkpoint_params.items()
         }
 

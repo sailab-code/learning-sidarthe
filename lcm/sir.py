@@ -23,6 +23,18 @@ class SIR(CompartmentalModel):
         self.learning_rates = kwargs.get("learning_rates", {})
         self.momentum_settings = kwargs.get("momentum_settings", {})
 
+
+    def get_description(self):
+        base_description = super().get_description()
+        return {
+            **base_description,
+            "learning_rates": self.learning_rates,
+            "momentum_settings": self.momentum_settings,
+            "population": self.population,
+            "loss_fn": self.loss_fn.to_dict(),
+            "reg_fn": self.regularization_fn.to_dict()
+        }
+
     @property
     def params(self) -> Dict:
         return {

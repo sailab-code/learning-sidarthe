@@ -2,9 +2,11 @@ import abc
 import torch
 import pytorch_lightning as pl
 
-from typing import List, Dict
-from .optimizers import MomentumOptimizer
+from typing import List, Dict, Union, TextIO
 
+from dataset.spatio_temporal_dataset import SpatioTemporalSidartheDataset
+from .optimizers import MomentumOptimizer
+import json
 
 class CompartmentalModel(pl.LightningModule, metaclass=abc.ABCMeta):
     """
@@ -17,6 +19,8 @@ class CompartmentalModel(pl.LightningModule, metaclass=abc.ABCMeta):
         self.initial_conditions = kwargs["initial_conditions"]
         self.time_step = kwargs["time_step"]
         self.integrator = kwargs["integrator"](self.time_step)
+
+        self.EPS = kwargs.get('EPS', 1e-6)
 
     def integrate(self, time_grid):
         """
@@ -147,5 +151,18 @@ class CompartmentalModel(pl.LightningModule, metaclass=abc.ABCMeta):
                                            )
                            )
 
+    def get_description(self):
+        return {
+            "class": self.__class__.__name__,
+            "initial_conditions": self.initial_conditions.tolist(),
+            "integrator": self.integrator.to_dict(),
+            "time_step": self.time_step,
+            "EPS": self.EPS,
+            "params": {k: v.detach().tolist() for k, v in self.params.items()}
+        }
+
     def __str__(self):
         return self.__class__.__name__
+
+
+

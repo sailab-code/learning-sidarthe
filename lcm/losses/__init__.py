@@ -10,6 +10,10 @@ class Loss(metaclass=abc.ABCMeta):
     def __call__(self, **kwargs):
         pass
 
+    @abc.abstractmethod
+    def to_dict(self):
+        pass
+
 
 class TargetLoss(Loss):
 
@@ -39,6 +43,16 @@ class TargetLoss(Loss):
         losses["unweighted"] = validation
 
         return losses
+
+    def to_dict(self):
+        return {
+            "class": self.__class__.__name__,
+            "ignored": self.ignore_targets,
+            "weights": {
+                key: val
+                for key, val in self.weights.items()
+            }
+        }
 
     def __str__(self):
         weight_str = ", ".join([f"{key}:{val}" for key, val in self.weights.items()])
@@ -72,6 +86,12 @@ class RegularizationLoss(Loss):
 
         return losses
 
+    def to_dict(self):
+        return {
+            "class": self.__class__.__name__,
+            "weight": self.weight
+        }
+
     def __str__(self):
         return f"{self.__class__.__name__}: {self.weight}"
 
@@ -96,6 +116,12 @@ def compose_losses(loss_fns, name=None):
                 }
 
             return total_losses
+
+        def to_dict(self):
+            return [
+                loss_fn.to_dict()
+                for loss_fn in self.loss_fns
+            ]
 
         def __str__(self):
             return "\n".join([lfn.__str__() for lfn in self.loss_fns])
