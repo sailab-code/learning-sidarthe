@@ -23,22 +23,23 @@ def load_from_json_checkpoint(checkpoint: Union[str, TextIO]):
 def _load_from_checkpoint(checkpoint: Dict):
     params = checkpoint['params']
     settings = checkpoint['settings']
-    model = load_model(settings["model"])
     dataset = load_dataset(settings["dataset"])
+    dataset.setup()
+    model = load_model(settings["model"], dataset.get_initial_conditions)
 
     return model, dataset
 
 
-def load_model(model: Dict):
+def load_model(model: Dict, get_default_initial_conditions):
     class_ = model["class"]
-    initial_conditions = model["initial_conditions"]
+    population = model["population"]
+    initial_conditions = model.get("initial_conditions", get_default_initial_conditions(population))
     integrator = load_integrator(model["integrator"])
     time_step = model["time_step"]
     eps = model["EPS"]
     params = model["params"]
     lrates = model["learning_rates"]
     momentum_settings = model["momentum_settings"]
-    population = model["population"]
     loss_fn = load_loss_fn(model["loss_fn"])
     reg_fn = load_reg_fn(model["reg_fn"])
     tied_parameters = model["tied_parameters"]
