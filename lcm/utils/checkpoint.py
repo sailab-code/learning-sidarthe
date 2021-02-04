@@ -23,7 +23,7 @@ def load_from_json_checkpoint(checkpoint: Union[str, TextIO]):
 def _load_from_checkpoint(checkpoint: Dict):
     params = checkpoint['params']
     settings = checkpoint['settings']
-    model = settings["model"]
+    model = load_model(settings["model"])
     dataset = load_dataset(settings["dataset"])
 
     return model, dataset
@@ -49,7 +49,7 @@ def load_model(model: Dict):
         "learning_rates": lrates,
         "EPS": eps,
         "tied_parameters": tied_parameters,
-        "population": torch.tensor(population),
+        "population": population,
         "initial_conditions": initial_conditions,
         "integrator": integrator,
         "n_areas": n_areas,
