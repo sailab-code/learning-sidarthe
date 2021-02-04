@@ -21,7 +21,6 @@ def load_from_json_checkpoint(checkpoint: Union[str, TextIO]):
         return _load_from_checkpoint(json.load(checkpoint))
 
 def _load_from_checkpoint(checkpoint: Dict):
-    params = checkpoint['params']
     settings = checkpoint['settings']
     dataset = load_dataset(settings["dataset"])
     dataset.setup()
@@ -34,6 +33,8 @@ def load_model(model: Dict, get_default_initial_conditions):
     class_ = model["class"]
     population = model["population"]
     initial_conditions = model.get("initial_conditions", get_default_initial_conditions(population))
+    if isinstance(initial_conditions, list):
+        initial_conditions = torch.tensor(initial_conditions)
     integrator = load_integrator(model["integrator"])
     time_step = model["time_step"]
     eps = model["EPS"]
