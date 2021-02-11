@@ -1,0 +1,15 @@
+name: learning_sidarthe
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.7
+  - pytorch-lightning
+  - pandas
+  - ipykernel
+  - cudatoolkit=10.2
+  - pytorch
+  - torchvision
+  - seaborn
+prefix: learning_sidarthe
+
