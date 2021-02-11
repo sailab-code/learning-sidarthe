@@ -22,42 +22,16 @@ exps_path = os.path.join(os.getcwd(), "italy_cut")
 if not os.path.exists(exps_path):
     os.mkdir(exps_path)
 
-# regions = ["Lombardia", "Veneto",
-#            "Umbria", "Toscana", "Lazio", "Marche", "Piemonte",
-#            "Liguria", "Puglia", "Sicilia", "Calabria", "Sardegna",
-#            "Basilicata", "Abruzzo", "Molise", "Campania",
-#            "Emilia-Romagna", "Friuli Venezia Giulia"]
 regions = ["ITA"]
 
 train_size, val_size = 60, 7
 time_step = 1.0
 
-# data_path = os.path.join(os.getcwd(), "data", "COVID-19", "dati-regioni", "dpc-covid19-ita-regioni.csv")
 data_path = os.path.join(os.getcwd(), "data", "COVID-19", "dati-andamento-nazionale", "dpc-covid19-ita-andamento-nazionale-cut.csv")
-# st_sidarthe_dataset = SpatioTemporalSidartheDataset(regions, data_path, train_size, val_size, "denominazione_regione")
 st_sidarthe_dataset = SpatioTemporalSidartheDataset(regions, data_path, train_size, val_size, "stato")
 st_sidarthe_dataset.setup()
 
-# initial_params = {
-#         "alpha": [[0.29]*len(regions)] * train_size,
-#         "beta": [[0.0057]] * train_size,
-#         "gamma": [[0.285]] * train_size,
-#         "delta": [[0.0057]] * train_size,
-#         "epsilon": [[0.143]] * train_size,
-#         "theta": [[0.371]] * train_size,
-#         "zeta": [[0.0034]] * train_size,
-#         "eta": [[0.0034]] * train_size,
-#         "mu": [[0.008]] * train_size,
-#         "nu": [[0.015]] * train_size,
-#         "tau": [[0.15]]* train_size,
-#         "lambda": [[0.08]] * train_size,
-#         "kappa": [[0.017]] * train_size,
-#         "xi": [[0.017]] * train_size,
-#         "rho": [[0.017]] * train_size,
-#         "sigma": [[0.017]] * train_size,
-#         "phi": [[0.02]] * train_size,
-#         "chi": [[0.02]] * train_size
-#     }
+
 
 """initial_params = {
         "alpha": [[0.21]] * 4 + [[0.57]] * 18 + [[0.360]] * 6 + [[0.210]] * 10 + [[0.210]] * (train_size - 38),
@@ -96,14 +70,10 @@ initial_params = {
          "mu": [[0.017]] * train_size,
          "nu": [[0.015]] * train_size,
          "tau": [[0.05]],
-         # "tau": [[0.05]]*train_size,
-         # "lambda": [[0.034]] * 22 + [[0.08]] * (train_size - 22),
          "lambda": [[0.02]],
          "kappa": [[0.02]] * train_size,
          "xi": [[0.02]] * train_size,
-         # "rho": [[0.034]] * 22 + [[0.017]] * 16 + [[0.02]] * (train_size - 38),
          "rho": [[0.02]],
-         # "sigma": [[0.017]] * 22 + [[0.017]] * 16 + [[0.01]] * (train_size - 38),
          "sigma": [[0.01]],
          "phi": [[0.02]] * train_size,
          "chi": [[0.02]] * train_size

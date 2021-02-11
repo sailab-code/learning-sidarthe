@@ -13,11 +13,6 @@ class SidartheExtended(Sidarthe):
         "Modelling the COVID-19 epidemic and implementation of population-wide interventions in Italy."
         Nature Medicine (2020): 1-6.
 
-    As proposed in:
-    Andrea Zugarini, Enrico Meloni et al.
-    "An Optimal Control Approach to Learning in SIDARTHE Epidemic model."
-    arXiv preprint arXiv:2010.14878 (2020).
-
     Two additional transitions are added: phi and chi, from (A,E) and (R,E) respectively.
     """
 
