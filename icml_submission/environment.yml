@@ -1,6 +1,7 @@
-name: learning_sidarthe
+name: learning_sidarthe_icml
 channels:
   - defaults
+  - pytorch
   - conda-forge
 dependencies:
   - python=3.7
@@ -11,5 +12,6 @@ dependencies:
   - pytorch
   - torchvision
   - seaborn
+  - jedi=0.18.0
 prefix: learning_sidarthe
 
