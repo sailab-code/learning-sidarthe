@@ -5,12 +5,6 @@ from torch.optim.optimizer import Optimizer
 
 
 class MomentumOptimizer(Optimizer):
-    """
-    Optimizer implementing temporal momentum, defined in:
-        Zugarini, Andrea, Enrico Meloni, et al.
-        "An Optimal Control Approach to Learning in SIDARTHE Epidemic model."
-        arXiv preprint arXiv:2010.14878 (2020).
-    """
 
     def __init__(self, params: Dict, learning_rates: Dict, momentum_settings: Dict = {}):
         """
